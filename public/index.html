@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "631";
+const CUBE_SHARED_RULES_VERSION = "632";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -22023,6 +22023,8 @@ el("closeRunShop").addEventListener("click", () => toggleRunShop(false));
 function smoothstep01(t){ t=clamp(Number(t)||0,0,1); return t*t*(3-2*t); }
 function hexToRgbParts(hex){ const s=String(hex||"").replace("#",""); const n=parseInt((s.length===3?s.split("").map(ch=>ch+ch).join(""):s)||"000000",16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
 function mixHex(a,b,t){ const ca=hexToRgbParts(a), cb=hexToRgbParts(b), q=clamp(Number(t)||0,0,1); return `rgb(${Math.round(lerp(ca.r,cb.r,q))},${Math.round(lerp(ca.g,cb.g,q))},${Math.round(lerp(ca.b,cb.b,q))})`; }
+function fract(v){ return v-Math.floor(v); }
+function groundNoise(a,b,c=0){ return fract(Math.sin(a*127.1+b*311.7+c*74.7)*43758.5453123); }
 function biomeBlendWeights(x,y){
   const arctic=1-smoothstep01((y-(arcticBoundaryY(x)-540))/1080);
   const forestRain=smoothstep01((x-(forestRainBoundaryX(y)-560))/1120);
@@ -22030,39 +22032,93 @@ function biomeBlendWeights(x,y){
   return { arctic, forest:lowland*(1-forestRain), rainforest:lowland*forestRain };
 }
 function blendBiomeGroundColor(x,y){
+  // Keep the original Forest / Rain Forest floor colors, but let them blend naturally.
   const ground={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2"};
   const w=biomeBlendWeights(x,y);
   const low=mixHex(ground.forest,ground.rainforest,w.rainforest/(Math.max(.001,w.forest+w.rainforest)));
   return mixHex(low,ground.arctic,w.arctic);
 }
+function drawFlowerCluster(x,y,petal,count,spread,scale=1){
+  for(let i=0;i<count;i++){
+    const a=(i/count)*TAU + groundNoise(x,y,i)*.8;
+    const fx=x+Math.cos(a)*(spread*(.28+groundNoise(i,x,y)*.72));
+    const fy=y+Math.sin(a)*(spread*(.22+groundNoise(y,i,x)*.68));
+    ctx.strokeStyle="rgba(56,101,51,.42)"; ctx.lineWidth=1*scale; ctx.beginPath(); ctx.moveTo(fx,fy+4*scale); ctx.lineTo(fx,fy-6*scale); ctx.stroke();
+    ctx.fillStyle=petal;
+    for(let p=0;p<5;p++){ const pa=(p/5)*TAU; ctx.beginPath(); ctx.ellipse(fx+Math.cos(pa)*2.6*scale, fy-7*scale+Math.sin(pa)*2.6*scale, 2.4*scale,1.8*scale,pa,0,TAU); ctx.fill(); }
+    ctx.fillStyle="#f6d55b"; ctx.beginPath(); ctx.arc(fx,fy-7*scale,1.4*scale,0,TAU); ctx.fill();
+  }
+}
+function drawPebblePatch(x,y,count,spread,baseColor){
+  for(let i=0;i<count;i++){
+    const px=x+(groundNoise(x,y,i)-.5)*spread;
+    const py=y+(groundNoise(y,x,i)-.5)*spread*.76;
+    const rr=1.8+groundNoise(i,x,y)*4.4;
+    ctx.fillStyle=i%2?shadeColor(baseColor,-18):shadeColor(baseColor,10);
+    ctx.beginPath(); ctx.ellipse(px,py,rr,rr*.78,groundNoise(px,py,i)*TAU,0,TAU); ctx.fill();
+  }
+}
+function drawLeafScatter(x,y,count,spread,baseColor){
+  for(let i=0;i<count;i++){
+    const px=x+(groundNoise(x,y,i)-.5)*spread;
+    const py=y+(groundNoise(y,x,i)-.5)*spread*.85;
+    const rot=groundNoise(px,py,i)*TAU;
+    ctx.fillStyle=i%3===0?shadeColor(baseColor,-10):i%3===1?shadeColor(baseColor,4):shadeColor(baseColor,16);
+    ctx.beginPath();
+    ctx.ellipse(px,py,5.5+groundNoise(i,px,py)*4.5,2.9+groundNoise(py,i,px)*1.8,rot,0,TAU);
+    ctx.fill();
+    ctx.strokeStyle="rgba(28,57,34,.18)"; ctx.lineWidth=.8; ctx.beginPath(); ctx.moveTo(px-Math.cos(rot)*4,py-Math.sin(rot)*2); ctx.lineTo(px+Math.cos(rot)*4,py+Math.sin(rot)*2); ctx.stroke();
+  }
+}
 function drawBiomeGroundDecor(px,py,seedX,seedY){
   const w=biomeBlendWeights(px,py);
-  if(w.forest>.1){
-    const flowerCount=1+(((seedX*3+seedY*5)>>0)&1);
-    for(let i=0;i<flowerCount;i++){
-      const fx=px-24+i*18+(((seedX*11+seedY*7+i*13)%9)-4), fy=py+8+(((seedX*7+seedY*13+i*5)%11)-5);
-      ctx.fillStyle="rgba(74,112,58,.20)"; ctx.beginPath(); ctx.ellipse(fx,fy,16,10,0,0,TAU); ctx.fill();
-      ctx.strokeStyle="rgba(56,101,51,.42)"; ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(fx,fy+1); ctx.lineTo(fx,fy-9); ctx.stroke();
-      ctx.fillStyle=["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][(seedX+seedY+i)&3];
-      for(let p=0;p<5;p++){ const a=(p/5)*TAU; ctx.beginPath(); ctx.ellipse(fx+Math.cos(a)*3.2, fy-10+Math.sin(a)*3.2, 2.6,1.9,a,0,TAU); ctx.fill(); }
-      ctx.fillStyle="#f6d55b"; ctx.beginPath(); ctx.arc(fx,fy-10,1.7,0,TAU); ctx.fill();
+  const jx=(groundNoise(seedX,seedY,1)-.5)*54, jy=(groundNoise(seedY,seedX,2)-.5)*54;
+  const x=px+jx, y=py+jy;
+
+  if(w.forest>.04){
+    ctx.save();
+    ctx.globalAlpha*=clamp(w.forest*1.15,0,1);
+    if(groundNoise(seedX,seedY,3)>.18){
+      ctx.fillStyle="rgba(69,108,55,.16)"; ctx.beginPath(); ctx.ellipse(x,y,42+groundNoise(seedX,seedY,4)*18,20+groundNoise(seedY,seedX,5)*10,groundNoise(seedX,seedY,6)*.8,0,TAU); ctx.fill();
     }
-    ctx.strokeStyle="rgba(52,82,46,.30)"; ctx.lineWidth=1.05; ctx.beginPath(); ctx.moveTo(px+22,py+18); ctx.lineTo(px+16,py+7); ctx.lineTo(px+10,py+18); ctx.moveTo(px+31,py+15); ctx.lineTo(px+26,py+5); ctx.lineTo(px+20,py+15); ctx.stroke();
-  }
-  if(w.rainforest>.1){
-    ctx.fillStyle="rgba(12,56,28,.18)"; ctx.beginPath(); ctx.ellipse(px+5,py+4,48,28,.1,0,TAU); ctx.fill();
-    ctx.strokeStyle="rgba(76,138,78,.40)"; ctx.lineWidth=1.4;
-    for(let i=0;i<3;i++){
-      const sx=px-14+i*14, sy=py+6+((seedX+seedY+i*7)%6-3);
-      ctx.beginPath(); ctx.moveTo(sx,sy+10); ctx.quadraticCurveTo(sx-7,sy,sx,sy-12); ctx.quadraticCurveTo(sx+7,sy,sx,sy+10); ctx.stroke();
+    if(groundNoise(seedX,seedY,7)>.28){
+      drawFlowerCluster(x-10,y-2,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedX,seedY,8)*4)],3+Math.floor(groundNoise(seedY,seedX,9)*4),18+groundNoise(seedX,seedY,10)*16,1+groundNoise(seedY,seedX,11)*.25);
+      if(groundNoise(seedX,seedY,12)>.62) drawFlowerCluster(x+14,y+8,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedY,seedX,13)*4)],2+Math.floor(groundNoise(seedX,seedY,14)*3),10+groundNoise(seedY,seedX,15)*12,.82);
     }
-    ctx.strokeStyle="rgba(26,89,53,.28)"; ctx.lineWidth=1.0; ctx.beginPath(); ctx.arc(px+26,py-8,10,.9,3.8); ctx.stroke();
+    if(groundNoise(seedX,seedY,16)>.56){ drawPebblePatch(x+18,y+12,3+Math.floor(groundNoise(seedY,seedX,17)*4),20,"#7e7a72"); }
+    if(groundNoise(seedX,seedY,18)>.48){ drawLeafScatter(x-8,y+10,4+Math.floor(groundNoise(seedY,seedX,19)*4),22,"#6a8b4e"); }
+    ctx.restore();
   }
-  if(w.arctic>.1){
-    ctx.fillStyle="rgba(247,253,255,.50)"; ctx.beginPath(); ctx.ellipse(px-8,py+3,28,14,.1,0,TAU); ctx.fill();
-    ctx.strokeStyle="rgba(126,184,205,.36)"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(px-28,py+14); ctx.lineTo(px-12,py+6); ctx.lineTo(px+5,py+14); ctx.lineTo(px+20,py+2); ctx.stroke();
-    ctx.fillStyle="rgba(214,236,244,.72)"; ctx.beginPath(); ctx.arc(px+24,py-10,4.4,0,TAU); ctx.fill();
-    ctx.strokeStyle="rgba(173,210,226,.55)"; ctx.beginPath(); ctx.moveTo(px+24,py-16); ctx.lineTo(px+24,py-4); ctx.moveTo(px+18,py-10); ctx.lineTo(px+30,py-10); ctx.stroke();
+
+  if(w.rainforest>.04){
+    ctx.save();
+    ctx.globalAlpha*=clamp(w.rainforest*1.18,0,1);
+    ctx.fillStyle="rgba(12,56,28,.14)"; ctx.beginPath(); ctx.ellipse(x+8,y+5,52+groundNoise(seedX,seedY,20)*24,26+groundNoise(seedY,seedX,21)*12,groundNoise(seedX,seedY,22)*.9,0,TAU); ctx.fill();
+    drawLeafScatter(x+4,y-1,6+Math.floor(groundNoise(seedY,seedX,23)*5),34,"#2f6d3f");
+    if(groundNoise(seedX,seedY,24)>.52){
+      for(let i=0;i<3;i++){
+        const sx=x-18+i*12+(groundNoise(seedX,seedY,25+i)-.5)*6, sy=y+4+(groundNoise(seedY,seedX,28+i)-.5)*6;
+        ctx.strokeStyle="rgba(70,132,79,.42)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(sx,sy+10); ctx.quadraticCurveTo(sx-8,sy,sx,sy-13); ctx.quadraticCurveTo(sx+8,sy,sx,sy+10); ctx.stroke();
+      }
+    }
+    if(groundNoise(seedX,seedY,31)>.64){
+      const px2=x+18+(groundNoise(seedX,seedY,32)-.5)*8, py2=y+10+(groundNoise(seedY,seedX,33)-.5)*6;
+      ctx.fillStyle="rgba(93,146,168,.24)"; ctx.beginPath(); ctx.ellipse(px2,py2,14+groundNoise(seedX,seedY,34)*9,8+groundNoise(seedY,seedX,35)*4,groundNoise(seedX,seedY,36)*.7,0,TAU); ctx.fill();
+      ctx.strokeStyle="rgba(180,223,235,.30)"; ctx.lineWidth=1.1; ctx.beginPath(); ctx.ellipse(px2,py2,11,6,groundNoise(seedY,seedX,37)*.7,0,TAU); ctx.stroke();
+    }
+    if(groundNoise(seedX,seedY,38)>.55){ drawPebblePatch(x-18,y+14,2+Math.floor(groundNoise(seedY,seedX,39)*4),16,"#5f655d"); }
+    ctx.restore();
+  }
+
+  if(w.arctic>.05){
+    ctx.save();
+    ctx.globalAlpha*=clamp(w.arctic*1.1,0,1);
+    ctx.fillStyle="rgba(247,253,255,.50)"; ctx.beginPath(); ctx.ellipse(x-8,y+3,28,14,.1,0,TAU); ctx.fill();
+    ctx.strokeStyle="rgba(126,184,205,.36)"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(x-28,y+14); ctx.lineTo(x-12,y+6); ctx.lineTo(x+5,y+14); ctx.lineTo(x+20,y+2); ctx.stroke();
+    ctx.fillStyle="rgba(214,236,244,.72)"; ctx.beginPath(); ctx.arc(x+24,y-10,4.4,0,TAU); ctx.fill();
+    ctx.strokeStyle="rgba(173,210,226,.55)"; ctx.beginPath(); ctx.moveTo(x+24,y-16); ctx.lineTo(x+24,y-4); ctx.moveTo(x+18,y-10); ctx.lineTo(x+30,y-10); ctx.stroke();
+    if(groundNoise(seedX,seedY,40)>.56){ drawPebblePatch(x-4,y+18,2+Math.floor(groundNoise(seedY,seedX,41)*3),15,"#a3b3bc"); }
+    ctx.restore();
   }
 }
 function drawBackground() {
@@ -22094,10 +22150,11 @@ function drawBackground() {
       ctx.fillStyle=blendBiomeGroundColor(cx,cy);ctx.fillRect(xx,yy,tile+1,tile+1);
     }
   }
-  const startX=Math.floor(game.camX/170)*170,startY=Math.floor(game.camY/170)*170;
-  for(let y=startY;y<game.camY+H+170;y+=170){
-    for(let x=startX;x<game.camX+W+170;x+=170){
-      const px=x+110,py=y+110;if(!isInsideIsland(px,py,160))continue;
+  const decorStep=150,startX=Math.floor(game.camX/decorStep)*decorStep-decorStep,startY=Math.floor(game.camY/decorStep)*decorStep-decorStep;
+  for(let y=startY;y<game.camY+H+decorStep*2;y+=decorStep){
+    for(let x=startX;x<game.camX+W+decorStep*2;x+=decorStep){
+      if(groundNoise(x,y,99)<.22)continue;
+      const px=x+decorStep*.5,py=y+decorStep*.5;if(!isInsideIsland(px,py,165))continue;
       drawBiomeGroundDecor(px,py,x,y);
     }
   }
