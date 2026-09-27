@@ -192,6 +192,33 @@ function grantStarterPetEntitlement(a,type,stage="baby") {
   });
   return before!==after;
 }
+function grantStarterPetUnlockNormal(a,type,minStage="baby") {
+  if(!a || typeof a!=="object") return false;
+  const t=canonicalAccountPetType(type);
+  if(!t || !ACCOUNT_PET_TYPES.has(t)) return false;
+  const rawStage=safeText(minStage,24).toLowerCase();
+  const cleanStage=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,rawStage)?rawStage:"baby";
+  ensurePetProgressState(a);
+  if(!a.ownedStarters || typeof a.ownedStarters!=="object" || Array.isArray(a.ownedStarters))a.ownedStarters={};
+  if(!a.petStages || typeof a.petStages!=="object" || Array.isArray(a.petStages))a.petStages={};
+  if(!a.petStatUpgrades || typeof a.petStatUpgrades!=="object" || Array.isArray(a.petStatUpgrades))a.petStatUpgrades={};
+  if(!a.speciesCards || typeof a.speciesCards!=="object" || Array.isArray(a.speciesCards))a.speciesCards={};
+  const before=JSON.stringify({owned:!!a.ownedStarters[`start_${t}`],stage:a.petStages[t]||"baby",cards:a.speciesCards[t]||0,upgrades:a.petStatUpgrades[t]||{}});
+  a.ownedStarters[`start_${t}`]=true;
+  const current=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,a.petStages[t])?a.petStages[t]:"baby";
+  if(STARTER_PET_STAGE_RANK[cleanStage]>STARTER_PET_STAGE_RANK[current])a.petStages[t]=cleanStage;
+  else a.petStages[t]=current;
+  // Code unlocks never replace progression. Cards and stat upgrades remain exactly
+  // where the normal pet systems saved them; the code only unlocks ownership and
+  // can raise a pet to its promised minimum starting stage.
+  a.speciesCards[t]=Math.max(0,Math.floor(Number(a.speciesCards[t])||0));
+  if(!a.petStatUpgrades[t] || typeof a.petStatUpgrades[t]!=="object" || Array.isArray(a.petStatUpgrades[t]))a.petStatUpgrades[t]={};
+  for(const stat of ["health","defense","attack","weight","regen","speed"]){
+    a.petStatUpgrades[t][stat]=Math.max(0,Math.min(10,Math.floor(Number(a.petStatUpgrades[t][stat])||0)));
+  }
+  const after=JSON.stringify({owned:!!a.ownedStarters[`start_${t}`],stage:a.petStages[t]||"baby",cards:a.speciesCards[t]||0,upgrades:a.petStatUpgrades[t]||{}});
+  return before!==after;
+}
 function repairSpecialPromoEntitlements(a) {
   if(!a || typeof a!=="object") return false;
   let changed=false;
@@ -203,7 +230,7 @@ function repairSpecialPromoEntitlements(a) {
     if(Math.max(0,Math.floor(Number(a.testerRank)||0))!==1){a.testerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("#1 Tester")){a.unlockedTitles.push("#1 Tester");changed=true;}
-    if(grantStarterPetEntitlement(a,"saber","adult"))changed=true;
+    if(grantStarterPetUnlockNormal(a,"saber","adult"))changed=true;
     if(!a.specialRewardRepairs.sccttSaberCardsV1){
       const old=Math.max(0,Math.floor(Number(a.speciesCards.saber)||0));
       if(old<500){a.speciesCards.saber=500;changed=true;}
@@ -215,14 +242,14 @@ function repairSpecialPromoEntitlements(a) {
     if(Math.max(0,Math.floor(Number(a.ownerRank)||0))!==1){a.ownerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("Owner")){a.unlockedTitles.push("Owner");changed=true;}
-    if(grantStarterPetEntitlement(a,"snake","baby"))changed=true;
-    if(!a.specialRewardRepairs.ovccViperUnlockV3){
-      a.specialRewardRepairs.ovccViperUnlockV3=Date.now(); changed=true;
+    if(grantStarterPetUnlockNormal(a,"snake","adult"))changed=true;
+    if(!a.specialRewardRepairs.ovccViperNormalUnlockV4){
+      a.specialRewardRepairs.ovccViperNormalUnlockV4=Date.now(); changed=true;
     }
   }
   const hasSTC=codes.includes("STC");
   if(hasSTC){
-    if(grantStarterPetEntitlement(a,"saber","adult"))changed=true;
+    if(grantStarterPetUnlockNormal(a,"saber","adult"))changed=true;
     if(!Array.isArray(a.unlockedThemes))a.unlockedThemes=[];
     if(!a.unlockedThemes.includes("celestialCrown")){a.unlockedThemes.push("celestialCrown");changed=true;}
     if(!a.specialRewardRepairs.stcSaberCardsV2){
@@ -779,7 +806,7 @@ const PROMO_CODES = new Map([
     speciesCards: { saber: 500 },
     title: "#1 Tester",
     testerRank: 1,
-    starterPetEntitlement: { type: "saber", stage: "adult" },
+    starterPets: [{ type: "saber", stage: "adult" }],
     globalOnce: true,
     label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
   }],
@@ -788,28 +815,28 @@ const PROMO_CODES = new Map([
     speciesCards: { saber: 500 },
     title: "#1 Tester",
     testerRank: 1,
-    starterPetEntitlement: { type: "saber", stage: "adult" },
+    starterPets: [{ type: "saber", stage: "adult" }],
     globalOnce: true,
     label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
   }],
   ["OVCC", {
     title: "Owner",
     ownerRank: 1,
-    starterPetEntitlement: { type: "snake", stage: "baby" },
+    starterPets: [{ type: "snake", stage: "adult" }],
     globalOnce: true,
     label: "Viper starter pet unlocked and the Owner title"
   }],
   ["OVCC2", {
     title: "Owner",
     ownerRank: 1,
-    starterPetEntitlement: { type: "snake", stage: "baby" },
+    starterPets: [{ type: "snake", stage: "adult" }],
     globalOnce: true,
     label: "Viper starter pet unlocked and the Owner title"
   }],
   ["STC", {
     speciesCards: { saber: 500 },
     themes: ["celestialCrown"],
-    starterPetEntitlement: { type: "saber", stage: "adult" },
+    starterPets: [{ type: "saber", stage: "adult" }],
     globalOnce: true,
     label: "+500 Saber Cards, Adult Saber starter access, and the Celestial Crown theme"
   }]
@@ -821,13 +848,58 @@ function ensureRedeemedCodes(account) {
   if (!Array.isArray(account.redeemedCodes)) account.redeemedCodes = [];
   return account.redeemedCodes;
 }
+function addSpeciesCardsNormal(a,species,amount){
+  ensurePetProgressState(a);
+  const type=canonicalAccountPetType(species);
+  const qty=Math.max(0,Math.floor(Number(amount)||0));
+  if(!type || !qty)return false;
+  a.speciesCards[type]=Math.max(0,Math.floor(Number(a.speciesCards[type])||0)+qty);
+  return true;
+}
+function unlockThemesNormal(a,themes){
+  if(!Array.isArray(themes)||!themes.length)return false;
+  if(!Array.isArray(a.unlockedThemes))a.unlockedThemes=[];
+  const before=a.unlockedThemes.length;
+  a.unlockedThemes=[...new Set([...a.unlockedThemes,...themes.map(x=>safeText(x,40)).filter(Boolean)])].slice(0,100);
+  return a.unlockedThemes.length!==before;
+}
+function applyPromoRewardThroughNormalSystems(a,reward={}){
+  ensureGoldCubits(a); ensurePetProgressState(a); ensureTitleState(a);
+  if(Number.isFinite(Number(reward.goldCubits))&&Number(reward.goldCubits)>0)addGoldCubits(a,reward.goldCubits);
+  unlockThemesNormal(a,reward.themes);
+  if(reward.speciesCards&&typeof reward.speciesCards==="object"){
+    for(const [species,raw] of Object.entries(reward.speciesCards))addSpeciesCardsNormal(a,species,raw);
+  }
+  if(reward.title){
+    const grantedTitle=safeText(reward.title,32);
+    if(grantedTitle&&!a.unlockedTitles.includes(grantedTitle))a.unlockedTitles.push(grantedTitle);
+    if(!a.title&&grantedTitle)a.title=grantedTitle;
+  }
+  if(Number(reward.testerRank)>0)a.testerRank=Math.max(Math.max(0,Math.floor(Number(a.testerRank)||0)),Math.floor(Number(reward.testerRank)||0));
+  if(Number(reward.ownerRank)>0){
+    a.ownerRank=Math.max(Math.max(0,Math.floor(Number(a.ownerRank)||0)),Math.floor(Number(reward.ownerRank)||0));
+    if(!a.unlockedTitles.includes("Owner"))a.unlockedTitles.push("Owner");
+    if(!a.title)a.title="Owner";
+  }
+  const starterPets=Array.isArray(reward.starterPets)?reward.starterPets:[];
+  for(const pet of starterPets){
+    if(pet&&typeof pet==="object")grantStarterPetUnlockNormal(a,pet.type,pet.stage||"baby");
+  }
+  // Backward compatibility for any old code definition still using the legacy key.
+  // It is immediately converted into normal pet ownership/progression, never a
+  // separate code-only pet record.
+  if(reward.starterPetEntitlement&&typeof reward.starterPetEntitlement==="object"){
+    grantStarterPetUnlockNormal(a,reward.starterPetEntitlement.type,reward.starterPetEntitlement.stage||"baby");
+  }
+  return a;
+}
 
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "629", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "630", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
@@ -1196,36 +1268,7 @@ app.post("/api/redeem-code", requireAccount, async (req, res) => {
   const existingGlobalClaim = accountDb.globalCodeClaims[code];
   if (reward.globalOnce && existingGlobalClaim && existingGlobalClaim !== a.userId) return res.status(409).json({ ok:false, error:"code_already_claimed" });
 
-  if (Number.isFinite(Number(reward.goldCubits)) && Number(reward.goldCubits) > 0) {
-    addGoldCubits(a, reward.goldCubits);
-  }
-  if (Array.isArray(reward.themes) && reward.themes.length) {
-    if (!Array.isArray(a.unlockedThemes)) a.unlockedThemes = [];
-    a.unlockedThemes = [...new Set([...a.unlockedThemes, ...reward.themes.map(x=>safeText(x,40)).filter(Boolean)])].slice(0,100);
-  }
-  if (reward.speciesCards && typeof reward.speciesCards === "object") {
-    if (!a.speciesCards || typeof a.speciesCards !== "object") a.speciesCards = {};
-    for (const [species, raw] of Object.entries(reward.speciesCards)) {
-      const key=safeText(species,24).toLowerCase(), amount=Math.max(0,Math.floor(Number(raw)||0));
-      if (key && amount) a.speciesCards[key]=Math.max(0,Math.floor(Number(a.speciesCards[key])||0)+amount);
-    }
-  }
-  if (reward.title) {
-    ensureTitleState(a);
-    const grantedTitle = safeText(reward.title,32);
-    if (grantedTitle && !a.unlockedTitles.includes(grantedTitle)) a.unlockedTitles.push(grantedTitle);
-    if (!a.title && grantedTitle) a.title = grantedTitle;
-  }
-  if (Number(reward.testerRank)>0) a.testerRank=Math.max(0,Math.floor(Number(reward.testerRank)||0));
-  if (Number(reward.ownerRank)>0) {
-    a.ownerRank=Math.max(0,Math.floor(Number(reward.ownerRank)||0));
-    ensureTitleState(a);
-    if (!a.unlockedTitles.includes("Owner")) a.unlockedTitles.push("Owner");
-    a.title="Owner";
-  }
-  if (reward.starterPetEntitlement && typeof reward.starterPetEntitlement === "object") {
-    grantStarterPetEntitlement(a,reward.starterPetEntitlement.type,reward.starterPetEntitlement.stage);
-  }
+  applyPromoRewardThroughNormalSystems(a,reward);
   // Mark/repair special pet rewards idempotently. This also repairs older tester/owner claims.
   repairSpecialPromoEntitlements(a);
   if (reward.globalOnce) accountDb.globalCodeClaims[code]=a.userId;
