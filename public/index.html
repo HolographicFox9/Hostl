@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "626";
+const CUBE_SHARED_RULES_VERSION = "629";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -22020,11 +22020,55 @@ el("runShopBtn").addEventListener("click", () => toggleRunShop());
 el("closeRunShop").addEventListener("click", () => toggleRunShop(false));
 
 // ---------- drawing ----------
+function smoothstep01(t){ t=clamp(Number(t)||0,0,1); return t*t*(3-2*t); }
+function hexToRgbParts(hex){ const s=String(hex||"").replace("#",""); const n=parseInt((s.length===3?s.split("").map(ch=>ch+ch).join(""):s)||"000000",16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+function mixHex(a,b,t){ const ca=hexToRgbParts(a), cb=hexToRgbParts(b), q=clamp(Number(t)||0,0,1); return `rgb(${Math.round(lerp(ca.r,cb.r,q))},${Math.round(lerp(ca.g,cb.g,q))},${Math.round(lerp(ca.b,cb.b,q))})`; }
+function biomeBlendWeights(x,y){
+  const arctic=1-smoothstep01((y-(arcticBoundaryY(x)-540))/1080);
+  const forestRain=smoothstep01((x-(forestRainBoundaryX(y)-560))/1120);
+  const lowland=Math.max(0,1-arctic);
+  return { arctic, forest:lowland*(1-forestRain), rainforest:lowland*forestRain };
+}
+function blendBiomeGroundColor(x,y){
+  const ground={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2"};
+  const w=biomeBlendWeights(x,y);
+  const low=mixHex(ground.forest,ground.rainforest,w.rainforest/(Math.max(.001,w.forest+w.rainforest)));
+  return mixHex(low,ground.arctic,w.arctic);
+}
+function drawBiomeGroundDecor(px,py,seedX,seedY){
+  const w=biomeBlendWeights(px,py);
+  if(w.forest>.1){
+    const flowerCount=1+(((seedX*3+seedY*5)>>0)&1);
+    for(let i=0;i<flowerCount;i++){
+      const fx=px-24+i*18+(((seedX*11+seedY*7+i*13)%9)-4), fy=py+8+(((seedX*7+seedY*13+i*5)%11)-5);
+      ctx.fillStyle="rgba(74,112,58,.20)"; ctx.beginPath(); ctx.ellipse(fx,fy,16,10,0,0,TAU); ctx.fill();
+      ctx.strokeStyle="rgba(56,101,51,.42)"; ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(fx,fy+1); ctx.lineTo(fx,fy-9); ctx.stroke();
+      ctx.fillStyle=["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][(seedX+seedY+i)&3];
+      for(let p=0;p<5;p++){ const a=(p/5)*TAU; ctx.beginPath(); ctx.ellipse(fx+Math.cos(a)*3.2, fy-10+Math.sin(a)*3.2, 2.6,1.9,a,0,TAU); ctx.fill(); }
+      ctx.fillStyle="#f6d55b"; ctx.beginPath(); ctx.arc(fx,fy-10,1.7,0,TAU); ctx.fill();
+    }
+    ctx.strokeStyle="rgba(52,82,46,.30)"; ctx.lineWidth=1.05; ctx.beginPath(); ctx.moveTo(px+22,py+18); ctx.lineTo(px+16,py+7); ctx.lineTo(px+10,py+18); ctx.moveTo(px+31,py+15); ctx.lineTo(px+26,py+5); ctx.lineTo(px+20,py+15); ctx.stroke();
+  }
+  if(w.rainforest>.1){
+    ctx.fillStyle="rgba(12,56,28,.18)"; ctx.beginPath(); ctx.ellipse(px+5,py+4,48,28,.1,0,TAU); ctx.fill();
+    ctx.strokeStyle="rgba(76,138,78,.40)"; ctx.lineWidth=1.4;
+    for(let i=0;i<3;i++){
+      const sx=px-14+i*14, sy=py+6+((seedX+seedY+i*7)%6-3);
+      ctx.beginPath(); ctx.moveTo(sx,sy+10); ctx.quadraticCurveTo(sx-7,sy,sx,sy-12); ctx.quadraticCurveTo(sx+7,sy,sx,sy+10); ctx.stroke();
+    }
+    ctx.strokeStyle="rgba(26,89,53,.28)"; ctx.lineWidth=1.0; ctx.beginPath(); ctx.arc(px+26,py-8,10,.9,3.8); ctx.stroke();
+  }
+  if(w.arctic>.1){
+    ctx.fillStyle="rgba(247,253,255,.50)"; ctx.beginPath(); ctx.ellipse(px-8,py+3,28,14,.1,0,TAU); ctx.fill();
+    ctx.strokeStyle="rgba(126,184,205,.36)"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(px-28,py+14); ctx.lineTo(px-12,py+6); ctx.lineTo(px+5,py+14); ctx.lineTo(px+20,py+2); ctx.stroke();
+    ctx.fillStyle="rgba(214,236,244,.72)"; ctx.beginPath(); ctx.arc(px+24,py-10,4.4,0,TAU); ctx.fill();
+    ctx.strokeStyle="rgba(173,210,226,.55)"; ctx.beginPath(); ctx.moveTo(px+24,py-16); ctx.lineTo(px+24,py-4); ctx.moveTo(px+18,py-10); ctx.lineTo(px+30,py-10); ctx.stroke();
+  }
+}
 function drawBackground() {
   ctx.save();
   ctx.translate(-game.camX,-game.camY);
 
-  // Ocean exists around the entire circular island. It is terrain, not a wall object.
   ctx.fillStyle="#2c7fa2";
   ctx.fillRect(game.camX-80,game.camY-80,W+160,H+160);
   const waveStep=190,waveX=Math.floor(game.camX/waveStep)*waveStep-waveStep,waveY=Math.floor(game.camY/waveStep)*waveStep-waveStep;
@@ -22038,34 +22082,27 @@ function drawBackground() {
     }
   }
 
-  // Shallow coastal water + broken foam make the ocean read as water rather
-  // than a flat blue world border. The land is painted over the inside half.
   ctx.strokeStyle="rgba(70,181,202,.34)";ctx.lineWidth=300;traceIslandPath(-105);ctx.stroke();
   ctx.strokeStyle="rgba(169,231,239,.22)";ctx.lineWidth=90;traceIslandPath(-42);ctx.stroke();
   ctx.save();ctx.setLineDash([42,30]);ctx.lineDashOffset=-(game.time*8)%72;ctx.strokeStyle="rgba(238,252,252,.55)";ctx.lineWidth=4;traceIslandPath(-8);ctx.stroke();ctx.restore();
 
-  // Everything from here is clipped to the natural island silhouette.
   ctx.save();traceIslandPath(0);ctx.clip();
-  const biomeGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2"};
-  const tile=96,bx0=Math.floor(game.camX/tile)*tile-tile,by0=Math.floor(game.camY/tile)*tile-tile;
+  const tile=80,bx0=Math.floor(game.camX/tile)*tile-tile,by0=Math.floor(game.camY/tile)*tile-tile;
   for(let yy=by0;yy<game.camY+H+tile;yy+=tile){
     for(let xx=bx0;xx<game.camX+W+tile;xx+=tile){
       const cx=xx+tile*.5,cy=yy+tile*.5;if(!isInsideIsland(cx,cy,tile*.9))continue;
-      const biome=worldBiomeAt(cx,cy),base=biomeGround[biome]||biomeGround.forest;ctx.fillStyle=base;ctx.fillRect(xx,yy,tile+1,tile+1);
-      const boundary=forestRainBoundaryX(cy),near=Math.abs(cx-boundary);
-      if(biome!=="arctic"&&near<tile*1.2){const g=ctx.createLinearGradient(boundary-tile,0,boundary+tile,0);g.addColorStop(0,biomeGround.forest);g.addColorStop(1,biomeGround.rainforest);ctx.fillStyle=g;ctx.fillRect(xx,yy,tile+1,tile+1);}
+      ctx.fillStyle=blendBiomeGroundColor(cx,cy);ctx.fillRect(xx,yy,tile+1,tile+1);
     }
   }
-  // Small ground details make each biome readable without hard circular zones.
-  const startX=Math.floor(game.camX/180)*180,startY=Math.floor(game.camY/180)*180;
-  for(let y=startY;y<game.camY+H+180;y+=180){for(let x=startX;x<game.camX+W+180;x+=180){
-    const px=x+110,py=y+110;if(!isInsideIsland(px,py,160))continue;const biome=worldBiomeAt(px,py),ox=((x*13+y*7)%37)-18,oy=((x*5+y*11)%29)-14;
-    if(biome==="arctic"){ctx.fillStyle="rgba(247,253,255,.42)";ctx.beginPath();ctx.ellipse(px+ox,py+oy,54,26,.08,0,TAU);ctx.fill();ctx.strokeStyle="rgba(126,184,205,.34)";ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(px-24,py+18);ctx.lineTo(px-8,py+8);ctx.lineTo(px+9,py+16);ctx.lineTo(px+26,py+5);ctx.stroke();continue;}
-    const rain=biome==="rainforest";ctx.fillStyle=rain?"rgba(8,48,26,.33)":"rgba(57,88,49,.13)";ctx.beginPath();ctx.ellipse(px+ox,py+oy,rain?58:45,rain?34:27,.08,0,TAU);ctx.fill();ctx.strokeStyle=rain?"rgba(104,171,92,.34)":"rgba(41,67,36,.27)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+58,y+72);ctx.lineTo(x+53,y+63);ctx.moveTo(x+58,y+72);ctx.lineTo(x+59,y+60);ctx.moveTo(x+58,y+72);ctx.lineTo(x+65,y+64);ctx.stroke();
-  }}
+  const startX=Math.floor(game.camX/170)*170,startY=Math.floor(game.camY/170)*170;
+  for(let y=startY;y<game.camY+H+170;y+=170){
+    for(let x=startX;x<game.camX+W+170;x+=170){
+      const px=x+110,py=y+110;if(!isInsideIsland(px,py,160))continue;
+      drawBiomeGroundDecor(px,py,x,y);
+    }
+  }
   ctx.restore();
 
-  // A broad sandy shelf + damp green inner shelf makes the island edge read like coast, not a black wall.
   ctx.strokeStyle="#c7b77b";ctx.lineWidth=150;traceIslandPath(75);ctx.stroke();
   ctx.strokeStyle="rgba(57,91,52,.46)";ctx.lineWidth=34;traceIslandPath(166);ctx.stroke();
   ctx.restore();
@@ -25837,7 +25874,18 @@ function claimDailyServs() {
 }
 function isPetUnlocked(type) {
   if (PET_TYPES[type] && PET_TYPES[type].startUnlock) return true;
-  return !!meta.ownedStarters["start_" + type];
+  const key = "start_" + type;
+  if (!!meta.ownedStarters[key]) return true;
+  if (type === "snake" && (Math.max(0, Math.floor(Number(accountState?.ownerRank) || 0)) >= 1 || Math.max(0, Math.floor(Number(player?.ownerRank) || 0)) >= 1)) return true;
+  if (type === "saber" && (Math.max(0, Math.floor(Number(accountState?.testerRank) || 0)) >= 1 || Math.max(0, Math.floor(Number(player?.testerRank) || 0)) >= 1)) return true;
+  const up = (meta.petStatUpgrades && meta.petStatUpgrades[type] && typeof meta.petStatUpgrades[type] === "object") ? meta.petStatUpgrades[type] : null;
+  if (up) {
+    let total = 0;
+    for (const v of Object.values(up)) total += Math.max(0, Math.floor(Number(v) || 0));
+    if (total > 0) return true;
+  }
+  if (String(meta.starterPetType || "") === String(type || "")) return true;
+  return false;
 }
 function openPetShop() {
   if (game.started && !game.over) return;
@@ -26349,11 +26397,18 @@ function buildOwnedStarterPetList() {
     } else {
       const info = PET_TYPES[type];
       const stage = starterStageFor(type);
+      const upgradeLevels=ensurePetStatUpgrades(type);
+      const totalUpgrades=Object.values(upgradeLevels).reduce((n,v)=>n+Math.max(0,Math.floor(Number(v)||0)),0);
+      const cards=Math.max(0,Math.floor(Number(meta.speciesCards?.[type])||0));
+      const progressBits=[];
+      if(selected)progressBits.push("Selected");
+      progressBits.push(`${cards} Cards`);
+      progressBits.push(`${totalUpgrades} Upgrades`);
       btn.innerHTML = `
         <span class="pet-ico">${info.emoji}</span>
         <span class="pet-name">${info.name}</span>
         <span class="pet-stage">${stageDisplayName(stage)}</span>
-        <span class="pet-note">${selected ? "Selected" : "Click to start with this pet"}</span>
+        <span class="pet-note">${progressBits.join(" · ")}</span>
       `;
     }
 
@@ -26876,6 +26931,21 @@ window.__hostlSetGameGoldCubits = function(value) {
   return next;
 };
 
+function schedulePetAccountUiRefresh(){
+  const refresh=()=>{
+    try{ restoreStarterPetPreference(); }catch(_){}
+    try{ buildPetShop(); }catch(_){}
+    try{ buildCardInventory(); }catch(_){}
+    try{ buildOwnedStarterPetList(); }catch(_){}
+    try{ updateSelectedStarterPetLabel(); }catch(_){}
+    try{ syncStarterPetSetup(false); }catch(_){}
+  };
+  try{ refresh(); }catch(_){}
+  try{ requestAnimationFrame(()=>{ try{ refresh(); }catch(_){} }); }catch(_){}
+  setTimeout(()=>{ try{ refresh(); }catch(_){} },60);
+  setTimeout(()=>{ try{ refresh(); }catch(_){} },220);
+}
+
 window.__hostlApplyAccountEntitlements = function(payload={}) {
   try {
     // While signed in, the server snapshot is the source of truth. Replace account
@@ -26920,6 +26990,10 @@ window.__hostlApplyAccountEntitlements = function(payload={}) {
       const old=normalizePetCardStage(meta.petStages[ent.type]||"baby");
       if((ranks[st]??0)>(ranks[old]??0)) meta.petStages[ent.type]=st;
     }
+    const snakeUp = meta.petStatUpgrades?.snake && typeof meta.petStatUpgrades.snake === "object" ? Object.values(meta.petStatUpgrades.snake).reduce((n,v)=>n+Math.max(0,Math.floor(Number(v)||0)),0) : 0;
+    const saberUp = meta.petStatUpgrades?.saber && typeof meta.petStatUpgrades.saber === "object" ? Object.values(meta.petStatUpgrades.saber).reduce((n,v)=>n+Math.max(0,Math.floor(Number(v)||0)),0) : 0;
+    if (Math.max(0, Math.floor(Number(payload.ownerRank) || 0)) >= 1 || snakeUp > 0) meta.ownedStarters.start_snake = true;
+    if (Math.max(0, Math.floor(Number(payload.testerRank) || 0)) >= 1 || saberUp > 0) meta.ownedStarters.start_saber = true;
 
     meta.starterPetType=String(payload.starterPetType||"");
     meta.starterPetName=String(payload.starterPetName||"");
@@ -26939,14 +27013,30 @@ window.__hostlApplyAccountEntitlements = function(payload={}) {
     player.testerRank=Math.max(0,Math.floor(Number(payload.testerRank)||0));
     player.ownerRank=Math.max(0,Math.floor(Number(payload.ownerRank)||0));
     saveMeta();
+    // Pet UI refresh is deliberately independent from setupHome. During first page
+    // load Home can still be finishing its boot render; that must never prevent
+    // owned pets/cards/stages/upgrades from appearing immediately.
     try{ restoreStarterPetPreference(); }catch(_){}
     try{ setupHome(); }catch(_){}
-    try{buildPetShop();buildCardInventory();updateSelectedStarterPetLabel();}catch(_){}
+    schedulePetAccountUiRefresh();
     return {ok:true};
   } catch(err) {
     console.error("HOSTL account entitlement bridge failed:", err);
+    schedulePetAccountUiRefresh();
     return {ok:false,error:String(err?.message||err)};
   }
+};
+
+window.__hostlRefreshPetAccountUi = function(){
+  schedulePetAccountUiRefresh();
+  // If a starter is already selected while the multiplayer preview room is live,
+  // ask the server to refresh that same pet from the newest account stage/stats.
+  try{
+    if(net?.room && game.startPet && isPetUnlocked(game.startPet)){
+      net.room.send("ensureStarterPet",{type:game.startPet,stage:starterStageFor(game.startPet),petName:starterPetNameValue(),gender:starterPetGenderValue()});
+    }
+  }catch(_){}
+  return true;
 };
 
 // boot
@@ -26960,6 +27050,7 @@ async function bootHostlGame() {
     initWorld();
     game.homeCamReady=false;game.camX=ISLAND_CX-W*.5;game.camY=ISLAND_CY-H*.5;pickHomeCameraTarget(true);
     buildHotbar();setupHome();updatePlayAvailability();
+    schedulePetAccountUiRefresh();
     requestAnimationFrame(frame);
     if(net.enabled&&!net.room&&!net.connecting)setTimeout(()=>connectMultiplayer({silent:true}),0);
   }catch(err){console.error("HOSTL boot recovered from an error:",err);try{requestAnimationFrame(frame);}catch(_){}
@@ -27068,6 +27159,12 @@ async function saveStarterPetPreferenceNow(){
   }catch(_){return false;}
 }
 
+function refreshPetAccountUiImmediate(){
+  // The game UI lives inside the gameplay IIFE. Use its exported bridge so account
+  // responses can refresh the pet picker immediately without waiting for reload.
+  try{ window.__hostlRefreshPetAccountUi?.(); }catch(_){}
+}
+
 function setAccountFromServer(p={}) {
   if(p?.recoveryToken) rememberAccountRecoveryToken(p.recoveryToken);
   window.__hostlAccountSessionActive = true;
@@ -27111,6 +27208,7 @@ function setAccountFromServer(p={}) {
     const homeUser=document.getElementById("username");
     if(homeUser && !window.__hostlUsernameDirty && document.activeElement!==homeUser) homeUser.value=meta.username;
     applyAccountGameEntitlements();
+    refreshPetAccountUiImmediate();
   } catch (err) { console.warn("HOSTL entitlement bridge error:", err); }
   // Account snapshots must not recursively trigger /api/friends. The friends loop
   // already handles presence/polling after login. Recursing here repeatedly replaced
@@ -27665,13 +27763,13 @@ async function redeemPromoCode() {
     const data=await r.json().catch(()=>({}));
     if(r.status===401){ logoutAccount(false); out.textContent="Your sign-in expired. Sign in again."; out.classList.add("error"); return; }
     if(!r.ok){
-      if(data?.account){ setAccountFromServer(data.account); saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); renderMaterialsAndRecipes(); try{setupHome();buildPetShop();buildCardInventory();buildOwnedStarterPetList();updateSelectedStarterPetLabel();}catch(_){} }
+      if(data?.account){ setAccountFromServer(data.account); saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); renderMaterialsAndRecipes(); try{window.__hostlRefreshPetAccountUi?.();}catch(_){} }
       const messages={invalid_code:"That code is not valid.",already_redeemed:data?.repaired?"That code was already redeemed. Its missing special pet rewards were repaired.":"You already redeemed that code.",code_already_claimed:"That special code has already been claimed.",missing_code:"Type a code first."};
       out.textContent=messages[data?.error]||"That code could not be redeemed."; out.classList.add(data?.repaired?"success":"error"); return;
     }
     if(data?.account) setAccountFromServer(data.account);
     saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); syncPromoCodeUi(); renderMaterialsAndRecipes();
-    try{setupHome();buildPetShop();buildCardInventory();buildOwnedStarterPetList();updateSelectedStarterPetLabel();}catch(_){}
+    try{window.__hostlRefreshPetAccountUi?.();}catch(_){}
     input.value="";
     out.textContent=data?.message||"Code redeemed!"; out.classList.add("success");
   }catch(_){ out.textContent="Could not reach the HOSTL server. Try again."; out.classList.add("error"); }

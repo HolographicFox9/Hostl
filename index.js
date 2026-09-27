@@ -215,11 +215,9 @@ function repairSpecialPromoEntitlements(a) {
     if(Math.max(0,Math.floor(Number(a.ownerRank)||0))!==1){a.ownerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("Owner")){a.unlockedTitles.push("Owner");changed=true;}
-    if(grantStarterPetEntitlement(a,"snake","adult"))changed=true;
-    if(!a.specialRewardRepairs.ovccViperCardsV2){
-      const old=Math.max(0,Math.floor(Number(a.speciesCards.snake)||0));
-      if(old<500){a.speciesCards.snake=500;changed=true;}
-      a.specialRewardRepairs.ovccViperCardsV2=Date.now(); changed=true;
+    if(grantStarterPetEntitlement(a,"snake","baby"))changed=true;
+    if(!a.specialRewardRepairs.ovccViperUnlockV3){
+      a.specialRewardRepairs.ovccViperUnlockV3=Date.now(); changed=true;
     }
   }
   const hasSTC=codes.includes("STC");
@@ -795,22 +793,18 @@ const PROMO_CODES = new Map([
     label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
   }],
   ["OVCC", {
-    goldCubits: 10000,
-    speciesCards: { snake: 500 },
     title: "Owner",
     ownerRank: 1,
-    starterPetEntitlement: { type: "snake", stage: "adult" },
+    starterPetEntitlement: { type: "snake", stage: "baby" },
     globalOnce: true,
-    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
+    label: "Viper starter pet unlocked and the Owner title"
   }],
   ["OVCC2", {
-    goldCubits: 10000,
-    speciesCards: { snake: 500 },
     title: "Owner",
     ownerRank: 1,
-    starterPetEntitlement: { type: "snake", stage: "adult" },
+    starterPetEntitlement: { type: "snake", stage: "baby" },
     globalOnce: true,
-    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
+    label: "Viper starter pet unlocked and the Owner title"
   }],
   ["STC", {
     speciesCards: { saber: 500 },
@@ -833,7 +827,7 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "627", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "629", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
