@@ -725,22 +725,24 @@
 
   /* Bottom center stays for inventory selection; controls stay clear on both edges. */
   body.mobile-performance #bottomDock{
-    left:50%;bottom:calc(var(--phone-bottom) + 2px);min-width:0;width:min(68vw,420px);max-width:calc(100vw - 128px);
-    gap:4px;padding:5px 6px;border-radius:12px;backdrop-filter:none;-webkit-backdrop-filter:none;
-    align-items:stretch;
+    left:50%;bottom:calc(var(--phone-bottom) + 2px);min-width:0;width:min(62vw,360px);max-width:calc(100vw - 138px);
+    gap:3px;padding:4px 5px;border-radius:11px;backdrop-filter:none;-webkit-backdrop-filter:none;
+    align-items:stretch;background:rgba(92,111,78,.48);border-color:rgba(27,33,25,.68);
+    box-shadow:0 4px 0 rgba(57,71,47,.48),0 8px 16px rgba(0,0,0,.16),inset 0 1px 0 rgba(239,244,204,.18);
   }
-  body.mobile-performance #resourceStrip{gap:4px;padding-left:0;justify-content:center;}
-  body.mobile-performance .dock-res{gap:2px;font-size:9px;padding:2px 5px;}
+  body.mobile-performance #resourceStrip{gap:3px;padding-left:0;justify-content:center;}
+  body.mobile-performance .dock-res{gap:2px;font-size:8px;padding:1px 4px;background:rgba(226,215,173,.58);}
   body.mobile-performance .dock-res .ico{font-size:10px;}
   body.mobile-performance .cubit-token{width:9px;height:9px;}
   body.mobile-performance #skillHud{padding:0 1px;}
   body.mobile-performance #skillHudTop{font-size:8px;margin-bottom:2px;}
   body.mobile-performance #skillHudTop b{font-size:9px;}
   body.mobile-performance #skillTrack{height:8px;border-width:1px;}
-  body.mobile-performance #hotbar{width:100%;max-width:100%;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+  body.mobile-performance #hotbar{width:100%;max-width:100%;gap:3px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
   body.mobile-performance #hotbar::-webkit-scrollbar{display:none;}
-  body.mobile-performance .slot{flex:0 0 44px;width:44px;height:44px;border-radius:8px;border-width:1px;}
-  body.mobile-performance .slot .ico{width:22px;height:22px;}
+  body.mobile-performance .slot{flex:0 0 38px;width:38px;height:38px;border-radius:7px;border-width:1px;background:rgba(86,107,75,.58);box-shadow:inset 0 1px 0 rgba(231,239,198,.14),0 2px 0 rgba(53,65,46,.55);}
+  body.mobile-performance .slot.active{background:rgba(138,120,71,.68);box-shadow:inset 0 0 0 2px rgba(226,189,85,.9),0 2px 0 rgba(91,70,32,.58);}
+  body.mobile-performance .slot .ico{width:19px;height:19px;}
   body.mobile-performance .slot .key{font-size:8px;left:3px;top:1px;}
   body.mobile-performance .slot .cost,
   body.mobile-performance .slot .label{font-size:7px;}
@@ -805,7 +807,7 @@
     body.mobile-performance #bottomDock{width:66vw;max-width:calc(100vw - 122px);}
     body.mobile-performance #resourceStrip{gap:3px;}
     body.mobile-performance .dock-res{font-size:8px;padding:2px 4px;}
-    body.mobile-performance .slot{flex-basis:42px;width:42px;height:42px;}
+    body.mobile-performance .slot{flex-basis:36px;width:36px;height:36px;}
     body.mobile-performance .joy-base{width:98px;height:98px;bottom:calc(var(--phone-bottom) + 86px);}
     body.mobile-performance .joy-knob{width:43px;height:43px;}
     body.mobile-performance #mAttack{width:62px;height:62px;}
@@ -837,8 +839,8 @@
     }
     body.mobile-performance #resourceStrip{gap:3px;}
     body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
-    body.mobile-performance .slot{flex-basis:40px;width:40px;height:40px;}
-    body.mobile-performance .slot .ico{width:20px;height:20px;}
+    body.mobile-performance .slot{flex-basis:35px;width:35px;height:35px;}
+    body.mobile-performance .slot .ico{width:18px;height:18px;}
 
     body.mobile-performance .joy-base{
       left:calc(var(--phone-left) + 4px);bottom:calc(var(--phone-bottom) + 5px);width:92px;height:92px;
@@ -6172,14 +6174,20 @@ const MOBILE_DEVICE_HINT = !!(
   (navigator.maxTouchPoints || 0) > 0
 );
 let W = 0, H = 0;
-let DPR = Math.min(window.devicePixelRatio || 1, MOBILE_DEVICE_HINT ? 1.18 : 1.5);
+// Phone GPUs pay heavily for oversized canvas backing buffers. A 1x gameplay
+// canvas keeps touch devices smooth while desktop still gets modest HiDPI detail.
+let DPR = Math.min(window.devicePixelRatio || 1, MOBILE_DEVICE_HINT ? 1.0 : 1.5);
+const PERF_PARTICLE_CAP = MOBILE_DEVICE_HINT ? 360 : 900;
+const PERF_PARTICLE_SOFT_CAP = MOBILE_DEVICE_HINT ? 280 : 700;
+const PERF_FLOAT_CAP = MOBILE_DEVICE_HINT ? 90 : 140;
+const PERF_ABILITY_FX_CAP = MOBILE_DEVICE_HINT ? 80 : 120;
 let vignetteGradient = null;
 let resizeRaf = 0;
 
 function resize(force = false) {
   const nextW = Math.max(1, Math.round(window.innerWidth));
   const nextH = Math.max(1, Math.round(window.innerHeight));
-  const nextDpr = Math.min(window.devicePixelRatio || 1, MOBILE_DEVICE_HINT ? 1.18 : 1.5);
+  const nextDpr = Math.min(window.devicePixelRatio || 1, MOBILE_DEVICE_HINT ? 1.0 : 1.5);
 
   // Mobile address bars can produce a stream of 1px-2px changes. Do not
   // reallocate the entire backing canvas for tiny changes.
@@ -6209,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "624";
+const CUBE_SHARED_RULES_VERSION = "625";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6249,9 +6257,9 @@ const AXE_SPECIALIZATIONS = [
   {id:"battleAxe",icon:"⚔️",name:"Battle Axe",desc:"Good: Damage • Bad: Gathering"}
 ];
 const SKILL_MILESTONE_CHOICES = [
-  {id:"speed",icon:"💨",name:"Move Faster",desc:"+8% survivor movement speed. Stacks every time you choose it."},
-  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"+8% damage from your survivor's melee attacks and bow shots. Stacks."},
-  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Take 8% less damage. Stacks with armor and other defense bonuses."}
+  {id:"speed",icon:"💨",name:"Move Faster",desc:"Good: Speed • Bad: None"},
+  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"Good: Damage • Bad: None"},
+  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Good: Defense • Bad: None"}
 ];
 
 function currentCraftables(){
@@ -9006,6 +9014,32 @@ function saveMeta() {
 let meta = loadMeta();
 // Old browser-wide achievement records are intentionally ignored from this build onward.
 meta.achievements = {};
+
+function cleanGuestMetaProfile(){
+  const speciesCards={},petStages={},petStatUpgrades={};
+  for(const type of Object.keys(PET_TYPES||{})){
+    speciesCards[type]=0;
+    petStages[type]="baby";
+    petStatUpgrades[type]={health:0,defense:0,attack:0,weight:0,regen:0,speed:0};
+  }
+  return {
+    servs:5,username:"Cube",color:COLORS[0],ownedStarters:{},speciesCards,petStages,petStatUpgrades,
+    achievements:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",lastDaily:null
+  };
+}
+function resetMetaForGuestProfile(){
+  meta=cleanGuestMetaProfile();
+  try{
+    game.startPet=null;game.startPetName="";game.startPetGender="Male";game.startPetCustomizationType="";
+  }catch(_){}
+  try{window.__hostlSetGameGoldCubits?.(5);}catch(_){}
+  saveMeta();
+  try{buildPetShop();}catch(_){}
+  try{buildStarterShop();}catch(_){}
+  try{syncStarterPetSelectionFromMeta();}catch(_){}
+  return meta;
+}
+window.__hostlResetGuestProfile = resetMetaForGuestProfile;
 
 // ---------- achievements ----------
 const ACHIEVEMENT_SPECIES = Object.keys(PET_TYPES);
@@ -16720,8 +16754,8 @@ function updateHomeAnimals(dt) {
 
 // ---------- particles ----------
 function spark(x, y, color, n = 6, speed = 120) {
-  if (particles.length > 700) n = Math.min(n, 2);
-  for (let i = 0; i < n && particles.length < 900; i++) {
+  if (particles.length > PERF_PARTICLE_SOFT_CAP) n = Math.min(n, MOBILE_DEVICE_HINT ? 1 : 2);
+  for (let i = 0; i < n && particles.length < PERF_PARTICLE_CAP; i++) {
     const a = rand(0, TAU);
     particles.push({
       x, y, vx: Math.cos(a) * rand(20, speed), vy: Math.sin(a) * rand(20, speed),
@@ -16731,8 +16765,9 @@ function spark(x, y, color, n = 6, speed = 120) {
 }
 function stardust(x, y, n = 34, speed = 145) {
   const colors = ["#fff7d6", "#ffd6ea", "#ff9fc6", "#ffd76a", "#ffffff"];
-  if (particles.length > 720) n = Math.min(n, 12);
-  for (let i = 0; i < n && particles.length < 900; i++) {
+  if (MOBILE_DEVICE_HINT) n = Math.min(n, 16);
+  if (particles.length > PERF_PARTICLE_SOFT_CAP) n = Math.min(n, MOBILE_DEVICE_HINT ? 6 : 12);
+  for (let i = 0; i < n && particles.length < PERF_PARTICLE_CAP; i++) {
     const a = rand(0, TAU), sp = rand(35, speed), life = rand(0.48, 0.92);
     particles.push({
       x:x+rand(-5,5), y:y+rand(-5,5), vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-rand(4,28),
@@ -20612,9 +20647,10 @@ function updateTime(dt) {
 
 function trimRuntimeLists() {
   // Hard ceilings prevent effects/projectiles from ever growing into a freeze.
-  if (particles.length > 900) particles.splice(0, particles.length - 900);
-  if (floaters.length > 140) floaters.splice(0, floaters.length - 140);
-  if (abilityFx.length > 120) abilityFx.splice(0, abilityFx.length - 120);
+  // Mobile keeps smaller visual-only pools; combat/simulation entities are unchanged.
+  if (particles.length > PERF_PARTICLE_CAP) particles.splice(0, particles.length - PERF_PARTICLE_CAP);
+  if (floaters.length > PERF_FLOAT_CAP) floaters.splice(0, floaters.length - PERF_FLOAT_CAP);
+  if (abilityFx.length > PERF_ABILITY_FX_CAP) abilityFx.splice(0, abilityFx.length - PERF_ABILITY_FX_CAP);
   if (projectiles.length > 260) projectiles.splice(0, projectiles.length - 260);
   if (petBlasts.length > 220) petBlasts.splice(0, petBlasts.length - 220);
 
@@ -21629,9 +21665,22 @@ function pendingWeaponSkillChoice(){
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
   return lv>=6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe") && !player.skillWeaponChoice;
 }
+function skillLevelUsesWeaponChoice(level){
+  return Math.floor(Number(level)||0)===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe");
+}
 function pendingSkillMilestone(){
+  // Every skill number earned gets one choice. Special branch levels replace
+  // the normal boost choice instead of adding a second popup for that level.
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
-  for(let m=10;m<=lv;m+=10) if(!player.skillMilestones?.[m]) return m;
+  player.skillMilestones=player.skillMilestones||{};
+  for(let m=1;m<=lv;m++){
+    if(m===2){ if(!player.skillStoneChoice)return 2; continue; }
+    if(m===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
+      if(!player.skillWeaponChoice)return 6;
+      continue;
+    }
+    if(!player.skillMilestones[m])return m;
+  }
   return 0;
 }
 function animateSkillHud(kind="gain"){
@@ -21648,11 +21697,12 @@ function updateSkillHud(){
 function updateCraftSkillUi(){ updateSkillHud(); }
 function syncSkillMilestonePrompt(){
   if(!game.started||game.over)return;
-  if(pendingStoneSkillChoice()){showSkillChoice(2);return;}
-  if(pendingWeaponSkillChoice()){showSkillChoice(6);return;}
-  const pending=Math.max(0,Math.floor(Number(player.pendingSkillMilestone)||0))||pendingSkillMilestone();
+  const localPending=pendingSkillMilestone();
+  const serverPending=Math.max(0,Math.floor(Number(player.pendingSkillMilestone)||0));
+  const pending=net.room?(serverPending||localPending):localPending;
   player.pendingSkillMilestone=pending;
   if(pending)showSkillChoice(pending);
+  else if(el("skillChoiceOverlay"))el("skillChoiceOverlay").style.display="none";
 }
 function gainSkillXp(amount,reason=""){
   amount=Math.max(0,Number(amount)||0);
@@ -21715,11 +21765,10 @@ function showSkillChoice(milestone){
     el("skillChoiceLead").textContent="Pick one.";
     choices=sword?SWORD_SPECIALIZATIONS:AXE_SPECIALIZATIONS;
   }else{
-    milestone=Math.max(10,milestone);
+    milestone=Math.max(1,milestone);
     if(player.skillMilestones?.[milestone])return;
     el("skillChoiceTitle").textContent=`Skill ${milestone} — Choose a Boost`;
-    const r=player.skillRanks||{speed:0,strength:0,defense:0};
-    el("skillChoiceLead").textContent=`Pick one lasting boost. Current picks — Speed ${r.speed||0}, Strength ${r.strength||0}, Defense ${r.defense||0}.`;
+    el("skillChoiceLead").textContent="Pick one.";
     choices=SKILL_MILESTONE_CHOICES;
   }
   grid.innerHTML="";
@@ -21741,14 +21790,14 @@ function chooseSkillUpgrade(milestone,id,name){
     syncSkillMilestonePrompt();
     return;
   }
-  if(milestone===6){
-    const valid=player.skillStoneChoice==="stoneSword"?["daggers","longSword","spear"]:player.skillStoneChoice==="stoneAxe"?["doubleAxe","throwingAxe","battleAxe"]:[];
+  if(milestone===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
+    const valid=player.skillStoneChoice==="stoneSword"?["daggers","longSword","spear"]:["doubleAxe","throwingAxe","battleAxe"];
     if(!valid.includes(id)||player.skillWeaponChoice)return;
     if(net.room){try{net.room.send("skillChoice",{milestone:6,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
     applyWeaponSkillChoice(id,true);el("skillChoiceOverlay").style.display="none";syncSkillMilestonePrompt();return;
   }
-  milestone=Math.max(10,milestone);
-  if(!["speed","strength","defense"].includes(id)||player.skillMilestones?.[milestone])return;
+  milestone=Math.max(1,milestone);
+  if(!["speed","strength","defense"].includes(id)||player.skillMilestones?.[milestone]||milestone>Math.max(0,Math.floor(Number(player.skillLevel)||0)))return;
   if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
   player.skillMilestones=player.skillMilestones||{};
   player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};
@@ -23797,7 +23846,7 @@ function drawAnimalUnsafe(a) {
     ctx.fillRect(a.x - bw / 2, a.y - a.r - 14, bw * ratio, 5);
   }
   // elemental walk trail
-  if (!a.sleeping && !a.dead && particles.length < 700 && (a._moved || Math.random() < 0.14)) {
+  if (!a.sleeping && !a.dead && particles.length < PERF_PARTICLE_SOFT_CAP && (a._moved || Math.random() < (MOBILE_DEVICE_HINT ? 0.05 : 0.14))) {
     const col = ELEM_GLOW[(PET_TYPES[a.type] || {}).elem] || a.coat || "#efe6d2";
     particles.push({
       x: a.x + rand(-4, 4), y: a.y + rand(-4, 4),
@@ -25341,7 +25390,7 @@ function draw(menuMode = false) {
 
   if (!menuMode) {
     const mmNow = performance.now();
-    if (mmNow - lastMinimapDrawAt >= 80) {
+    if (mmNow - lastMinimapDrawAt >= (MOBILE_DEVICE_HINT ? 140 : 80)) {
       lastMinimapDrawAt = mmNow;
       drawMinimap();
     }
@@ -27174,8 +27223,9 @@ async function restoreAccountSession() {
     accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
     window.__hostlThemeAccountState={loggedIn:false,unlockedThemes:[],goldCubits:0};
     try { window.__hostlRefreshThemeAccess?.(); } catch(_) {}
-    // Guest mode has its own clean starting balance and must never inherit account Gold Cubits.
-    try { window.__hostlSetGameGoldCubits?.(5); saveMeta(); } catch (_) {}
+    // Guest mode is a clean profile. Never inherit any account starter gear,
+    // pet progress, permanent perks, selected pet, cards, or Gold Cubits.
+    try { window.__hostlResetGuestProfile?.(); } catch (_) {}
     saveAccountSession();
     syncAccountUi();
   }
@@ -27753,7 +27803,7 @@ function logoutAccount(showMessage=true) {
   hostlSessionToken="";
   window.__hostlAccountSessionActive = false;
   accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
-  try { window.__hostlSetGameGoldCubits?.(5); saveMeta(); } catch (_) {}
+  try { window.__hostlResetGuestProfile?.(); } catch (_) {}
   saveAccountSession();
   try { google?.accounts?.id?.disableAutoSelect?.(); } catch (_) {}
   syncAccountUi(showMessage ? "Logged out. Guest mode starts with 5 Gold Cubits." : "");
@@ -28278,6 +28328,6 @@ setTimeout(()=>{
 })();
 </script>
 
-<div id="hostlBuildStamp" style="position:fixed;right:8px;bottom:7px;z-index:99999;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.08em;color:rgba(255,255,255,.78);background:rgba(15,18,16,.58);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 6px;pointer-events:none">HOSTL GAME 663 • RULES 624</div>
+<div id="hostlBuildStamp" style="position:fixed;right:8px;bottom:7px;z-index:99999;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.08em;color:rgba(255,255,255,.78);background:rgba(15,18,16,.58);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 6px;pointer-events:none">HOSTL GAME 663 • RULES 625</div>
 </body>
 </html>

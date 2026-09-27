@@ -12,7 +12,7 @@ const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "624";
+const CUBE_SHARED_RULES_VERSION = "625";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -2288,7 +2288,13 @@ export class WorldRoom extends Room {
     return s;
   }
   pendingSkillMilestone(s){
-    for(let m=10;m<=Math.max(0,Math.floor(Number(s?.level)||0));m+=10)if(!s.milestones?.[m])return m;
+    const level=Math.max(0,Math.floor(Number(s?.level)||0));
+    if(!s.milestones||typeof s.milestones!=="object")s.milestones={};
+    for(let m=1;m<=level;m++){
+      if(m===2){if(!s.stoneChoice)return 2;continue;}
+      if(m===6&&(s.stoneChoice==="stoneSword"||s.stoneChoice==="stoneAxe")){if(!s.weaponChoice)return 6;continue;}
+      if(!s.milestones[m])return m;
+    }
     return 0;
   }
   skillSnapshot(ownerId){
@@ -2309,16 +2315,19 @@ export class WorldRoom extends Room {
   handleSkillChoice(client,data={}){
     const s=this.skillState(client.sessionId),pending=this.pendingSkillMilestone(s);
     const milestone=Math.max(0,Math.floor(Number(data.milestone)||0)),choice=String(data.choice||"");
+    // Choices are consumed in skill-number order. If XP jumps multiple levels,
+    // the player receives each missed choice one after another instead of losing it.
+    if(!pending||milestone!==pending){this.sendSkillState(client.sessionId);return;}
     if(milestone===2){
-      if(s.level<2||s.stoneChoice||!["stoneWall","stoneSword","stoneAxe"].includes(choice)){this.sendSkillState(client.sessionId);return;}
+      if(s.stoneChoice||!["stoneWall","stoneSword","stoneAxe"].includes(choice)){this.sendSkillState(client.sessionId);return;}
       s.stoneChoice=choice;this.sendSkillState(client.sessionId);return;
     }
-    if(milestone===6){
-      const valid=s.stoneChoice==="stoneSword"?["daggers","longSword","spear"]:s.stoneChoice==="stoneAxe"?["doubleAxe","throwingAxe","battleAxe"]:[];
-      if(s.level<6||s.weaponChoice||!valid.includes(choice)){this.sendSkillState(client.sessionId);return;}
+    if(milestone===6&&(s.stoneChoice==="stoneSword"||s.stoneChoice==="stoneAxe")){
+      const valid=s.stoneChoice==="stoneSword"?["daggers","longSword","spear"]:["doubleAxe","throwingAxe","battleAxe"];
+      if(s.weaponChoice||!valid.includes(choice)){this.sendSkillState(client.sessionId);return;}
       s.weaponChoice=choice;this.sendSkillState(client.sessionId);return;
     }
-    if(!pending||milestone!==pending||!["speed","strength","defense"].includes(choice)){this.sendSkillState(client.sessionId);return;}
+    if(!["speed","strength","defense"].includes(choice)){this.sendSkillState(client.sessionId);return;}
     s.milestones[milestone]=choice;s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;this.sendSkillState(client.sessionId);
   }
 
