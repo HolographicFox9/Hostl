@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "630";
+const CUBE_SHARED_RULES_VERSION = "631";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -27088,6 +27088,39 @@ let googleAuthReady = false;
 let rewardedAdsConfigured = false;
 let hostlServerDayKey = "";
 let accountState = { loggedIn:false, userId:"", username:"", displayName:"", email:"", picture:"", goldCubits:0, unlockedThemes:[], selectedTheme:"", achievements:{}, speciesCards:{}, ownedStarters:{}, petStages:{}, petStatUpgrades:{}, starterPetType:"", starterPetName:"", starterPetGender:"Male", materials:{}, craftedStarters:[], learnedSkills:[], title:"", unlockedTitles:[], testerRank:0, ownerRank:0, starterPetEntitlements:[], starterPetEntitlement:null, lastDailyCubits:"", lastDailyChest:"", createdAt:"", friendCount:0 };
+window.__hostlLatestPetProgressSnapshot = null;
+let accountPetProgressReplayTimer = 0;
+function makePetProgressPayload(source=accountState){
+  return {
+    username:String(source?.username||""),
+    goldCubits:Math.max(0,Math.floor(Number(source?.goldCubits)||0)),
+    speciesCards:(source?.speciesCards&&typeof source.speciesCards==="object")?JSON.parse(JSON.stringify(source.speciesCards)):{},
+    ownedStarters:(source?.ownedStarters&&typeof source.ownedStarters==="object")?JSON.parse(JSON.stringify(source.ownedStarters)):{},
+    petStages:(source?.petStages&&typeof source.petStages==="object")?JSON.parse(JSON.stringify(source.petStages)):{},
+    petStatUpgrades:(source?.petStatUpgrades&&typeof source.petStatUpgrades==="object")?JSON.parse(JSON.stringify(source.petStatUpgrades)):{},
+    starterPetType:String(source?.starterPetType||""), starterPetName:String(source?.starterPetName||""), starterPetGender:source?.starterPetGender==="Female"?"Female":"Male",
+    craftedStarters:Array.isArray(source?.craftedStarters)?[...source.craftedStarters]:[], learnedSkills:Array.isArray(source?.learnedSkills)?[...source.learnedSkills]:[],
+    title:String(source?.title||""), testerRank:Math.max(0,Math.floor(Number(source?.testerRank)||0)), ownerRank:Math.max(0,Math.floor(Number(source?.ownerRank)||0)),
+    starterPetEntitlements:Array.isArray(source?.starterPetEntitlements)?JSON.parse(JSON.stringify(source.starterPetEntitlements)):[],
+    starterPetEntitlement:(source?.starterPetEntitlement&&typeof source.starterPetEntitlement==="object")?JSON.parse(JSON.stringify(source.starterPetEntitlement)):null
+  };
+}
+function replayAccountPetProgressNow(){
+  if(!accountState.loggedIn) return false;
+  const payload=window.__hostlLatestPetProgressSnapshot || makePetProgressPayload(accountState);
+  try{ window.__hostlApplyAccountEntitlements?.(payload); }catch(err){ console.warn("HOSTL pet progression replay skipped:",err); }
+  try{ window.__hostlRefreshPetAccountUi?.(); }catch(_){ }
+  return true;
+}
+function scheduleAccountPetProgressReplay(){
+  clearTimeout(accountPetProgressReplayTimer);
+  const delays=[0,32,120,360,900];
+  for(const delay of delays){
+    setTimeout(()=>{ if(accountState.loggedIn) replayAccountPetProgressNow(); },delay);
+  }
+  accountPetProgressReplayTimer=setTimeout(()=>{},920);
+}
+window.__hostlReplayPetProgressNow = replayAccountPetProgressNow;
 
 // Single source of truth used by the in-game HUD. Null means guest mode, so the
 // gameplay layer may use its local guest balance.
@@ -27105,20 +27138,9 @@ function petStageRank(stage){ return {baby:0,adult:1,boss:2,superboss:3,bigmomma
 function applyAccountGameEntitlements(){
   if(!accountState.loggedIn) return;
   try {
-    window.__hostlApplyAccountEntitlements?.({
-      username:accountState.username||"",
-      goldCubits:Math.max(0,Math.floor(Number(accountState.goldCubits)||0)),
-      speciesCards:(accountState.speciesCards && typeof accountState.speciesCards==="object") ? accountState.speciesCards : {},
-      ownedStarters:accountState.ownedStarters||{}, petStages:accountState.petStages||{}, petStatUpgrades:accountState.petStatUpgrades||{},
-      starterPetType:accountState.starterPetType||"", starterPetName:accountState.starterPetName||"", starterPetGender:accountState.starterPetGender||"Male",
-      craftedStarters:Array.isArray(accountState.craftedStarters)?accountState.craftedStarters:[],
-      learnedSkills:Array.isArray(accountState.learnedSkills)?accountState.learnedSkills:[],
-      title:accountState.title||"",
-      testerRank:accountState.testerRank||0,
-      ownerRank:accountState.ownerRank||0,
-      starterPetEntitlements:Array.isArray(accountState.starterPetEntitlements)?accountState.starterPetEntitlements:[],
-      starterPetEntitlement:accountState.starterPetEntitlement||null
-    });
+    const payload=makePetProgressPayload(accountState);
+    window.__hostlLatestPetProgressSnapshot=payload;
+    window.__hostlApplyAccountEntitlements?.(payload);
   } catch (err) {
     console.warn("HOSTL account game-entitlement sync skipped:", err);
   }
@@ -27184,6 +27206,9 @@ function setAccountFromServer(p={}) {
     starterPetEntitlement:(p.starterPetEntitlement && typeof p.starterPetEntitlement==="object") ? p.starterPetEntitlement : null,
     lastDailyCubits:p.lastDailyCubits||"", lastDailyChest:p.lastDailyChest||"", createdAt:p.createdAt||"", friendCount:Math.max(0,Math.floor(Number(p.friendCount)||0))
   };
+  // Keep a full pet-progression snapshot separate from Home/profile rendering. This
+  // lets pet cards/stages/stats replay even if Home rebuilds during account restore.
+  window.__hostlLatestPetProgressSnapshot=makePetProgressPayload(accountState);
   // Push the server balance into gameplay immediately, before any HUD/home redraw can
   // render the guest fallback value.
   try { window.__hostlSetGameGoldCubits?.(accountState.goldCubits); } catch(_) {}
@@ -27210,6 +27235,7 @@ function setAccountFromServer(p={}) {
     applyAccountGameEntitlements();
     refreshPetAccountUiImmediate();
   } catch (err) { console.warn("HOSTL entitlement bridge error:", err); }
+  scheduleAccountPetProgressReplay();
   // Account snapshots must not recursively trigger /api/friends. The friends loop
   // already handles presence/polling after login. Recursing here repeatedly replaced
   // live Shop DOM nodes under the mouse, causing hover/click flicker.
@@ -27362,6 +27388,7 @@ async function restoreAccountSession() {
   } catch (_) {
     hostlSessionToken="";
     window.__hostlAccountSessionActive = false;
+    window.__hostlLatestPetProgressSnapshot = null;
     window.__hostlPendingStarterPetPreference = null;
     clearTimeout(starterPetPreferenceSaveTimer);
     accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
