@@ -148,16 +148,49 @@ function ensureStarterPetEntitlements(a) {
 function grantStarterPetEntitlement(a,type,stage="baby") {
   const t=canonicalAccountPetType(type);
   const st=safeText(stage,24).toLowerCase();
-  if(!t)return;
+  if(!t)return false;
   const cleanStage=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,st)?st:"baby";
+  // A promo/code pet is not a separate pet record. Merge ownership into the same
+  // canonical species progression used by normal card unlocks so old cards, stage
+  // upgrades and stat upgrades remain intact forever.
+  ensurePetProgressState(a);
   ensureStarterPetEntitlements(a);
+  const before=JSON.stringify({
+    owned:!!a.ownedStarters?.[`start_${t}`],
+    stage:a.petStages?.[t]||"baby",
+    upgrades:a.petStatUpgrades?.[t]||{},
+    cards:a.speciesCards?.[t]||0,
+    ents:a.starterPetEntitlements,
+    legacy:a.starterPetEntitlement
+  });
   if (!a.ownedStarters || typeof a.ownedStarters !== "object" || Array.isArray(a.ownedStarters)) a.ownedStarters={};
+  if (!a.petStages || typeof a.petStages !== "object" || Array.isArray(a.petStages)) a.petStages={};
+  if (!a.petStatUpgrades || typeof a.petStatUpgrades !== "object" || Array.isArray(a.petStatUpgrades)) a.petStatUpgrades={};
+  if (!a.speciesCards || typeof a.speciesCards !== "object" || Array.isArray(a.speciesCards)) a.speciesCards={};
   a.ownedStarters[`start_${t}`]=true;
+  if(!a.petStatUpgrades[t] || typeof a.petStatUpgrades[t]!=="object" || Array.isArray(a.petStatUpgrades[t]))a.petStatUpgrades[t]={};
+  for(const stat of ["health","defense","attack","weight","regen","speed"]){
+    a.petStatUpgrades[t][stat]=Math.max(0,Math.min(10,Math.floor(Number(a.petStatUpgrades[t][stat])||0)));
+  }
+  a.speciesCards[t]=Math.max(0,Math.floor(Number(a.speciesCards[t])||0));
+  const currentStage=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,a.petStages[t])?a.petStages[t]:"baby";
+  if(STARTER_PET_STAGE_RANK[cleanStage]>STARTER_PET_STAGE_RANK[currentStage])a.petStages[t]=cleanStage;
+  else a.petStages[t]=currentStage;
   const found=a.starterPetEntitlements.find(x=>x.type===t);
   if(found){ if(STARTER_PET_STAGE_RANK[cleanStage]>STARTER_PET_STAGE_RANK[found.stage]) found.stage=cleanStage; }
   else a.starterPetEntitlements.push({type:t,stage:cleanStage});
   // Prefer the newly granted entitlement in the legacy field for older clients.
   a.starterPetEntitlement={type:t,stage:(a.starterPetEntitlements.find(x=>x.type===t)||{}).stage||cleanStage};
+  ensurePetProgressState(a);
+  const after=JSON.stringify({
+    owned:!!a.ownedStarters?.[`start_${t}`],
+    stage:a.petStages?.[t]||"baby",
+    upgrades:a.petStatUpgrades?.[t]||{},
+    cards:a.speciesCards?.[t]||0,
+    ents:a.starterPetEntitlements,
+    legacy:a.starterPetEntitlement
+  });
+  return before!==after;
 }
 function repairSpecialPromoEntitlements(a) {
   if(!a || typeof a!=="object") return false;
@@ -170,8 +203,7 @@ function repairSpecialPromoEntitlements(a) {
     if(Math.max(0,Math.floor(Number(a.testerRank)||0))!==1){a.testerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("#1 Tester")){a.unlockedTitles.push("#1 Tester");changed=true;}
-    const before=JSON.stringify(ensureStarterPetEntitlements(a)); grantStarterPetEntitlement(a,"saber","adult");
-    if(JSON.stringify(a.starterPetEntitlements)!==before)changed=true;
+    if(grantStarterPetEntitlement(a,"saber","adult"))changed=true;
     if(!a.specialRewardRepairs.sccttSaberCardsV1){
       const old=Math.max(0,Math.floor(Number(a.speciesCards.saber)||0));
       if(old<500){a.speciesCards.saber=500;changed=true;}
@@ -183,8 +215,7 @@ function repairSpecialPromoEntitlements(a) {
     if(Math.max(0,Math.floor(Number(a.ownerRank)||0))!==1){a.ownerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("Owner")){a.unlockedTitles.push("Owner");changed=true;}
-    const before=JSON.stringify(ensureStarterPetEntitlements(a)); grantStarterPetEntitlement(a,"snake","adult");
-    if(JSON.stringify(a.starterPetEntitlements)!==before)changed=true;
+    if(grantStarterPetEntitlement(a,"snake","adult"))changed=true;
     if(!a.specialRewardRepairs.ovccViperCardsV2){
       const old=Math.max(0,Math.floor(Number(a.speciesCards.snake)||0));
       if(old<500){a.speciesCards.snake=500;changed=true;}
@@ -193,8 +224,7 @@ function repairSpecialPromoEntitlements(a) {
   }
   const hasSTC=codes.includes("STC");
   if(hasSTC){
-    const before=JSON.stringify(ensureStarterPetEntitlements(a)); grantStarterPetEntitlement(a,"saber","adult");
-    if(JSON.stringify(a.starterPetEntitlements)!==before)changed=true;
+    if(grantStarterPetEntitlement(a,"saber","adult"))changed=true;
     if(!Array.isArray(a.unlockedThemes))a.unlockedThemes=[];
     if(!a.unlockedThemes.includes("celestialCrown")){a.unlockedThemes.push("celestialCrown");changed=true;}
     if(!a.specialRewardRepairs.stcSaberCardsV2){
@@ -803,7 +833,7 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "620", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "627", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {

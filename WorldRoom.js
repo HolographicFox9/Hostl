@@ -12,7 +12,7 @@ const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "626";
+const CUBE_SHARED_RULES_VERSION = "627";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -2134,12 +2134,18 @@ export class WorldRoom extends Room {
   applyStarterStageToExistingPet(p,ownerId,targetStage){
     if(!p)return false;
     const order=["baby","adult","boss","superboss"],current=order.includes(p.stage)?p.stage:"baby";
-    if(!order.includes(targetStage)||order.indexOf(current)>=order.indexOf(targetStage))return false;
-    p.stage=targetStage;p.r=animalRadius(p.type,targetStage);this.applyPetUpgradeFields(p,ownerId,p.type);
-    p.maxHp=Math.max(12,Math.round(typeHp(p.type,targetStage)*petUpgradeMultiplier(p,"health")));
-    p.hp=p.maxHp;p.speed=animalSpeed(p.type,targetStage,true,petUpgradeMultiplier(p,"weight"))*petUpgradeMultiplier(p,"speed");
-    p.level=1;p.exp=0;
-    return true;
+    const validTarget=order.includes(targetStage)?targetStage:current;
+    const stageUpgraded=order.indexOf(validTarget)>order.indexOf(current);
+    const oldMax=Math.max(1,Number(p.maxHp)||typeHp(p.type,current)),oldHp=Math.max(0,Number(p.hp)||oldMax),hpRatio=clamp(oldHp/oldMax,0,1);
+    if(stageUpgraded){p.stage=validTarget;p.r=animalRadius(p.type,validTarget);p.level=1;p.exp=0;}
+    // Always refresh permanent card/stat upgrades, even when the stage did not
+    // change. Home preview rooms can stay connected while the player upgrades a
+    // code pet, so waiting for a reconnect would leave the live pet stale.
+    this.applyPetUpgradeFields(p,ownerId,p.type);
+    p.maxHp=Math.max(12,Math.round(typeHp(p.type,p.stage)*petUpgradeMultiplier(p,"health")));
+    p.hp=stageUpgraded?p.maxHp:Math.max(1,Math.min(p.maxHp,p.maxHp*hpRatio));
+    p.speed=animalSpeed(p.type,p.stage,true,petUpgradeMultiplier(p,"weight"))*petUpgradeMultiplier(p,"speed");
+    return stageUpgraded;
   }
 
   ensureStarterPetFor(client,type,stage,opts={}){
