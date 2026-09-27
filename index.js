@@ -123,6 +123,7 @@ function canonicalAccountPetType(type){
 }
 function ensureStarterPetEntitlements(a) {
   if (!a || typeof a !== "object") return [];
+  if (!a.ownedStarters || typeof a.ownedStarters !== "object" || Array.isArray(a.ownedStarters)) a.ownedStarters = {};
   const raw = Array.isArray(a.starterPetEntitlements) ? [...a.starterPetEntitlements] : [];
   if (a.starterPetEntitlement && typeof a.starterPetEntitlement === "object") raw.push(a.starterPetEntitlement);
   const byType = new Map();
@@ -136,6 +137,10 @@ function ensureStarterPetEntitlements(a) {
     if (!old || STARTER_PET_STAGE_RANK[cleanStage] > STARTER_PET_STAGE_RANK[old.stage]) byType.set(type,{type,stage:cleanStage});
   }
   a.starterPetEntitlements = [...byType.values()];
+  // A code-granted starter pet is normal permanent starter ownership too. Keeping
+  // this canonical flag means every client/menu sees it immediately through the
+  // same path as pets unlocked with cards or Gold Cubits.
+  for (const ent of a.starterPetEntitlements) if (ent?.type) a.ownedStarters[`start_${ent.type}`] = true;
   // Legacy field is kept so older clients still receive at least one entitlement.
   a.starterPetEntitlement = a.starterPetEntitlements[0] || null;
   return a.starterPetEntitlements;
@@ -146,6 +151,8 @@ function grantStarterPetEntitlement(a,type,stage="baby") {
   if(!t)return;
   const cleanStage=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,st)?st:"baby";
   ensureStarterPetEntitlements(a);
+  if (!a.ownedStarters || typeof a.ownedStarters !== "object" || Array.isArray(a.ownedStarters)) a.ownedStarters={};
+  a.ownedStarters[`start_${t}`]=true;
   const found=a.starterPetEntitlements.find(x=>x.type===t);
   if(found){ if(STARTER_PET_STAGE_RANK[cleanStage]>STARTER_PET_STAGE_RANK[found.stage]) found.stage=cleanStage; }
   else a.starterPetEntitlements.push({type:t,stage:cleanStage});

@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "625";
+const CUBE_SHARED_RULES_VERSION = "626";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -26262,6 +26262,14 @@ function persistStarterPetPreference() {
   meta.starterPetName = valid ? starterPetNameValue() : "";
   meta.starterPetGender = valid ? starterPetGenderValue() : "Male";
   saveMeta();
+  // Signed-in starter-pet preferences must move as one atomic preference. The
+  // account bridge mirrors this immediately, then saves it server-side after the
+  // player stops typing so a late account refresh cannot erase a pet name/selection.
+  try { window.__hostlStarterPetPreferenceChanged?.({
+    starterPetType:meta.starterPetType,
+    starterPetName:meta.starterPetName,
+    starterPetGender:meta.starterPetGender
+  }); } catch (_) {}
 }
 function restoreStarterPetPreference() {
   const type = String(meta.starterPetType || "");
@@ -27025,16 +27033,52 @@ function applyAccountGameEntitlements(){
   }
 }
 
+let starterPetPreferenceSaveTimer = 0;
+let starterPetPreferenceRequestSeq = 0;
+window.__hostlPendingStarterPetPreference = null;
+window.__hostlStarterPetPreferenceChanged = function(pref={}){
+  if(!accountState.loggedIn || !hostlSessionToken) return;
+  const type=String(pref.starterPetType||"");
+  const name=String(pref.starterPetName||"").trim().replace(/\s+/g," ").slice(0,14);
+  const gender=pref.starterPetGender==="Female"?"Female":"Male";
+  const pending={type,name,gender};
+  window.__hostlPendingStarterPetPreference=pending;
+  accountState.starterPetType=type;
+  accountState.starterPetName=name;
+  accountState.starterPetGender=gender;
+  clearTimeout(starterPetPreferenceSaveTimer);
+  starterPetPreferenceSaveTimer=setTimeout(saveStarterPetPreferenceNow,420);
+};
+async function saveStarterPetPreferenceNow(){
+  if(!accountState.loggedIn || !hostlSessionToken) return false;
+  const pending=window.__hostlPendingStarterPetPreference;
+  if(!pending) return true;
+  const sent={...pending},seq=++starterPetPreferenceRequestSeq;
+  try{
+    const r=await fetch("/api/account",{method:"PUT",headers:{"Content-Type":"application/json",...accountAuthHeaders()},credentials:"same-origin",body:JSON.stringify({starterPetType:sent.type,starterPetName:sent.name,starterPetGender:sent.gender})});
+    const data=await r.json().catch(()=>({}));
+    if(r.status===401){logoutAccount(false);return false;}
+    if(!r.ok||!data?.account)return false;
+    const current=window.__hostlPendingStarterPetPreference;
+    const same=current&&current.type===sent.type&&current.name===sent.name&&current.gender===sent.gender;
+    if(same && seq===starterPetPreferenceRequestSeq) window.__hostlPendingStarterPetPreference=null;
+    setAccountFromServer(data.account);
+    saveAccountSession();
+    return true;
+  }catch(_){return false;}
+}
+
 function setAccountFromServer(p={}) {
   if(p?.recoveryToken) rememberAccountRecoveryToken(p.recoveryToken);
   window.__hostlAccountSessionActive = true;
+  const pendingStarterPref=window.__hostlPendingStarterPetPreference;
   accountState = {
     loggedIn:true, userId:p.userId||"", username:String(p.username||""), displayName:String(p.displayName||""), email:p.email||"", picture:p.picture||"",
     goldCubits:Number(p.goldCubits ?? p.cubits)||0, unlockedThemes:Array.isArray(p.unlockedThemes)?p.unlockedThemes:[], selectedTheme:String(p.selectedTheme||""),
     achievements:(p.achievements && typeof p.achievements==="object") ? p.achievements : {},
     speciesCards:(p.speciesCards && typeof p.speciesCards==="object") ? p.speciesCards : {},
     ownedStarters:(p.ownedStarters&&typeof p.ownedStarters==="object")?p.ownedStarters:{}, petStages:(p.petStages&&typeof p.petStages==="object")?p.petStages:{},
-    petStatUpgrades:(p.petStatUpgrades&&typeof p.petStatUpgrades==="object")?p.petStatUpgrades:{}, starterPetType:String(p.starterPetType||""), starterPetName:String(p.starterPetName||""), starterPetGender:p.starterPetGender==="Female"?"Female":"Male",
+    petStatUpgrades:(p.petStatUpgrades&&typeof p.petStatUpgrades==="object")?p.petStatUpgrades:{}, starterPetType:pendingStarterPref?pendingStarterPref.type:String(p.starterPetType||""), starterPetName:pendingStarterPref?pendingStarterPref.name:String(p.starterPetName||""), starterPetGender:pendingStarterPref?pendingStarterPref.gender:(p.starterPetGender==="Female"?"Female":"Male"),
     materials:(p.materials && typeof p.materials==="object") ? p.materials : {},
     craftedStarters:Array.isArray(p.craftedStarters)?p.craftedStarters.map(String):[],
     learnedSkills:Array.isArray(p.learnedSkills)?p.learnedSkills.map(String):[],
@@ -27220,6 +27264,8 @@ async function restoreAccountSession() {
   } catch (_) {
     hostlSessionToken="";
     window.__hostlAccountSessionActive = false;
+    window.__hostlPendingStarterPetPreference = null;
+    clearTimeout(starterPetPreferenceSaveTimer);
     accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
     window.__hostlThemeAccountState={loggedIn:false,unlockedThemes:[],goldCubits:0};
     try { window.__hostlRefreshThemeAccess?.(); } catch(_) {}
@@ -27619,13 +27665,13 @@ async function redeemPromoCode() {
     const data=await r.json().catch(()=>({}));
     if(r.status===401){ logoutAccount(false); out.textContent="Your sign-in expired. Sign in again."; out.classList.add("error"); return; }
     if(!r.ok){
-      if(data?.account){ setAccountFromServer(data.account); saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); renderMaterialsAndRecipes(); try{setupHome();buildPetShop();buildCardInventory();}catch(_){} }
+      if(data?.account){ setAccountFromServer(data.account); saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); renderMaterialsAndRecipes(); try{setupHome();buildPetShop();buildCardInventory();buildOwnedStarterPetList();updateSelectedStarterPetLabel();}catch(_){} }
       const messages={invalid_code:"That code is not valid.",already_redeemed:data?.repaired?"That code was already redeemed. Its missing special pet rewards were repaired.":"You already redeemed that code.",code_already_claimed:"That special code has already been claimed.",missing_code:"Type a code first."};
       out.textContent=messages[data?.error]||"That code could not be redeemed."; out.classList.add(data?.repaired?"success":"error"); return;
     }
     if(data?.account) setAccountFromServer(data.account);
     saveAccountSession(); syncAchievementAccountBridge(); syncAccountUi(); syncPromoCodeUi(); renderMaterialsAndRecipes();
-    try{setupHome();buildPetShop();buildCardInventory();}catch(_){}
+    try{setupHome();buildPetShop();buildCardInventory();buildOwnedStarterPetList();updateSelectedStarterPetLabel();}catch(_){}
     input.value="";
     out.textContent=data?.message||"Code redeemed!"; out.classList.add("success");
   }catch(_){ out.textContent="Could not reach the HOSTL server. Try again."; out.classList.add("error"); }
@@ -27802,6 +27848,8 @@ function logoutAccount(showMessage=true) {
   try { fetch("/auth/logout", {method:"POST", headers:accountAuthHeaders(), credentials:"same-origin", keepalive:true}); } catch (_) {}
   hostlSessionToken="";
   window.__hostlAccountSessionActive = false;
+  window.__hostlPendingStarterPetPreference = null;
+  clearTimeout(starterPetPreferenceSaveTimer);
   accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
   try { window.__hostlResetGuestProfile?.(); } catch (_) {}
   saveAccountSession();
