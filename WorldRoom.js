@@ -12,7 +12,7 @@ const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "632";
+const CUBE_SHARED_RULES_VERSION = "633";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -1224,6 +1224,8 @@ function pondShapeFactor(r,theta){
     +Math.sin(theta*7+seed*2.27-.8)*.026;
   return clamp(f,.82,1.18);
 }
+function riverCenterOffsetLocal(r,x,rx,ry){const u=clamp(x/Math.max(1,rx),-1,1),seed=Number(r?.rot)||0;return Math.sin((u+1)*Math.PI*1.35+seed*2.1)*ry*.28+Math.sin((u+1)*Math.PI*2.7-seed*.8)*ry*.10;}
+function riverHalfWidthLocal(r,x,rx,ry){const u=clamp(x/Math.max(1,rx),-1,1),seed=Number(r?.rot)||0,taper=Math.sqrt(Math.max(.05,1-u*u)),variation=1+Math.sin((u+1)*Math.PI*3.0+seed*1.7)*.16+Math.sin((u+1)*Math.PI*5.0-seed*.9)*.07;return Math.max(8,ry*taper*variation);}
 function waterNearPoint(r,x,y,extra=78){
   if(!r||(r.type!=="pond"&&r.type!=="river"))return false;
   const ang=-(Number(r.rot)||0),ca=Math.cos(ang),sa=Math.sin(ang),dx=x-r.x,dy=y-r.y;
@@ -1231,7 +1233,8 @@ function waterNearPoint(r,x,y,extra=78){
   const edgePad=Math.max(0,Number(extra)||0)/Math.max(20,Math.min(rx,ry));
   const nx=lx/rx,ny=ly/ry,n=Math.hypot(nx,ny);
   if(r.type==="pond")return n<=pondShapeFactor(r,Math.atan2(ny,nx))+edgePad;
-  return n<=1+edgePad;
+  const center=riverCenterOffsetLocal(r,lx,rx,ry),half=riverHalfWidthLocal(r,lx,rx,ry),pad=Math.max(0,Number(extra)||0);
+  return Math.abs(lx)<=rx+pad&&Math.abs(ly-center)<=half+pad;
 }
 function waterPlacementClear(resources,x,y,solidR,canopyR,gap=34){
   const candidateR=Math.max(1,Number(solidR)||90,Number(canopyR)||0);

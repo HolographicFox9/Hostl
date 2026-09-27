@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "632";
+const CUBE_SHARED_RULES_VERSION = "633";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -15480,7 +15480,8 @@ function waterNearPoint(r,x,y,extra=78){
   const edgePad=Math.max(0,Number(extra)||0)/Math.max(20,Math.min(rx,ry));
   const nx=lx/rx,ny=ly/ry,n=Math.hypot(nx,ny);
   if(r.type==="pond")return n<=pondShapeFactor(r,Math.atan2(ny,nx))+edgePad;
-  return n<=1+edgePad;
+  const center=riverCenterOffsetLocal(r,lx,rx,ry),half=riverHalfWidthLocal(r,lx,rx,ry);
+  return Math.abs(lx)<=rx+Math.max(0,Number(extra)||0) && Math.abs(ly-center)<=half+Math.max(0,Number(extra)||0);
 }
 // Water bodies get an additional broad-footprint reservation during generation.
 // This is intentionally stricter than ordinary scenery placement: two ponds/rivers
@@ -17252,7 +17253,7 @@ function meleeAttack() {
     }
   }
   for (const r of resources) {
-    if (!r.alive) continue;
+    if (!r.alive || r.type === "pond" || r.type === "river") continue;
     let resourceHit = false;
     if (r.type === "log") {
       resourceHit = logSolidHitboxes(r).some(h =>
@@ -17324,6 +17325,7 @@ function meleeAttack() {
 }
 
 function gatherResource(r, t) {
+  if (!r || !r.alive || r.type === "pond" || r.type === "river") return;
   const toolName = player.tool || "Fist";
   if(!net.room){gainSkillXp(1,"resource-hit"); consumeHydration(r.type === "bush" ? 0.65 : 1.2);}
   const isWood = r.type === "tree" || r.type === "log";
@@ -22032,11 +22034,14 @@ function biomeBlendWeights(x,y){
   return { arctic, forest:lowland*(1-forestRain), rainforest:lowland*forestRain };
 }
 function blendBiomeGroundColor(x,y){
-  // Keep the original Forest / Rain Forest floor colors, but let them blend naturally.
-  const ground={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2"};
-  const w=biomeBlendWeights(x,y);
-  const low=mixHex(ground.forest,ground.rainforest,w.rainforest/(Math.max(.001,w.forest+w.rainforest)));
-  return mixHex(low,ground.arctic,w.arctic);
+  // Forest stays brighter and a little warm/brown-green; Rain Forest is a deep rich green.
+  // Blend the actual RGB channels directly so nested rgb(...) strings can never collapse colors.
+  const colors={forest:hexToRgbParts("#89905b"),rainforest:hexToRgbParts("#1f5835"),arctic:hexToRgbParts("#d9edf2")};
+  const w=biomeBlendWeights(x,y), total=Math.max(.001,w.forest+w.rainforest+w.arctic);
+  const r=Math.round((colors.forest.r*w.forest+colors.rainforest.r*w.rainforest+colors.arctic.r*w.arctic)/total);
+  const g=Math.round((colors.forest.g*w.forest+colors.rainforest.g*w.rainforest+colors.arctic.g*w.arctic)/total);
+  const b=Math.round((colors.forest.b*w.forest+colors.rainforest.b*w.rainforest+colors.arctic.b*w.arctic)/total);
+  return `rgb(${r},${g},${b})`;
 }
 function drawFlowerCluster(x,y,petal,count,spread,scale=1){
   for(let i=0;i<count;i++){
@@ -22070,9 +22075,19 @@ function drawLeafScatter(x,y,count,spread,baseColor){
     ctx.strokeStyle="rgba(28,57,34,.18)"; ctx.lineWidth=.8; ctx.beginPath(); ctx.moveTo(px-Math.cos(rot)*4,py-Math.sin(rot)*2); ctx.lineTo(px+Math.cos(rot)*4,py+Math.sin(rot)*2); ctx.stroke();
   }
 }
+function traceGroundPuddle(x,y,rx,ry,seed){
+  const steps=24; ctx.beginPath();
+  for(let i=0;i<steps;i++){
+    const a=i/steps*TAU;
+    const f=1+Math.sin(a*3+seed*.017)*.14+Math.sin(a*5-seed*.011)*.08+Math.sin(a*7+seed*.007)*.04;
+    const xx=x+Math.cos(a)*rx*f, yy=y+Math.sin(a)*ry*f;
+    if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+  }
+  ctx.closePath();
+}
 function drawBiomeGroundDecor(px,py,seedX,seedY){
   const w=biomeBlendWeights(px,py);
-  const jx=(groundNoise(seedX,seedY,1)-.5)*54, jy=(groundNoise(seedY,seedX,2)-.5)*54;
+  const jx=(groundNoise(seedX,seedY,1)-.5)*104, jy=(groundNoise(seedY,seedX,2)-.5)*104;
   const x=px+jx, y=py+jy;
 
   if(w.forest>.04){
@@ -22092,21 +22107,31 @@ function drawBiomeGroundDecor(px,py,seedX,seedY){
 
   if(w.rainforest>.04){
     ctx.save();
-    ctx.globalAlpha*=clamp(w.rainforest*1.18,0,1);
-    ctx.fillStyle="rgba(12,56,28,.14)"; ctx.beginPath(); ctx.ellipse(x+8,y+5,52+groundNoise(seedX,seedY,20)*24,26+groundNoise(seedY,seedX,21)*12,groundNoise(seedX,seedY,22)*.9,0,TAU); ctx.fill();
-    drawLeafScatter(x+4,y-1,6+Math.floor(groundNoise(seedY,seedX,23)*5),34,"#2f6d3f");
-    if(groundNoise(seedX,seedY,24)>.52){
-      for(let i=0;i<3;i++){
-        const sx=x-18+i*12+(groundNoise(seedX,seedY,25+i)-.5)*6, sy=y+4+(groundNoise(seedY,seedX,28+i)-.5)*6;
-        ctx.strokeStyle="rgba(70,132,79,.42)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(sx,sy+10); ctx.quadraticCurveTo(sx-8,sy,sx,sy-13); ctx.quadraticCurveTo(sx+8,sy,sx,sy+10); ctx.stroke();
+    ctx.globalAlpha*=clamp(w.rainforest*1.16,0,1);
+    const feature=groundNoise(seedX,seedY,20);
+    if(feature<.30){
+      // Open leaf-litter patch: visible, but not a solid carpet.
+      ctx.fillStyle="rgba(10,49,25,.11)"; traceGroundPuddle(x+4,y+3,42+groundNoise(seedX,seedY,21)*25,20+groundNoise(seedY,seedX,22)*12,seedX+seedY); ctx.fill();
+      drawLeafScatter(x+2,y,4+Math.floor(groundNoise(seedY,seedX,23)*4),38,"#2f6d3f");
+    } else if(feature<.52){
+      // Fern cluster with plenty of empty ground around it.
+      for(let i=0;i<2+Math.floor(groundNoise(seedX,seedY,24)*2);i++){
+        const sx=x-11+i*15+(groundNoise(seedX,seedY,25+i)-.5)*8, sy=y+4+(groundNoise(seedY,seedX,28+i)-.5)*9;
+        ctx.strokeStyle="rgba(70,132,79,.42)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(sx,sy+10); ctx.quadraticCurveTo(sx-9,sy,sx,sy-14); ctx.quadraticCurveTo(sx+9,sy,sx,sy+10); ctx.stroke();
       }
+      if(groundNoise(seedX,seedY,30)>.55) drawLeafScatter(x+14,y+8,3+Math.floor(groundNoise(seedY,seedX,31)*3),24,"#3a7847");
+    } else if(feature<.72){
+      // Small natural puddles: every cell gets a different shoreline and proportions.
+      const prx=12+groundNoise(seedX,seedY,32)*17, pry=6+groundNoise(seedY,seedX,33)*10;
+      const px2=x+(groundNoise(seedX,seedY,34)-.5)*18, py2=y+(groundNoise(seedY,seedX,35)-.5)*14;
+      ctx.fillStyle="rgba(65,120,145,.27)"; traceGroundPuddle(px2,py2,prx,pry,seedX*3+seedY*5); ctx.fill();
+      ctx.strokeStyle="rgba(177,220,231,.26)";ctx.lineWidth=1; traceGroundPuddle(px2-2,py2-1,prx*.68,pry*.57,seedX*7-seedY*2);ctx.stroke();
+      if(groundNoise(seedX,seedY,36)>.52) drawLeafScatter(x-18,y+12,2+Math.floor(groundNoise(seedY,seedX,37)*3),18,"#316c3e");
+    } else if(feature<.86){
+      drawPebblePatch(x-6,y+7,2+Math.floor(groundNoise(seedY,seedX,38)*4),24,"#5f655d");
+      drawLeafScatter(x+13,y-5,2+Math.floor(groundNoise(seedY,seedX,39)*3),22,"#2d6840");
     }
-    if(groundNoise(seedX,seedY,31)>.64){
-      const px2=x+18+(groundNoise(seedX,seedY,32)-.5)*8, py2=y+10+(groundNoise(seedY,seedX,33)-.5)*6;
-      ctx.fillStyle="rgba(93,146,168,.24)"; ctx.beginPath(); ctx.ellipse(px2,py2,14+groundNoise(seedX,seedY,34)*9,8+groundNoise(seedY,seedX,35)*4,groundNoise(seedX,seedY,36)*.7,0,TAU); ctx.fill();
-      ctx.strokeStyle="rgba(180,223,235,.30)"; ctx.lineWidth=1.1; ctx.beginPath(); ctx.ellipse(px2,py2,11,6,groundNoise(seedY,seedX,37)*.7,0,TAU); ctx.stroke();
-    }
-    if(groundNoise(seedX,seedY,38)>.55){ drawPebblePatch(x-18,y+14,2+Math.floor(groundNoise(seedY,seedX,39)*4),16,"#5f655d"); }
+    // Remaining cells intentionally stay mostly empty so the jungle floor can breathe.
     ctx.restore();
   }
 
@@ -22150,10 +22175,10 @@ function drawBackground() {
       ctx.fillStyle=blendBiomeGroundColor(cx,cy);ctx.fillRect(xx,yy,tile+1,tile+1);
     }
   }
-  const decorStep=150,startX=Math.floor(game.camX/decorStep)*decorStep-decorStep,startY=Math.floor(game.camY/decorStep)*decorStep-decorStep;
+  const decorStep=205,startX=Math.floor(game.camX/decorStep)*decorStep-decorStep,startY=Math.floor(game.camY/decorStep)*decorStep-decorStep;
   for(let y=startY;y<game.camY+H+decorStep*2;y+=decorStep){
     for(let x=startX;x<game.camX+W+decorStep*2;x+=decorStep){
-      if(groundNoise(x,y,99)<.22)continue;
+      if(groundNoise(x,y,99)<.30)continue;
       const px=x+decorStep*.5,py=y+decorStep*.5;if(!isInsideIsland(px,py,165))continue;
       drawBiomeGroundDecor(px,py,x,y);
     }
@@ -22193,6 +22218,27 @@ function resourceBiomeStyle(r){
   };
 }
 
+function riverCenterOffsetLocal(r,x,rx,ry){
+  const u=clamp(x/Math.max(1,rx),-1,1),seed=Number(r?.rot)||0;
+  return Math.sin((u+1)*Math.PI*1.35+seed*2.1)*ry*.28 + Math.sin((u+1)*Math.PI*2.7-seed*.8)*ry*.10;
+}
+function riverHalfWidthLocal(r,x,rx,ry){
+  const u=clamp(x/Math.max(1,rx),-1,1),seed=Number(r?.rot)||0;
+  const taper=Math.sqrt(Math.max(.05,1-u*u));
+  const variation=1+Math.sin((u+1)*Math.PI*3.0+seed*1.7)*.16+Math.sin((u+1)*Math.PI*5.0-seed*.9)*.07;
+  return Math.max(8,ry*taper*variation);
+}
+function traceNaturalRiverLocal(r,rx,ry,mul=1){
+  const steps=34,top=[],bottom=[];
+  for(let i=0;i<=steps;i++){
+    const u=-1+(i/steps)*2,x=u*rx,y=riverCenterOffsetLocal(r,x,rx,ry),w=riverHalfWidthLocal(r,x,rx,ry)*mul;
+    top.push([x,y-w]);bottom.push([x,y+w]);
+  }
+  ctx.beginPath();
+  top.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+  for(let i=bottom.length-1;i>=0;i--)ctx.lineTo(bottom[i][0],bottom[i][1]);
+  ctx.closePath();
+}
 function traceNaturalPondLocal(r,rx,ry,mulX=1,mulY=1){
   const steps=48;
   ctx.beginPath();
@@ -22214,17 +22260,17 @@ function drawResource(r) {
     const isRiver=r.type==="river";
     const rx=Math.max(isRiver?240:52,Number(r.solidR)||90), ry=Math.max(isRiver?40:38,Number(r.canopyR)||rx*.72);
     ctx.rotate(r.rot||0);
-    // Ponds use an irregular shoreline rather than perfect ellipses. Rivers keep
-    // their long soft shape so connected segments still read as flowing water.
+    // Both ponds and rivers use irregular top-down shorelines. River segments curve,
+    // taper and vary their width so they do not look like long oval water pills.
     const waterBiome=worldBiomeAt(r.x,r.y),rain=waterBiome==="rainforest",arctic=waterBiome==="arctic";
     ctx.fillStyle=arctic?"#b9d5db":(rain?"#355c3b":"#6e8053");
-    if(isRiver){ctx.beginPath();ctx.ellipse(0,0,rx*1.05,ry*1.34,0,0,TAU);}else traceNaturalPondLocal(r,rx,ry,1.24,1.28);ctx.fill();
+    if(isRiver)traceNaturalRiverLocal(r,rx,ry,1.34);else traceNaturalPondLocal(r,rx,ry,1.24,1.28);ctx.fill();
     ctx.fillStyle=arctic?"#cfe5e8":(rain?"#426a45":"#788a5b");
-    if(isRiver){ctx.beginPath();ctx.ellipse(0,0,rx*1.025,ry*1.17,0,0,TAU);}else traceNaturalPondLocal(r,rx,ry,1.13,1.14);ctx.fill();
+    if(isRiver)traceNaturalRiverLocal(r,rx,ry,1.17);else traceNaturalPondLocal(r,rx,ry,1.13,1.14);ctx.fill();
     ctx.fillStyle=arctic?(isRiver?"#72bfd6":"#83cadc"):(isRiver?"#3d99b7":"#43a2be");
-    if(isRiver){ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,TAU);}else traceNaturalPondLocal(r,rx,ry,1,1);ctx.fill();
-    ctx.globalAlpha=.18;ctx.fillStyle="#e9fbff";ctx.beginPath();ctx.ellipse(-rx*.20,-ry*.20,rx*(isRiver?.33:.34),ry*(isRiver?.24:.14),-.08,0,TAU);ctx.fill();
-    ctx.globalAlpha=.10;ctx.fillStyle="#1f7897";ctx.beginPath();ctx.ellipse(rx*.20,ry*.18,rx*(isRiver?.24:.25),ry*(isRiver?.20:.11),.1,0,TAU);ctx.fill();ctx.globalAlpha=1;
+    if(isRiver)traceNaturalRiverLocal(r,rx,ry,1);else traceNaturalPondLocal(r,rx,ry,1,1);ctx.fill();
+    ctx.globalAlpha=.18;ctx.fillStyle="#e9fbff";if(isRiver){ctx.beginPath();ctx.ellipse(-rx*.18,-ry*.10,rx*.25,ry*.16,-.08,0,TAU);ctx.fill();}else{ctx.beginPath();ctx.ellipse(-rx*.20,-ry*.20,rx*.34,ry*.14,-.08,0,TAU);ctx.fill();}
+    ctx.globalAlpha=.10;ctx.fillStyle="#1f7897";ctx.beginPath();ctx.ellipse(rx*.20,ry*.18,rx*(isRiver?.20:.25),ry*(isRiver?.15:.11),.1,0,TAU);ctx.fill();ctx.globalAlpha=1;
     if(!isRiver){ctx.fillStyle="#609c58";for(const [lx,ly,lr] of [[-.52,-.18,.08],[.40,.20,.07],[.12,-.34,.055]]){ctx.beginPath();ctx.arc(rx*lx,ry*ly,rx*lr,0,TAU);ctx.fill();}}
   } else if (BIOME_RESOURCE_INFO[r.type]) {
     // Biome materials are drawn strictly from overhead. No side-view stems,
