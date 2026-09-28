@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "639";
+const CUBE_SHARED_RULES_VERSION = "640";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -10885,7 +10885,7 @@ function applyNetworkHarvestReward(data = {}) {
 
   if (kind === "biomeMaterial") {
     const material=String(data.material||""),metaInfo=BIOME_MATERIAL_META[material];
-    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
+    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
     return;
   }
   if (kind === "wood" || kind === "stone" || kind === "berries" || kind === "gold") {
@@ -11064,7 +11064,7 @@ async function connectMultiplayer(options={}) {
       updateHydrationHud();syncHotbar();syncMobilePrimaryButton();
       if(data?.message)banner(String(data.message),data.ok===false);
     });
-    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||"");if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(data?.message)banner(String(data.message));restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||"");if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit")player._stoneFruitUntil=game.time+20;}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(data?.message)banner(String(data.message));restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
     room.onMessage("resourceReward", applyNetworkHarvestReward);
     room.onMessage("goldBalance", data => {
       applyConfirmedNetworkGold(data?.balance, data?.delta);
@@ -11515,7 +11515,7 @@ function drawRemotePlayer(v) {
     drawSwimArms(arm, game.time*7.4);
   } else if (holding === "Bucket") {
     drawHeldBucket(arm, false);
-  } else if (holding === "Berry" || holding === "JungleBerry" || holding === "FrostBerry" || holding === "GoodCactus" || holding === "BadCactus") {
+  } else if (holding === "Berry" || holding === "JungleBerry" || holding === "FrostBerry" || holding === "GoodCactus" || holding === "BadCactus" || holding === "StoneFruit") {
     drawHeldBerry(arm, remoteSwing, holding);
   } else if (holding === "Wall" || holding === "Tower") {
     drawHeldWall(arm);
@@ -11666,7 +11666,7 @@ canvas.addEventListener("mousedown", e => {
       e.preventDefault();
       return;
     }
-    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
+    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
       mouse.down = false;
       meleeAttack();
     } else {
@@ -11709,9 +11709,9 @@ const mobileCraftBtn = document.getElementById("mCraft");
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
   const special = player?.heldSpecial || "";
-  const label = special === "Bucket" ? ((player.bucketSips||0)>0?`DRINK ${player.bucketSips}`:"FILL") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus") ? "EAT" : (special === "Wall" || special === "Tower") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
+  const label = special === "Bucket" ? ((player.bucketSips||0)>0?`DRINK ${player.bucketSips}`:"FILL") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit") ? "EAT" : (special === "Wall" || special === "Tower") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
   mobileAttackBtn.textContent = label;
-  const actionText = special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Fill bucket at water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus") ? "Eat food" : (special === "Wall" || special === "Tower") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
+  const actionText = special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Fill bucket at water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit") ? "Eat food" : (special === "Wall" || special === "Tower") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
   mobileAttackBtn.setAttribute("aria-label", actionText);
   mobileAttackBtn.title = actionText;
 }
@@ -11778,7 +11778,7 @@ mobileAttackBtn.addEventListener("pointerdown", e => {
   if (!mobileMode || attackPointerId != null) return;
   e.preventDefault();
   attackPointerId = e.pointerId;
-  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
+  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
     mouse.down = false;
     meleeAttack();
   } else if (player.heldSpecial === "Saddle") {
@@ -15370,7 +15370,8 @@ function skillDefenseMul(){return Math.pow(0.92, skillRank("defense"));}
 function runDamageMul(){
   const hatMul = runShop.hat==="warriorHelm"?1.18:1;
   const starterMul = meta?.ownedStarters?.hunterWrap ? 1.10 : 1;
-  return hatMul * starterMul * skillStrengthMul();
+  const stoneFruitMul=(Number(player?._stoneFruitUntil)||0)>game.time?1.20:1;
+  return hatMul * starterMul * skillStrengthMul() * stoneFruitMul;
 }
 function runTameBonus(){return runShop.cape==="tamerCape"?0.10:0;}
 function runCardChanceMul(){
@@ -15400,16 +15401,18 @@ const ISLAND_CX = WORLD_W * 0.5, ISLAND_CY = WORLD_H * 0.5;
 const ISLAND_RADIUS = Math.min(WORLD_W, WORLD_H) * 0.415;
 const ISLAND_SHORE_WIDTH = 230;
 const BIOME_ZONES = {
-  forest:{id:"forest",cx:WORLD_W*0.34,cy:WORLD_H*0.58},
-  rainforest:{id:"rainforest",cx:WORLD_W*0.66,cy:WORLD_H*0.58},
+  forest:{id:"forest",cx:WORLD_W*0.39,cy:WORLD_H*0.57},
+  rainforest:{id:"rainforest",cx:WORLD_W*0.68,cy:WORLD_H*0.57},
   arctic:{id:"arctic",cx:WORLD_W*0.50,cy:WORLD_H*0.25},
   desert:{id:"desert",cx:WORLD_W*0.50,cy:WORLD_H*0.80},
+  mountains:{id:"mountains",cx:WORLD_W*0.20,cy:WORLD_H*0.52},
 };
 const BIOME_PROFILES = {
-  forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","mountaingoat","eagle","cougar","bighorn","marmot","saber"] },
+  forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","saber"] },
   rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["clouded","jaguar","toucan","tapir","capybara","anaconda","dragon"] },
   arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["polarbear","arcticfox","walrus","muskox","snowyowl"] },
   desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","camel","scorpion","hyena","caracal","snake"] },
+  mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["mountaingoat","eagle","cougar","bighorn","marmot"] },
   ocean:{ id:"ocean", name:"Ocean", tint:"rgba(0,0,0,0)", edge:"rgba(0,0,0,0)", minimap:"#2f83a7", species:[] }
 };
 const BIOME_RESOURCE_INFO = Object.freeze({
@@ -15420,13 +15423,15 @@ const BIOME_RESOURCE_INFO = Object.freeze({
   desertSandstone:{biome:"desert",material:"sandstone",name:"Sandstone",color:"#d6b66f",category:"stone",hp:5},
   arcticIceCrystal:{biome:"arctic",material:"iceCrystal",name:"Ice Crystal",color:"#8ee7ff",category:"stone",hp:5},
   arcticFrostBerry:{biome:"arctic",material:"frostBerry",name:"Frost Berry",color:"#b8d8ff",category:"soft",hp:3},
-  mountainIron:{biome:"mountains",material:"ironOre",name:"Iron Ore",color:"#8d979d",category:"stone",hp:6},
-  mountainQuartz:{biome:"mountains",material:"mountainQuartz",name:"Mountain Quartz",color:"#ddd8ee",category:"stone",hp:5},
+  mountainIron:{biome:"mountains",material:"ironOre",name:"Iron Ore",color:"#8d979d",category:"stone",hp:7},
+  mountainQuartz:{biome:"mountains",material:"mountainQuartz",name:"Crystal Rock",color:"#ddd8ee",category:"stone",hp:6},
+  mountainGem:{biome:"mountains",material:"mountainGem",name:"Gem Cluster",color:"#8dc7d9",category:"stone",hp:7},
+  mountainStoneFruit:{biome:"mountains",material:"stoneFruit",name:"Stone Fruit",color:"#9a8cad",category:"soft",hp:4},
   rainforestVine:{biome:"rainforest",material:"jungleVine",name:"Jungle Vine",color:"#4f9f56",category:"wood",hp:4},
   rainforestFruit:{biome:"rainforest",material:"jungleBerry",name:"Jungle Fruit",color:"#f06d55",category:"soft",hp:3}
 });
 const BIOME_MATERIAL_META = Object.fromEntries(Object.values(BIOME_RESOURCE_INFO).map(v=>[v.material,{name:v.name,color:v.color,biome:v.biome}]));
-const BIOME_ORDER = ["forest","rainforest","arctic","desert"];
+const BIOME_ORDER = ["forest","rainforest","arctic","desert","mountains"];
 function biomeBaseId(id){ return String(id||CURRENT_BIOME_ID).replace(/_edge$/,'') || CURRENT_BIOME_ID; }
 function biomeProfileAt(x,y){ return BIOME_PROFILES[biomeBaseId(worldBiomeAt(x,y))] || BIOME_PROFILES.forest; }
 function islandDistance(x,y){ return Math.hypot(x-ISLAND_CX,y-ISLAND_CY); }
@@ -15473,10 +15478,15 @@ function desertBoundaryY(x){
   const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);
   return ISLAND_CY+ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.55-.35)*WORLD_H*.020 + Math.sin(xn*Math.PI*3.2+1.4)*WORLD_H*.008;
 }
+function mountainBoundaryX(y){
+  const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
+  return ISLAND_CX-ISLAND_RADIUS*.50 + Math.sin(yn*Math.PI*1.7+.6)*WORLD_W*.020 + Math.sin(yn*Math.PI*3.9-.9)*WORLD_W*.007;
+}
 function worldBiomeAt(x,y){
   if(!isInsideIsland(x,y,0))return "ocean";
   if(y<=arcticBoundaryY(x))return "arctic";
   if(y>=desertBoundaryY(x))return "desert";
+  if(x<=mountainBoundaryX(y))return "mountains";
   return x <= forestRainBoundaryX(y) ? "forest" : "rainforest";
 }
 function randomBiomeZoneId(){ return BIOME_ORDER[randi(0,BIOME_ORDER.length-1)] || "forest"; }
@@ -16190,6 +16200,7 @@ function placeBiomeFeatures() {
   placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest");
   placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
   placeUnique("desertCactusGood",22,"desert"); placeUnique("desertCactusBad",18,"desert"); placeUnique("desertSandstone",24,"desert");
+  placeUnique("mountainIron",30,"mountains"); placeUnique("mountainQuartz",26,"mountains"); placeUnique("mountainGem",22,"mountains"); placeUnique("mountainStoneFruit",24,"mountains");
 }
 
 function scatter(type, count, hp, minDistFromCenter, rSolid) {
@@ -16201,7 +16212,7 @@ function scatter(type, count, hp, minDistFromCenter, rSolid) {
     else if(type==="bush"){scale=rand(1.08,1.7);solid=10.8*scale;canopy=24*scale;}
     for(let tries=0;tries<85;tries++){
       const pos=randomLandPoint(Math.max(120,solid+80)),x=pos.x,y=pos.y,biome=worldBiomeAt(x,y);
-      const chance=biome==="arctic"?(type==="tree"?.34:type==="bush"?.44:type==="log"?.40:.86):biome==="desert"?(type==="tree"?.18:type==="bush"?.22:type==="log"?.08:.92):type==="tree"?(biome==="rainforest"?1:.88):type==="bush"?(biome==="rainforest"?1:.82):type==="log"?(biome==="rainforest"?.90:.78):(biome==="rainforest"?.56:.68);
+      const chance=biome==="arctic"?(type==="tree"?.34:type==="bush"?.44:type==="log"?.40:.86):biome==="desert"?(type==="tree"?.18:type==="bush"?.22:type==="log"?.08:.92):biome==="mountains"?(type==="tree"?.26:type==="bush"?.34:type==="log"?.20:.98):type==="tree"?(biome==="rainforest"?1:.88):type==="bush"?(biome==="rainforest"?1:.82):type==="log"?(biome==="rainforest"?.90:.78):(biome==="rainforest"?.56:.68);
       if(Math.random()>chance)continue;
       if(dist(x,y,WORLD_W/2,WORLD_H/2)<minDistFromCenter||solidOverlaps(x,y,solid))continue;
       addGeneratedResource({type,x,y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:canopy,scale,rot:type==="log"?rand(0,TAU):0});
@@ -16947,6 +16958,7 @@ function handleHotkey(key) {
   } else if(item.special==="FrostBerry"){selectBiomeFood("frostBerry");
   } else if(item.special==="GoodCactus"){selectBiomeFood("goodCactus");
   } else if(item.special==="BadCactus"){selectBiomeFood("badCactus");
+  } else if(item.special==="StoneFruit"){selectBiomeFood("stoneFruit");
   } else if (item.special === "Saddle" || item.label === "Saddle") {
     if (!player.hasSaddle) return;
     if (TOOLS[player.tool] && player.owned[player.tool]) player.lastWeaponTool = player.tool;
@@ -17151,8 +17163,8 @@ function meleeAttack() {
   if (player.heldSpecial === "Berry") {
     if (player.attackCd > 0) return;eatBerry();return;
   }
-  if (player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus") {
-    if(player.attackCd>0)return;eatBiomeFood(player.heldSpecial==="JungleBerry"?"jungleBerry":player.heldSpecial==="FrostBerry"?"frostBerry":player.heldSpecial==="GoodCactus"?"goodCactus":"badCactus");return;
+  if (player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit") {
+    if(player.attackCd>0)return;eatBiomeFood(player.heldSpecial==="JungleBerry"?"jungleBerry":player.heldSpecial==="FrostBerry"?"frostBerry":player.heldSpecial==="GoodCactus"?"goodCactus":player.heldSpecial==="BadCactus"?"badCactus":"stoneFruit");return;
   }
   if (player.heldSpecial === "Wall") {
     if (player.attackCd > 0) return;
@@ -17405,7 +17417,7 @@ function gatherResource(r, t) {
   if(biomeInfo){
     const correct=(biomeInfo.category==="wood"&&toolName==="Axe")||(biomeInfo.category==="stone"&&toolName==="Pickaxe")||(biomeInfo.category==="soft"&&(toolName==="Fist"||toolName==="Axe"));
     let dmg=(t.resourcePower==null?1:t.resourcePower)*(correct?1.25:.68); if(toolName==="Sword")dmg*=.35;
-    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);
+    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");if(biomeInfo.material==="goodCactus")registerHotbarItem("Cactus A");if(biomeInfo.material==="badCactus")registerHotbarItem("Cactus B");if(biomeInfo.material==="stoneFruit")registerHotbarItem("Stone Fruit");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);
     floatText(r.x,r.y-20,`+${yieldAmt} ${biomeInfo.name}`,biomeInfo.color);spark(r.x,r.y,biomeInfo.color,correct?7:4,correct?90:55);syncHud();syncHotbar();
     if(biomeInfo.category==="stone")sfx.stoneHit();else sfx.logHit();
     if(r.hp<=0){r.hp=0;r.alive=false;r.respawnAt=game.time+rand(18,30);spark(r.x,r.y,biomeInfo.color,10,100);}
@@ -17544,11 +17556,11 @@ function eatBerry() {
 
 function selectBiomeFood(food){
   const material=food,count=Math.max(0,Math.floor(Number(player.biomeMaterials?.[material])||0));
-  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus"};
+  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus",stoneFruit:"Stone Fruit"};
   if(count<1){banner(`No ${names[material]||"food"}!`,true);return;}
   if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;
-  player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":"BadCactus";
-  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":"Cactus equipped — eat to find out");
+  player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":material==="badCactus"?"BadCactus":"StoneFruit";
+  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — strength at a hydration cost":"Cactus equipped — eat to find out");
   syncHotbar();syncMobilePrimaryButton();
 }
 function eatBiomeFood(food){
@@ -17560,6 +17572,7 @@ function eatBiomeFood(food){
   else if(food==="frostBerry"){player.health=clamp(player.health+14,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)+18,0,100);banner("Frost Berry — +14 HP, +18 hydration");updateHydrationHud();}
   else if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;banner("This cactus was good — healing and hydrating over time");}
   else if(food==="badCactus"){player.health=clamp(player.health-8,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)-14,0,100);player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;banner("This cactus was bad — it hurts and dehydrates you",true);updateHydrationHud();}
+  else if(food==="stoneFruit"){player.hydration=clamp((Number(player.hydration)||0)-20,0,100);player._stoneFruitUntil=game.time+20;banner("Stone Fruit — +20% strength for 20s, -20 hydration");updateHydrationHud();}
   sfx.eat();restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();
 }
 
@@ -17575,6 +17588,7 @@ function fireBow() {
     projectiles.push({
       x: player.x + Math.cos(a) * 26, y: player.y + Math.sin(a) * 26,
       vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, life: 1.15, r: 5,
+      dmg: TOOLS.Bow.dmg * runDamageMul(),
     });
   }
   sfx.shoot();
@@ -21203,6 +21217,7 @@ function ensureHotbarAcquisitionOrder() {
   if((player.biomeMaterials?.frostBerry||0)>0)registerHotbarItem("Frost Berry");
   if((player.biomeMaterials?.goodCactus||0)>0)registerHotbarItem("Cactus A");
   if((player.biomeMaterials?.badCactus||0)>0)registerHotbarItem("Cactus B");
+  if((player.biomeMaterials?.stoneFruit||0)>0)registerHotbarItem("Stone Fruit");
   if (player.owned.Wall) registerHotbarItem("Wall");
   if (player.owned.Tower) registerHotbarItem("Tower");
 }
@@ -21224,6 +21239,7 @@ function getHotbarItems() {
     else if (label === "Frost Berry" && (player.biomeMaterials?.frostBerry||0)>0) entry={tool:null,label:"Frost Berry",special:"FrostBerry",qty:player.biomeMaterials.frostBerry||0};
     else if (label === "Cactus A" && (player.biomeMaterials?.goodCactus||0)>0) entry={tool:null,label:"Cactus A",special:"GoodCactus",qty:player.biomeMaterials.goodCactus||0};
     else if (label === "Cactus B" && (player.biomeMaterials?.badCactus||0)>0) entry={tool:null,label:"Cactus B",special:"BadCactus",qty:player.biomeMaterials.badCactus||0};
+    else if (label === "Stone Fruit" && (player.biomeMaterials?.stoneFruit||0)>0) entry={tool:null,label:"Stone Fruit",special:"StoneFruit",qty:player.biomeMaterials.stoneFruit||0};
     else if (label === "Wall" && player.owned.Wall) entry={tool:null,label:"Wall"};
     else if (label === "Tower" && player.owned.Tower) entry={tool:null,label:"Tower",special:"Tower"};
     if(entry) out.push({key:hotkeys[out.length],...entry});
@@ -21266,6 +21282,7 @@ function iconSvg(name) {
     "Frost Berry": '<g><circle cx="9" cy="15" r="5" fill="#89b8f2"/><circle cx="17" cy="15" r="5" fill="#b9dcff"/><circle cx="13" cy="10" r="4.2" fill="#76a5e3"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#d9fbff"/><path d="M4 13 L8 11 M18 9 L22 6 M15 20 L19 23" stroke="#effcff" stroke-width="1.4" stroke-linecap="round"/></g>',
     "Cactus A": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
     "Cactus B": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
+    "Stone Fruit": '<g><ellipse cx="13" cy="14" rx="8" ry="7" fill="#8b8491" stroke="#3f3b43" stroke-width="1.3"/><path d="M7 13 L11 16 L15 12 L20 15" fill="none" stroke="#5d5665" stroke-width="1.2"/><ellipse cx="10" cy="10" rx="2.4" ry="1.5" fill="#b3a7c1"/><path d="M13 7 Q17 3 21 6 Q17 9 13 9Z" fill="#6f8b61"/></g>',
   };
   return `<svg class="ico" viewBox="0 0 26 26">${s[name] || ""}</svg>`;
 }
@@ -21285,7 +21302,7 @@ function buildHotbar() {
       div.title = "Empty — craft items to fill";
     } else {
       div.innerHTML = `<span class="key">${item.key}</span>${iconSvg(item.label)}${item.qty != null ? `<span class="qty">${item.qty}</span>` : ""}`;
-      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : (item.tool ? toolDisplayName(item.tool) : item.label));
+      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : item.label === "Stone Fruit" ? `Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration` : (item.tool ? toolDisplayName(item.tool) : item.label));
       div.addEventListener("click", () => handleHotkey(item.key));
     }
     bar.appendChild(div);
@@ -21310,7 +21327,7 @@ function syncHotbar() {
     const isTool = !!item.tool;
     const bucketActive = item.special === "Bucket" && player.heldSpecial === "Bucket";
     const berryActive = item.special === "Berry" && player.heldSpecial === "Berry";
-    const biomeFoodActive = (item.special === "JungleBerry"||item.special === "FrostBerry"||item.special === "GoodCactus"||item.special === "BadCactus") && player.heldSpecial === item.special;
+    const biomeFoodActive = (item.special === "JungleBerry"||item.special === "FrostBerry"||item.special === "GoodCactus"||item.special === "BadCactus"||item.special === "StoneFruit") && player.heldSpecial === item.special;
     const wallActive = item.label === "Wall" && player.heldSpecial === "Wall";
     const saddleActive = item.label === "Saddle" && player.heldSpecial === "Saddle";
     const towerActive = item.label === "Tower" && player.heldSpecial === "Tower";
@@ -21323,9 +21340,10 @@ function syncHotbar() {
       s.title=sips>0?`Bucket — ${sips} sip${sips===1?"":"s"} left`:"Bucket (empty) — fill it at water";
     } else if (item.special === "Berry") {
       const q = s.querySelector(".qty");if (q) q.textContent = player.berries || 0;s.title = `Berry ×${player.berries || 0} — select it, then click to eat`;
-    } else if(item.special==="JungleBerry"||item.special==="FrostBerry"||item.special==="GoodCactus"||item.special==="BadCactus"){
-      const key=item.special==="JungleBerry"?"jungleBerry":item.special==="FrostBerry"?"frostBerry":item.special==="GoodCactus"?"goodCactus":"badCactus",q=s.querySelector(".qty");if(q)q.textContent=player.biomeMaterials?.[key]||0;
+    } else if(item.special==="JungleBerry"||item.special==="FrostBerry"||item.special==="GoodCactus"||item.special==="BadCactus"||item.special==="StoneFruit"){
+      const key=item.special==="JungleBerry"?"jungleBerry":item.special==="FrostBerry"?"frostBerry":item.special==="GoodCactus"?"goodCactus":item.special==="BadCactus"?"badCactus":"stoneFruit",q=s.querySelector(".qty");if(q)q.textContent=player.biomeMaterials?.[key]||0;
       if(item.special==="GoodCactus"||item.special==="BadCactus")s.title=`Cactus ×${player.biomeMaterials?.[key]||0} — eat to find out`;
+      if(item.special==="StoneFruit")s.title=`Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration`;
     }
   });
   syncMobilePrimaryButton();
@@ -22164,16 +22182,18 @@ function groundNoise(a,b,c=0){ return fract(Math.sin(a*127.1+b*311.7+c*74.7)*437
 function biomeBlendWeights(x,y){
   const arctic=1-smoothstep01((y-(arcticBoundaryY(x)-540))/1080);
   const desert=smoothstep01((y-(desertBoundaryY(x)-540))/1080);
-  const forestRain=smoothstep01((x-(forestRainBoundaryX(y)-560))/1120);
   const middle=Math.max(0,1-Math.max(arctic,desert));
-  return { arctic, desert, forest:middle*(1-forestRain), rainforest:middle*forestRain };
+  const mountain=middle*(1-smoothstep01((x-(mountainBoundaryX(y)-460))/920));
+  const nonMountain=Math.max(0,middle-mountain);
+  const forestRain=smoothstep01((x-(forestRainBoundaryX(y)-560))/1120);
+  return { arctic, desert, mountains:mountain, forest:nonMountain*(1-forestRain), rainforest:nonMountain*forestRain };
 }
 function blendBiomeGroundColor(x,y){
-  const colors={forest:hexToRgbParts("#8d9562"),rainforest:hexToRgbParts("#225a33"),arctic:hexToRgbParts("#d9edf2"),desert:hexToRgbParts("#d8bf86")};
-  const w=biomeBlendWeights(x,y), total=Math.max(.001,w.forest+w.rainforest+w.arctic+w.desert);
-  const r=Math.round((colors.forest.r*w.forest+colors.rainforest.r*w.rainforest+colors.arctic.r*w.arctic+colors.desert.r*w.desert)/total);
-  const g=Math.round((colors.forest.g*w.forest+colors.rainforest.g*w.rainforest+colors.arctic.g*w.arctic+colors.desert.g*w.desert)/total);
-  const b=Math.round((colors.forest.b*w.forest+colors.rainforest.b*w.rainforest+colors.arctic.b*w.arctic+colors.desert.b*w.desert)/total);
+  const colors={forest:hexToRgbParts("#8d9562"),rainforest:hexToRgbParts("#225a33"),arctic:hexToRgbParts("#d9edf2"),desert:hexToRgbParts("#d8bf86"),mountains:hexToRgbParts("#747972")};
+  const w=biomeBlendWeights(x,y), total=Math.max(.001,w.forest+w.rainforest+w.arctic+w.desert+w.mountains);
+  const r=Math.round((colors.forest.r*w.forest+colors.rainforest.r*w.rainforest+colors.arctic.r*w.arctic+colors.desert.r*w.desert+colors.mountains.r*w.mountains)/total);
+  const g=Math.round((colors.forest.g*w.forest+colors.rainforest.g*w.rainforest+colors.arctic.g*w.arctic+colors.desert.g*w.desert+colors.mountains.g*w.mountains)/total);
+  const b=Math.round((colors.forest.b*w.forest+colors.rainforest.b*w.rainforest+colors.arctic.b*w.arctic+colors.desert.b*w.desert+colors.mountains.b*w.mountains)/total);
   return `rgb(${r},${g},${b})`;
 }
 function drawFlowerCluster(x,y,petal,count,spread,scale=1){
@@ -22268,6 +22288,22 @@ function drawBiomeGroundDecor(px,py,seedX,seedY){
     ctx.restore();
   }
 
+
+  if(w.mountains>.05){
+    ctx.save();
+    ctx.globalAlpha*=clamp(w.mountains*1.12,0,1);
+    const feature=groundNoise(seedX,seedY,48);
+    if(feature<.54){
+      drawPebblePatch(x,y,4+Math.floor(groundNoise(seedY,seedX,49)*6),36,"#777d78");
+      if(groundNoise(seedX,seedY,50)>.55){ctx.strokeStyle="rgba(72,79,72,.42)";ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x-25,y+9);ctx.lineTo(x-8,y+1);ctx.lineTo(x+5,y+8);ctx.lineTo(x+24,y-3);ctx.stroke();}
+    }else if(feature<.78){
+      ctx.fillStyle="rgba(112,126,90,.24)";traceGroundPuddle(x,y,28+groundNoise(seedX,seedY,51)*18,12+groundNoise(seedY,seedX,52)*8,seedX+seedY);ctx.fill();
+      ctx.strokeStyle="rgba(95,119,72,.48)";ctx.lineWidth=1.1;for(let i=0;i<5;i++){const gx=x-16+i*8+(groundNoise(seedX,i,53)-.5)*4;ctx.beginPath();ctx.moveTo(gx,y+7);ctx.lineTo(gx-2,y-4-groundNoise(seedY,i,54)*7);ctx.stroke();}
+    }else if(feature<.90){
+      drawPebblePatch(x+6,y+4,2+Math.floor(groundNoise(seedY,seedX,55)*4),20,"#9a9d98");
+    }
+    ctx.restore();
+  }
 
   if(w.desert>.05){
     ctx.save();
@@ -22513,6 +22549,15 @@ function drawResource(r) {
       const cols=["#eee9fa","#d9d2ed","#c6bfe3","#e4def3","#d2cae9"];
       for(let i=0;i<5;i++){const a=i/5*TAU;ctx.save();ctx.rotate(a);poly([[0,-3],[7,-12],[0,-27],[-7,-12]],cols[i],ink);ctx.restore();}
       ctx.fillStyle="#f6f2ff";ctx.strokeStyle=ink;ctx.lineWidth=2;circ(0,0,7);ctx.stroke();
+    }else if(r.type==="mountainGem"){
+      flatRock([[-24,7],[-18,-14],[-2,-23],[19,-18],[25,1],[16,20],[-9,23]],"#69746f",null);
+      const gems=[[ -10,-5,"#72c5d8"],[7,-8,"#b687db"],[10,8,"#75cf9b"],[-5,10,"#d7a866"]];
+      for(const [gx,gy,col] of gems){ctx.fillStyle=col;ctx.strokeStyle=ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(gx,gy-7);ctx.lineTo(gx+5,gy-1);ctx.lineTo(gx+2,gy+6);ctx.lineTo(gx-4,gy+4);ctx.lineTo(gx-6,gy-2);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle="rgba(255,255,255,.45)";ctx.beginPath();ctx.ellipse(gx-1.5,gy-2.5,1.8,3,-.35,0,TAU);ctx.fill();}
+    }else if(r.type==="mountainStoneFruit"){
+      for(let i=0;i<5;i++){const a=i/5*TAU+.3;leaf(Math.cos(a)*10,Math.sin(a)*10,8,3.8,a,"#6f8b61");}
+      ctx.fillStyle="#8b8491";ctx.strokeStyle=ink;ctx.lineWidth=2.1;ctx.beginPath();ctx.ellipse(0,1,14,12,.12,0,TAU);ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#5d5665";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(-8,-1);ctx.lineTo(-2,3);ctx.lineTo(4,-2);ctx.lineTo(9,3);ctx.stroke();
+      ctx.fillStyle="#b3a7c1";ctx.beginPath();ctx.ellipse(-4,-4,4.4,2.4,-.3,0,TAU);ctx.fill();
     }else if(r.type==="rainforestVine"){
       ctx.strokeStyle="#2f6f3e";ctx.lineWidth=7;ctx.beginPath();
       for(let i=0;i<=28;i++){const t=i/28*TAU*1.55,rad=4+t*2.0,x=Math.cos(t)*rad,y=Math.sin(t)*rad;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
@@ -24417,6 +24462,8 @@ function drawHeldBerry(color, eatT, kind="Berry") {
     ctx.fillStyle="#d9fbff";ctx.beginPath();ctx.moveTo(0,-5);ctx.quadraticCurveTo(4,-9,8,-6);ctx.quadraticCurveTo(4,-3,0,-3);ctx.fill();
   }else if(kind==="GoodCactus"||kind==="BadCactus"){
     ctx.fillStyle="#67a555";ctx.strokeStyle="#30511f";ctx.lineWidth=1.2;circ(0,0,5.2);ctx.stroke();ctx.beginPath();ctx.ellipse(0,-5.5,3.3,2.1,0,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(5,0,3,2,0,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(-5,0,3,2,0,0,TAU);ctx.fill();ctx.stroke();
+  }else if(kind==="StoneFruit"){
+    ctx.fillStyle="#8b8491";ctx.strokeStyle="#3f3b43";ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(0,0,6.5,5.5,.15,0,TAU);ctx.fill();ctx.stroke();ctx.strokeStyle="#5d5665";ctx.beginPath();ctx.moveTo(-4,0);ctx.lineTo(-1,2);ctx.lineTo(2,-1);ctx.lineTo(5,2);ctx.stroke();ctx.fillStyle="#6f8b61";ctx.beginPath();ctx.ellipse(2,-6,4,1.8,-.3,0,TAU);ctx.fill();
   }else{
     ctx.fillStyle="#d83d68";circ(-3.2,1.5,4.6);ctx.fillStyle="#e65a80";circ(3.2,1.4,4.6);ctx.fillStyle="#c92e5c";circ(0,-2.3,4.2);ctx.fillStyle="#6ab04c";ctx.beginPath();ctx.moveTo(0,-5);ctx.quadraticCurveTo(4,-10,8,-7);ctx.quadraticCurveTo(4,-3,0,-3);ctx.fill();
   }
@@ -24580,7 +24627,7 @@ function drawPlayer() {
     ctx.translate(0, armWalk * 0.28);
     drawHeldBucket(armFill, player.bucketWater);
     ctx.restore();
-  } else if (holding === "Berry" || holding === "JungleBerry" || holding === "FrostBerry" || holding === "GoodCactus" || holding === "BadCactus") {
+  } else if (holding === "Berry" || holding === "JungleBerry" || holding === "FrostBerry" || holding === "GoodCactus" || holding === "BadCactus" || holding === "StoneFruit") {
     ctx.save();
     ctx.translate(0, armWalk * 0.35);
     drawHeldBerry(armFill, swingEase, holding);
@@ -25367,6 +25414,12 @@ function drawTopHealthOverlays(viewResources = resources, viewGold = goldChunks,
       w = Math.max(40, 34 * sc);
       fill = "#7be08a";
       label = "BUSH";
+    } else if (BIOME_RESOURCE_INFO[r.type]) {
+      const info=BIOME_RESOURCE_INFO[r.type];
+      y = r.y - Math.max(30, 34 * sc);
+      w = Math.max(52, Math.min(88, 42 + String(info.name||"").length * 3.2));
+      fill = info.color || "#d8e2c7";
+      label = String(info.name||"RESOURCE").toUpperCase();
     } else {
       continue;
     }
@@ -25832,7 +25885,7 @@ function resetGame(options = {}) {
   player.gold = meta.ownedStarters.gold15 ? 15 : (meta.ownedStarters.gold5 ? 5 : 0);
   net.goldFloor = Math.max(0, Number(player.gold) || 0);
   player.berries = meta.ownedStarters.berries10 ? 10 : 0;
-  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;player._desertHydrationWait=2.5;player._footprintLastX=NaN;player._footprintLastY=NaN;player._footSide=1;groundFootprints.length=0;
+  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;player._desertHydrationWait=2.5;player._stoneFruitUntil=0;player._footprintLastX=NaN;player._footprintLastY=NaN;player._footSide=1;groundFootprints.length=0;
   player.hydration = 100; player.bucketWater = true; player.bucketSips = BUCKET_MAX_SIPS; updateHydrationHud();
   player.tool = "Fist";
   player.lastWeaponTool = "Fist";
