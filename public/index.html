@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "638";
+const CUBE_SHARED_RULES_VERSION = "639";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -19799,15 +19799,46 @@ function carryPlayerWithOfflineWildMovement(a, oldX, oldY) {
 }
 
 function keepWildInHomeBiomeOffline(a, dt) {
-  if (!a || a.dead || a.owned || a.releasedWild) return false;
-  const home = biomeBaseId(a.biome || worldBiomeAt(a.x, a.y));
-  if (worldBiomeAt(a.x, a.y) === home) return false;
-  if(!a._homeReturnPoint||dist(a.x,a.y,a._homeReturnPoint.x,a._homeReturnPoint.y)<80)a._homeReturnPoint=randomPointInBiome(home,Math.max(60,(a.r||18)+26));
+  // Wild animals cannot survive outside their native biome. Player pets and
+  // Hostl-owned animals are pets, so they are intentionally exempt.
+  if (!a || a.dead || a.owned || a.enemyOwner) return false;
+  const home = biomeBaseId(a.biome || speciesHomeBiome(a.type));
+  const here = biomeBaseId(worldBiomeAt(a.x, a.y));
+  if (here === home || here === "ocean") { a._wrongBiomeTime=0; return false; }
+
+  a.sleeping=false;
+  a.hostileTarget=null;
+  a.enraged=false;
+  a.tameFailedAggro=false;
+  a.desperateAggro=false;
+  a.fleeUntil=0;
+  a.fleeFrom=null;
+  a.mateTarget=null;
+  a.combat=0;
+  a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
+
+  // Percentage damage means babies and Big Mommas get the same amount of time
+  // to escape. With no path home, a healthy animal dies in about 18 seconds.
+  const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;
+  a.hp=Math.max(0,(Number(a.hp)||0)-loss);
+  a._biomeDamageFxT=(Number(a._biomeDamageFxT)||0)-dt;
+  if(a._biomeDamageFxT<=0){a._biomeDamageFxT=.48;a.flash=Math.max(Number(a.flash)||0,.11);}
+  if(a.hp<=0){
+    a.hp=0;a.dead=true;a.hostileTarget=null;a.fleeFrom=null;
+    return true;
+  }
+
+  // Run toward the stable center of the home biome. Once the animal crosses
+  // the boundary, normal wildlife AI resumes immediately.
+  const zone=BIOME_ZONES[home]||BIOME_ZONES.forest;
+  if(!a._homeReturnPoint||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){
+    a._homeReturnPoint={x:zone.cx+rand(-220,220),y:zone.cy+rand(-220,220)};
+    if(biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home)a._homeReturnPoint={x:zone.cx,y:zone.cy};
+  }
   const pos=a._homeReturnPoint;
-  const aim = angTo(a.x, a.y, pos.x, pos.y);
-  smoothTurn(a, aim, dt, 3.8);
-  a.x += Math.cos(a.angle) * (a.speed || 60) * 0.92 * dt;
-  a.y += Math.sin(a.angle) * (a.speed || 60) * 0.92 * dt;
+  const aim=angTo(a.x,a.y,pos.x,pos.y);
+  smoothTurn(a,aim,dt,5.4);
+  moveFacing(a,(a.speed||60)*1.32,dt);
   resolveAnimalWorld(a);
   return true;
 }
@@ -19821,6 +19852,7 @@ function updateAnimals(dt) {
   const fullSimRange2 = fullSimRange * fullSimRange;
   for (const a of animals) {
     if (a.dead || a.owned) continue;
+    if (keepWildInHomeBiomeOffline(a, dt)) continue;
     const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
 
     const adx = a.x - player.x, ady = a.y - player.y;

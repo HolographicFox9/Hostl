@@ -12,7 +12,7 @@ const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "638";
+const CUBE_SHARED_RULES_VERSION = "639";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -2941,6 +2941,7 @@ export class WorldRoom extends Room {
     // timing intentionally match the offline rules.
     for(const[id,a]of this.state.animals){const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
       if(!a||a.hp<=0)continue;
+      if(this.keepWildInHomeBiome(id,a,dt))continue;
       const forcedActive=this.enemyOwnerByPet.has(id)||this.animalAggro.has(id)||this.wildMateTargets.has(id)||a.tameFailedAggro||a.desperateAggro||(a.recentHit||0)>0;
       if(!forcedActive&&!this.hasNearbyPlayerOrPet(a.x,a.y,1650))continue;
       const moveStartX=a.x,moveStartY=a.y;
@@ -2954,7 +2955,6 @@ export class WorldRoom extends Room {
       a.tailPhase=(a.tailPhase||0)+dt*(2.2+(a.speed||60)*.02);
       if(!a.sleeping)this.moveCreatureSwept(a,Math.max(5,(Number(a.speed)||60)*.06),dt);
       if((Number(a._abilityStunUntil)||0)>this.state.worldTime){a.attackAnim=0;this.resolveStatic(a,(a.r||18)*.68);continue;}
-      if(this.keepWildInHomeBiome(id,a,dt))continue;
 
       const enemyOwnerId=this.enemyOwnerByPet.get(id);
       if(enemyOwnerId){
@@ -3513,15 +3513,42 @@ export class WorldRoom extends Room {
   }
 
   keepWildInHomeBiome(id,a,dt){
-    if(!a||a.hp<=0||a.owned||a.releasedWild)return false;
-    const home=biomeBaseId(a.biome||worldBiomeAt(a.x,a.y));
-    if(worldBiomeAt(a.x,a.y)===home)return false;
-    if(!a._homeReturnPoint||dist(a.x,a.y,a._homeReturnPoint.x,a._homeReturnPoint.y)<80)a._homeReturnPoint=randomPointInBiome(home,Math.max(60,(a.r||18)+26));
+    // state.animals also contains Hostl guard/mount animals. Those are pets and
+    // must be allowed to follow their owner across biomes without damage.
+    if(!a||a.hp<=0||a.owned||this.enemyOwnerByPet.has(id))return false;
+    const home=biomeBaseId(a.biome||speciesHomeBiome(a.type));
+    const here=biomeBaseId(worldBiomeAt(a.x,a.y));
+    if(here===home||here==="ocean"){a._wrongBiomeTime=0;return false;}
+
+    a.sleeping=false;
+    a.enraged=false;
+    a.tameFailedAggro=false;
+    a.desperateAggro=false;
+    a.combat=0;
+    this.animalAggro.delete(id);
+    this.animalFleeFrom.delete(id);
+    this.clearWildMate(id);
+    a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
+
+    const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;
+    a.hp=Math.max(0,(Number(a.hp)||0)-loss);
+    a._biomeDamageFxT=(Number(a._biomeDamageFxT)||0)-dt;
+    if(a._biomeDamageFxT<=0){a._biomeDamageFxT=.48;a.flash=Math.max(Number(a.flash)||0,.11);this.broadcastEntityHealth("animal",id,a);}
+    if(a.hp<=0){
+      a.hp=0;a.dead=true;this.broadcastEntityHealth("animal",id,a);this.clearWildMate(id);
+      this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);
+      return true;
+    }
+
+    const zone=BIOME_ZONES[home]||BIOME_ZONES.forest;
+    if(!a._homeReturnPoint||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){
+      a._homeReturnPoint={x:zone.cx+rand(-220,220),y:zone.cy+rand(-220,220)};
+      if(biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home)a._homeReturnPoint={x:zone.cx,y:zone.cy};
+    }
     const homePoint=a._homeReturnPoint;
     const aTo=angTo(a.x,a.y,homePoint.x,homePoint.y);
-    smoothTurn(a,aTo,dt,3.8);
-    a.x+=Math.cos(a.angle)*(a.speed||60)*0.92*dt;
-    a.y+=Math.sin(a.angle)*(a.speed||60)*0.92*dt;
+    smoothTurn(a,aTo,dt,5.4);
+    this.moveCreatureSwept(a,(a.speed||60)*1.32,dt);
     this.resolveStatic(a,(a.r||18)*.68);
     return true;
   }
