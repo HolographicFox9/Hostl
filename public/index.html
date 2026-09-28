@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "635";
+const CUBE_SHARED_RULES_VERSION = "636";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -20851,11 +20851,16 @@ function consumeHydration(amount){
 function applyMovementHydration(dt,moveMul=1){
   if(net.room||player.dead||!(dt>0))return;
   const biome=worldBiomeAt(player.x,player.y);
-  if(!isHotDryBiome(biome))return;
+  if(!isHotDryBiome(biome)){player._desertHydrationWait=2.5;return;}
   const mul=clamp(Number(moveMul)||0,0,1.35);
   const rate=1.85*(0.45+mul*0.55);
-  player.hydration=clamp((Number(player.hydration)||0)-dt*rate,0,100);
-  updateHydrationHud();
+  if(!Number.isFinite(Number(player._desertHydrationWait)))player._desertHydrationWait=2.5;
+  player._desertHydrationWait=Math.max(0,Number(player._desertHydrationWait)-dt);
+  if(player._desertHydrationWait<=0){
+    player.hydration=clamp((Number(player.hydration)||0)-rate*2.5,0,100);
+    player._desertHydrationWait=2.5;
+    updateHydrationHud();
+  }
 }
 function updateHydrationHud(){
   const h=clamp(Number(player.hydration)||0,0,100),fill=el("hydrationFill"),txt=el("hydrationText"),hud=el("hydrationHud");
@@ -20959,6 +20964,7 @@ function updatePlayer(dt) {
   player._actualMoveVY = (player.y - moveStartY) / moveDt;
   player._actualMoving = Math.hypot(player._actualMoveVX, player._actualMoveVY) > 2.5;
   if(player._actualMoving) applyMovementHydration(dt, Math.min(1.2, Math.hypot(player._actualMoveVX, player._actualMoveVY) / 148));
+  updatePlayerFootprints();
   if (player.riding && !player.riding.dead) {
     const mountSpeed = Math.hypot(player._actualMoveVX, player._actualMoveVY);
     player.riding._visualMoveSpeed = mountSpeed;
@@ -22134,8 +22140,8 @@ function drawBiomeGroundDecor(px,py,seedX,seedY){
       ctx.fillStyle="rgba(69,108,55,.16)"; ctx.beginPath(); ctx.ellipse(x,y,42+groundNoise(seedX,seedY,4)*18,20+groundNoise(seedY,seedX,5)*10,groundNoise(seedX,seedY,6)*.8,0,TAU); ctx.fill();
     }
     if(groundNoise(seedX,seedY,7)>.28){
-      drawFlowerCluster(x-10,y-2,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedX,seedY,8)*4)],3+Math.floor(groundNoise(seedY,seedX,9)*4),18+groundNoise(seedX,seedY,10)*16,1+groundNoise(seedY,seedX,11)*.25);
-      if(groundNoise(seedX,seedY,12)>.62) drawFlowerCluster(x+14,y+8,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedY,seedX,13)*4)],2+Math.floor(groundNoise(seedX,seedY,14)*3),10+groundNoise(seedY,seedX,15)*12,.82);
+      drawFlowerCluster(x-10,y-2,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedX,seedY,8)*4)],3+Math.floor(groundNoise(seedY,seedX,9)*4),18+groundNoise(seedX,seedY,10)*16,1.28+groundNoise(seedY,seedX,11)*.30);
+      if(groundNoise(seedX,seedY,12)>.62) drawFlowerCluster(x+14,y+8,["#f3f7a8","#f8d0e6","#d9f7ff","#ffd18e"][Math.floor(groundNoise(seedY,seedX,13)*4)],2+Math.floor(groundNoise(seedX,seedY,14)*3),10+groundNoise(seedY,seedX,15)*12,1.08);
     }
     if(groundNoise(seedX,seedY,16)>.56){ drawPebblePatch(x+18,y+12,3+Math.floor(groundNoise(seedY,seedX,17)*4),20,"#7e7a72"); }
     if(groundNoise(seedX,seedY,18)>.48){ drawLeafScatter(x-8,y+10,4+Math.floor(groundNoise(seedY,seedX,19)*4),22,"#6a8b4e"); }
@@ -22190,6 +22196,55 @@ function drawBiomeGroundDecor(px,py,seedX,seedY){
     ctx.fillStyle="rgba(214,236,244,.72)"; ctx.beginPath(); ctx.arc(x+24,y-10,4.4,0,TAU); ctx.fill();
     ctx.strokeStyle="rgba(173,210,226,.55)"; ctx.beginPath(); ctx.moveTo(x+24,y-16); ctx.lineTo(x+24,y-4); ctx.moveTo(x+18,y-10); ctx.lineTo(x+30,y-10); ctx.stroke();
     if(groundNoise(seedX,seedY,40)>.56){ drawPebblePatch(x-4,y+18,2+Math.floor(groundNoise(seedY,seedX,41)*3),15,"#a3b3bc"); }
+    ctx.restore();
+  }
+}
+const groundFootprints=[];
+function addPlayerGroundFootprint(biome,angle){
+  if(biome!=="arctic"&&biome!=="desert")return;
+  const side=(player._footSide||1);player._footSide=-side;
+  const perp=angle+Math.PI/2, back=angle+Math.PI;
+  groundFootprints.push({
+    x:player.x+Math.cos(perp)*side*6+Math.cos(back)*5,
+    y:player.y+Math.sin(perp)*side*6+Math.sin(back)*5,
+    angle, biome, born:game.time,
+    driftX:biome==="desert"?(7+groundNoise(player.x,player.y,52)*9):0,
+    driftY:biome==="desert"?(-3+groundNoise(player.y,player.x,53)*8):0,
+    spin:biome==="desert"?(groundNoise(player.x,player.y,54)-.5)*.34:0
+  });
+  if(groundFootprints.length>180)groundFootprints.splice(0,groundFootprints.length-180);
+}
+function updatePlayerFootprints(){
+  const biome=biomeBaseId(worldBiomeAt(player.x,player.y));
+  if(biome!=="arctic"&&biome!=="desert"){player._footprintLastX=player.x;player._footprintLastY=player.y;return;}
+  if(!player._actualMoving)return;
+  const lx=Number(player._footprintLastX),ly=Number(player._footprintLastY);
+  if(!Number.isFinite(lx)||!Number.isFinite(ly)){player._footprintLastX=player.x;player._footprintLastY=player.y;return;}
+  if(dist(lx,ly,player.x,player.y)<24)return;
+  const a=Math.atan2(player.y-ly,player.x-lx);
+  addPlayerGroundFootprint(biome,a);
+  player._footprintLastX=player.x;player._footprintLastY=player.y;
+}
+function drawGroundFootprints(){
+  const now=game.time;
+  for(let i=groundFootprints.length-1;i>=0;i--){
+    const f=groundFootprints[i],age=now-f.born;
+    if(age<0||age>(f.biome==="arctic"?10:6)){groundFootprints.splice(i,1);continue;}
+    ctx.save();
+    if(f.biome==="arctic"){
+      const t=clamp(age/10,0,1);
+      const c=mixHex("#8da9b1","#d9edf2",t);
+      ctx.translate(f.x,f.y);ctx.rotate(f.angle);ctx.fillStyle=c;ctx.globalAlpha=.76*(1-t*.35);
+      ctx.beginPath();ctx.ellipse(0,0,4.8,8.5,0,0,TAU);ctx.fill();
+      ctx.beginPath();ctx.ellipse(0,-7.2,5.4,3.2,0,0,TAU);ctx.fill();
+    }else{
+      const t=clamp(age/6,0,1),wind=t*t;
+      ctx.translate(f.x+f.driftX*wind,f.y+f.driftY*wind);ctx.rotate(f.angle+f.spin*wind);
+      ctx.fillStyle="#9b7d4e";ctx.globalAlpha=.58*(1-t);
+      ctx.beginPath();ctx.ellipse(0,0,4.6*(1-t*.18),8.1*(1-t*.12),0,0,TAU);ctx.fill();
+      ctx.beginPath();ctx.ellipse(0,-6.8,5.1*(1-t*.15),3.0,0,0,TAU);ctx.fill();
+      ctx.strokeStyle="rgba(183,150,91,.32)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-8+f.driftX*wind*.2,4);ctx.lineTo(8+f.driftX*wind*.45,1);ctx.stroke();
+    }
     ctx.restore();
   }
 }
@@ -22350,7 +22405,7 @@ function drawResource(r) {
       ctx.fillStyle="#5f9d51";ctx.strokeStyle=ink;ctx.lineWidth=2.5;circ(0,0,13);ctx.stroke();
       for(const [a,d,rx,ry] of [[0,15,9,6],[1.57,14,8,5.5],[3.14,15,9,6],[4.71,14,8,5.5]]){leaf(Math.cos(a)*d,Math.sin(a)*d,rx,ry,a,"#6eaa59");}
       ctx.fillStyle="#d9e6af";for(let i=0;i<8;i++){const a=i/8*TAU;circ(Math.cos(a)*9,Math.sin(a)*9,1.1);}
-      for(const [fx,fy] of [[-5,-5],[6,-3],[1,6]]){ctx.fillStyle=flower;for(let k=0;k<4;k++){const a=k/4*TAU;ctx.beginPath();ctx.ellipse(fx+Math.cos(a)*1.8,fy+Math.sin(a)*1.8,1.5,1.1,a,0,TAU);ctx.fill();}ctx.fillStyle="#ffe39a";circ(fx,fy,1.0);}
+      for(const [fx,fy] of [[-5,-5],[6,-3],[1,6]]){ctx.fillStyle=flower;for(let k=0;k<5;k++){const a=k/5*TAU;ctx.beginPath();ctx.ellipse(fx+Math.cos(a)*3.0,fy+Math.sin(a)*3.0,2.45,1.75,a,0,TAU);ctx.fill();}ctx.fillStyle="#ffe39a";circ(fx,fy,1.7);}
     }else if(r.type==="desertSandstone"){
       flatRock([[-24,-4],[-14,-20],[8,-23],[24,-9],[22,12],[5,23],[-17,17]],"#caa865","#e0c886");
     }else if(r.type==="arcticIceCrystal"){
@@ -25363,15 +25418,12 @@ function drawMinimap() {
   const toMap=(x,y)=>({x:(x-left)*scale,y:(y-top)*scale});
   const visible=(x,y,pad=5)=>{const m=toMap(x,y);return m.x>=-pad&&m.x<=size+pad&&m.y>=-pad&&m.y<=size+pad;};
 
-  const mmGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2",ocean:"#2f83a7"};
+  const mmGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2",desert:"#d8b36a",ocean:"#2f83a7"};
   const cells=70,cs=size/cells;
   for(let gy=0;gy<cells;gy++)for(let gx=0;gx<cells;gx++){
     const wx=left+(gx+.5)/cells*MINIMAP_VIEW_SPAN,wy=top+(gy+.5)/cells*MINIMAP_VIEW_SPAN,b=biomeBaseId(worldBiomeAt(wx,wy));
     mmCtx.fillStyle=mmGround[b]||mmGround.ocean;mmCtx.fillRect(gx*cs,gy*cs,cs+.5,cs+.5);
   }
-  mmCtx.font="bold 7px sans-serif";mmCtx.textAlign="center";mmCtx.textBaseline="middle";
-  for(const id of BIOME_ORDER){const z=BIOME_ZONES[id];if(!z||!visible(z.cx,z.cy,18))continue;const m=toMap(z.cx,z.cy);mmCtx.fillStyle=id==="arctic"?"rgba(42,74,87,.92)":"rgba(255,255,255,.88)";mmCtx.fillText((BIOME_PROFILES[id]?.name||id).toUpperCase(),m.x,m.y);}
-
   mmCtx.fillStyle="#f2c94c";
   for(const g of goldChunks){if(!g.pure||!visible(g.x,g.y,8))continue;const m=toMap(g.x,g.y),sz=10;mmCtx.fillRect(m.x-sz/2,m.y-sz/2,sz,sz);}
   mmCtx.fillStyle="#ffb347";
@@ -25466,6 +25518,8 @@ function draw(menuMode = false) {
   // Render only nearby static objects. The recovery query validates suspiciously
   // empty buckets against the authoritative arrays and rebuilds the grid when
   // needed, so we keep the dead-zone fix without scanning the entire map every frame.
+  safeCanvasDrawCall("ground footprints", drawGroundFootprints);
+
   const viewResources = queryStaticForRender("resources", viewCx, viewCy, viewRange);
   let vrWrite = 0;
   for (let i = 0; i < viewResources.length; i++) {
@@ -25669,7 +25723,7 @@ function resetGame(options = {}) {
   player.gold = meta.ownedStarters.gold15 ? 15 : (meta.ownedStarters.gold5 ? 5 : 0);
   net.goldFloor = Math.max(0, Number(player.gold) || 0);
   player.berries = meta.ownedStarters.berries10 ? 10 : 0;
-  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;
+  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;player._desertHydrationWait=2.5;player._footprintLastX=NaN;player._footprintLastY=NaN;player._footSide=1;groundFootprints.length=0;
   player.hydration = 100; player.bucketWater = true; player.bucketSips = BUCKET_MAX_SIPS; updateHydrationHud();
   player.tool = "Fist";
   player.lastWeaponTool = "Fist";
