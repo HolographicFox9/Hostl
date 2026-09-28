@@ -6215,9 +6215,9 @@ if (window.visualViewport) window.visualViewport.addEventListener("resize", sche
 resize(true);
 
 // ---------- constants ----------
-const WORLD_W = 24000, WORLD_H = 24000;
+const WORLD_W = 28000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "640";
+const CUBE_SHARED_RULES_VERSION = "643";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8255,26 +8255,26 @@ const PET_TYPES = {
            sizeMul: 1.28, flee: false, style: "galeslip",
            coats: ["#c9ac7c","#b99669","#d6bc8d","#aa8b60"] },
 
-  fennec: { name:"Fennec Fox", emoji:"🦊", elem:"Fire", color:"#e5b86d", abilityCd:12, desc:"Heat mirage — a close heat burst that pushes enemies away", baseSpeed:104, friendly:true, sizeMul:.82, flee:true, style:"mirage", coats:["#e5b86d","#d8a45d","#f0cc8b"] },
-  camel: { name:"Camel", emoji:"🐪", elem:"Water", color:"#b99161", abilityCd:15, desc:"Water spray — a long cooling stream that hits forward and restores some health", baseSpeed:64, friendly:true, sizeMul:1.48, flee:false, style:"spray", coats:["#b99161","#caa777","#9f794e"] },
-  scorpion: { name:"Scorpion", emoji:"🦂", elem:"Poison", color:"#7e6548", abilityCd:13, desc:"Venom sting — a fast tail strike that applies strong poison directly", baseSpeed:70, friendly:false, sizeMul:.88, flee:false, style:"sting", coats:["#7e6548","#5e4d38","#a2845b"] },
-  hyena: { name:"Hyena", emoji:"🐾", elem:"Sound", color:"#ad9264", abilityCd:13, desc:"Laugh shock — staggered sound rings that knock enemies off balance", baseSpeed:90, friendly:false, sizeMul:1.16, flee:false, style:"laugh", coats:["#ad9264","#947a52","#c2a879"] },
-  caracal: { name:"Caracal", emoji:"🐈", elem:"Wind", color:"#b7754d", abilityCd:11, desc:"Ear-slice gust — twin narrow wind cuts from either side", baseSpeed:108, friendly:false, sizeMul:1.02, flee:false, style:"windcut", coats:["#b7754d","#a56545","#cd8e62"] },
-  polarbear: { name:"Polar Bear", emoji:"🐻‍❄️", elem:"Ice", color:"#edf3f3", abilityCd:17, desc:"Ice shove — a heavy forward frost wave that slows and pushes", baseSpeed:52, friendly:false, sizeMul:1.62, flee:false, style:"iceshove", coats:["#edf3f3","#dce8ea","#f8fbfb"] },
-  arcticfox: { name:"Arctic Fox", emoji:"🦊", elem:"Ice", color:"#e9f1f5", abilityCd:12, desc:"Snow veil — freezes nearby enemies briefly while the fox slips away", baseSpeed:102, friendly:true, sizeMul:.94, flee:true, style:"snowveil", coats:["#e9f1f5","#d4e4ec","#f7fbff"] },
-  walrus: { name:"Walrus", emoji:"🦭", elem:"Water", color:"#94735f", abilityCd:16, desc:"Tidal slam — a short heavy splash with huge knockback", baseSpeed:42, friendly:false, sizeMul:1.62, flee:false, style:"tidalslam", coats:["#94735f","#7c6050","#ad8970"] },
-  muskox: { name:"Musk Ox", emoji:"🐂", elem:"Earth", color:"#5d4838", abilityCd:16, desc:"Ground brace — stomps a stone shock ring and briefly resists knockback", baseSpeed:58, friendly:false, sizeMul:1.48, flee:false, style:"brace", coats:["#5d4838","#49392e","#765c47"] },
-  snowyowl: { name:"Snowy Owl", emoji:"🦉", elem:"Wind", color:"#f0f2ee", abilityCd:13, desc:"Whiteout fan — a broad wind fan that pushes several targets", baseSpeed:76, friendly:true, sizeMul:1.0, flee:true, style:"whiteout", coats:["#f0f2ee","#dde4e3","#fafcf8"] },
-  mountaingoat: { name:"Mountain Goat", emoji:"🐐", elem:"Earth", color:"#b9b4a7", abilityCd:14, desc:"Cliff kick — a hard physical-earth kick that launches one target", baseSpeed:88, friendly:true, sizeMul:1.08, flee:false, style:"cliffkick", coats:["#b9b4a7","#a39d91","#d0ccc1"] },
-  eagle: { name:"Golden Eagle", emoji:"🦅", elem:"Lightning", color:"#8a6537", abilityCd:14, desc:"Thunder dive — marks a target and strikes it with a vertical bolt", baseSpeed:102, friendly:false, sizeMul:1.10, flee:false, style:"thunderdive", coats:["#8a6537","#6d4e2c","#a67a43"] },
-  cougar: { name:"Cougar", emoji:"🐆", elem:"Combat", color:"#c39a68", abilityCd:12, desc:"Rake combo — three rapid claw hits while circling the target", baseSpeed:105, friendly:false, sizeMul:1.22, flee:false, style:"rake", coats:["#c39a68","#ad8558","#d6b07b"] },
-  bighorn: { name:"Bighorn Sheep", emoji:"🐏", elem:"Earth", color:"#9a8064", abilityCd:15, desc:"Horn charge — accelerates straight forward and knocks through targets", baseSpeed:78, friendly:false, sizeMul:1.28, flee:false, style:"horncharge", coats:["#9a8064","#806a54","#b19a7c"] },
-  marmot: { name:"Marmot", emoji:"🐿️", elem:"Sound", color:"#8d6b4e", abilityCd:11, desc:"Alarm whistle — a sharp cone that stuns nearby enemies", baseSpeed:74, friendly:true, sizeMul:.78, flee:true, style:"whistle", coats:["#8d6b4e","#74563f","#a58262"] },
-  jaguar: { name:"Jaguar", emoji:"🐆", elem:"Shadow", color:"#d2a23d", abilityCd:13, desc:"Shadow rake — dark claw arcs hit around the jaguar without a pounce", baseSpeed:100, friendly:false, sizeMul:1.26, flee:false, style:"shadowrake", coats:["#d2a23d","#bd8e32","#e2b85a"] },
-  toucan: { name:"Toucan", emoji:"🦜", elem:"Sound", color:"#272523", abilityCd:12, desc:"Beak call — a focused sound bolt that ricochets once", baseSpeed:82, friendly:true, sizeMul:.88, flee:true, style:"beakcall", coats:["#272523","#34302c","#1c1c1c"] },
-  tapir: { name:"Tapir", emoji:"🐗", elem:"Earth", color:"#5d5147", abilityCd:16, desc:"Mud roll — rolls forward leaving an earth wake that damages what crosses it", baseSpeed:60, friendly:true, sizeMul:1.34, flee:false, style:"mudroll", coats:["#5d5147","#4d433c","#706158"] },
-  capybara: { name:"Capybara", emoji:"🦫", elem:"Water", color:"#9b7352", abilityCd:14, desc:"Calm current — a healing water pulse for allies with a small enemy push", baseSpeed:66, friendly:true, sizeMul:1.12, flee:false, style:"calmcurrent", coats:["#9b7352","#865f43","#ad8460"] },
-  anaconda: { name:"Anaconda", emoji:"🐍", elem:"Combat", color:"#4f7040", abilityCd:15, desc:"Constrict — grabs the nearest target, crushing and slowing it without venom", baseSpeed:60, friendly:false, sizeMul:1.50, flee:false, style:"constrict", coats:["#4f7040","#3d5e32","#69875a"] },};
+  fennec: { name:"Fennec Fox", emoji:"🦊", elem:"Fire", color:"#e5b86d", abilityCd:12, desc:"Heat mirage — a close heat burst that pushes enemies away", baseSpeed:104, friendly:true, sizeMul:.90, flee:true, style:"mirage", coats:["#e5b86d","#d8a45d","#f0cc8b"] },
+  camel: { name:"Camel", emoji:"🐪", elem:"Water", color:"#b99161", abilityCd:15, desc:"Water spray — a long cooling stream that hits forward and restores some health", baseSpeed:64, friendly:true, sizeMul:1.62, flee:false, style:"spray", coats:["#b99161","#caa777","#9f794e"] },
+  scorpion: { name:"Scorpion", emoji:"🦂", elem:"Poison", color:"#7e6548", abilityCd:13, desc:"Venom sting — a fast tail strike that applies strong poison directly", baseSpeed:70, friendly:false, sizeMul:.96, flee:false, style:"sting", coats:["#7e6548","#5e4d38","#a2845b"] },
+  hyena: { name:"Hyena", emoji:"🐾", elem:"Sound", color:"#ad9264", abilityCd:13, desc:"Laugh shock — staggered sound rings that knock enemies off balance", baseSpeed:90, friendly:false, sizeMul:1.26, flee:false, style:"laugh", coats:["#ad9264","#947a52","#c2a879"] },
+  caracal: { name:"Caracal", emoji:"🐈", elem:"Wind", color:"#b7754d", abilityCd:11, desc:"Ear-slice gust — twin narrow wind cuts from either side", baseSpeed:108, friendly:false, sizeMul:1.10, flee:false, style:"windcut", coats:["#b7754d","#a56545","#cd8e62"] },
+  polarbear: { name:"Polar Bear", emoji:"🐻‍❄️", elem:"Ice", color:"#edf3f3", abilityCd:17, desc:"Ice shove — a heavy forward frost wave that slows and pushes", baseSpeed:52, friendly:false, sizeMul:1.78, flee:false, style:"iceshove", coats:["#edf3f3","#dce8ea","#f8fbfb"] },
+  arcticfox: { name:"Arctic Fox", emoji:"🦊", elem:"Ice", color:"#e9f1f5", abilityCd:12, desc:"Snow veil — freezes nearby enemies briefly while the fox slips away", baseSpeed:102, friendly:true, sizeMul:1.02, flee:true, style:"snowveil", coats:["#e9f1f5","#d4e4ec","#f7fbff"] },
+  walrus: { name:"Walrus", emoji:"🦭", elem:"Water", color:"#94735f", abilityCd:16, desc:"Tidal slam — a short heavy splash with huge knockback", baseSpeed:42, friendly:false, sizeMul:1.80, flee:false, style:"tidalslam", coats:["#94735f","#7c6050","#ad8970"] },
+  muskox: { name:"Musk Ox", emoji:"🐂", elem:"Earth", color:"#5d4838", abilityCd:16, desc:"Ground brace — stomps a stone shock ring and briefly resists knockback", baseSpeed:58, friendly:false, sizeMul:1.62, flee:false, style:"brace", coats:["#5d4838","#49392e","#765c47"] },
+  snowyowl: { name:"Snowy Owl", emoji:"🦉", elem:"Wind", color:"#f0f2ee", abilityCd:13, desc:"Whiteout fan — a broad wind fan that pushes several targets", baseSpeed:76, friendly:true, sizeMul:1.08, flee:true, style:"whiteout", coats:["#f0f2ee","#dde4e3","#fafcf8"] },
+  mountaingoat: { name:"Mountain Goat", emoji:"🐐", elem:"Earth", color:"#b9b4a7", abilityCd:14, desc:"Cliff kick — a hard physical-earth kick that launches one target", baseSpeed:88, friendly:true, sizeMul:1.18, flee:false, style:"cliffkick", coats:["#b9b4a7","#a39d91","#d0ccc1"] },
+  eagle: { name:"Golden Eagle", emoji:"🦅", elem:"Lightning", color:"#8a6537", abilityCd:14, desc:"Thunder dive — marks a target and strikes it with a vertical bolt", baseSpeed:102, friendly:false, sizeMul:1.20, flee:false, style:"thunderdive", coats:["#8a6537","#6d4e2c","#a67a43"] },
+  cougar: { name:"Cougar", emoji:"🐆", elem:"Combat", color:"#c39a68", abilityCd:12, desc:"Rake combo — three rapid claw hits while circling the target", baseSpeed:105, friendly:false, sizeMul:1.34, flee:false, style:"rake", coats:["#c39a68","#ad8558","#d6b07b"] },
+  bighorn: { name:"Bighorn Sheep", emoji:"🐏", elem:"Earth", color:"#9a8064", abilityCd:15, desc:"Horn charge — accelerates straight forward and knocks through targets", baseSpeed:78, friendly:false, sizeMul:1.40, flee:false, style:"horncharge", coats:["#9a8064","#806a54","#b19a7c"] },
+  marmot: { name:"Marmot", emoji:"🐿️", elem:"Sound", color:"#8d6b4e", abilityCd:11, desc:"Alarm whistle — a sharp cone that stuns nearby enemies", baseSpeed:74, friendly:true, sizeMul:.86, flee:true, style:"whistle", coats:["#8d6b4e","#74563f","#a58262"] },
+  jaguar: { name:"Jaguar", emoji:"🐆", elem:"Shadow", color:"#d2a23d", abilityCd:13, desc:"Shadow rake — dark claw arcs hit around the jaguar without a pounce", baseSpeed:100, friendly:false, sizeMul:1.40, flee:false, style:"shadowrake", coats:["#d2a23d","#bd8e32","#e2b85a"] },
+  toucan: { name:"Toucan", emoji:"🦜", elem:"Sound", color:"#272523", abilityCd:12, desc:"Beak call — a focused sound bolt that ricochets once", baseSpeed:82, friendly:true, sizeMul:.96, flee:true, style:"beakcall", coats:["#272523","#34302c","#1c1c1c"] },
+  tapir: { name:"Tapir", emoji:"🐗", elem:"Earth", color:"#5d5147", abilityCd:16, desc:"Mud roll — rolls forward leaving an earth wake that damages what crosses it", baseSpeed:60, friendly:true, sizeMul:1.48, flee:false, style:"mudroll", coats:["#5d5147","#4d433c","#706158"] },
+  capybara: { name:"Capybara", emoji:"🦫", elem:"Water", color:"#9b7352", abilityCd:14, desc:"Calm current — a healing water pulse for allies with a small enemy push", baseSpeed:66, friendly:true, sizeMul:1.22, flee:false, style:"calmcurrent", coats:["#9b7352","#865f43","#ad8460"] },
+  anaconda: { name:"Anaconda", emoji:"🐍", elem:"Combat", color:"#4f7040", abilityCd:15, desc:"Constrict — grabs the nearest target, crushing and slowing it without venom", baseSpeed:60, friendly:false, sizeMul:1.68, flee:false, style:"constrict", coats:["#4f7040","#3d5e32","#69875a"] },};
 
 // Species are intentionally different instead of sharing one generic health pool.
 // hpMul = natural toughness, damageTaken < 1 = better defense, attack = base bite power.
@@ -8600,19 +8600,34 @@ function stageDisplayName(stage) {
   if (stage === "bigmomma") return "Big Momma";
   return stage ? stage.charAt(0).toUpperCase() + stage.slice(1) : "";
 }
+const ANIMAL_PLANT_EATERS = new Set(["rabbit","deer","camel","muskox","mountaingoat","bighorn","marmot","tapir","capybara"]);
+function animalDietSizeMultiplier(type) {
+  // Plant eaters are the smaller-bodied group. Predators/non-herbivores stay
+  // more imposing at every age, with scorpions deliberately large enough to
+  // read as dangerous animals rather than tiny insects in the world.
+  if (ANIMAL_PLANT_EATERS.has(type)) return 0.88;
+  if (type === "scorpion") return 1.32;
+  return 1.14;
+}
 function animalRadius(type, stage) {
   const mul = (PET_TYPES[type] && PET_TYPES[type].sizeMul) || 1;
-  let base = 18;
-  if (stage === "adult") base = 36;
-  else if (stage === "boss") base = 52;
-  else if (stage === "superboss") base = 68;
-  else if (stage === "bigmomma") base = 92;
+  const dietMul = animalDietSizeMultiplier(type);
+  // Stage size is intentionally dramatic. Babies can already be larger than the
+  // player for naturally large species; Adults are imposing, Bosses/Superbosses
+  // are huge, and Big Mommas are unmistakably massive.
+  let base = 22;
+  if (stage === "adult") base = 45;
+  else if (stage === "boss") base = 68;
+  else if (stage === "superboss") base = 96;
+  else if (stage === "bigmomma") base = 140;
 
   let extra = 1;
   if (stage === "boss" || stage === "superboss" || stage === "bigmomma") {
-    extra = (type === "bear" || type === "saber" || type === "clouded") ? 1.28 : (type === "wolf" || type === "boar") ? 1.18 : 1.1;
+    extra = (type === "bear" || type === "saber" || type === "clouded") ? 1.28 :
+            (type === "polarbear" || type === "walrus" || type === "camel" || type === "muskox" || type === "anaconda" || type === "tapir") ? 1.20 :
+            (type === "wolf" || type === "boar" || type === "jaguar" || type === "bighorn" || type === "cougar") ? 1.16 : 1.08;
   }
-  return base * mul * extra;
+  return base * mul * dietMul * extra;
 }
 function uploadedAnimalVisibleDimensions(type, stage) {
   const baseR = animalRadius(type, stage);
@@ -25580,7 +25595,7 @@ function drawMinimap() {
   const toMap=(x,y)=>({x:(x-left)*scale,y:(y-top)*scale});
   const visible=(x,y,pad=5)=>{const m=toMap(x,y);return m.x>=-pad&&m.x<=size+pad&&m.y>=-pad&&m.y<=size+pad;};
 
-  const mmGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2",desert:"#d8b36a",ocean:"#2f83a7"};
+  const mmGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2",desert:"#d8b36a",mountains:"#777b73",ocean:"#2f83a7"};
   const cells=70,cs=size/cells;
   for(let gy=0;gy<cells;gy++)for(let gx=0;gx<cells;gx++){
     const wx=left+(gx+.5)/cells*MINIMAP_VIEW_SPAN,wy=top+(gy+.5)/cells*MINIMAP_VIEW_SPAN,b=biomeBaseId(worldBiomeAt(wx,wy));

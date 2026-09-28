@@ -6,13 +6,13 @@
 import { Room } from "@colyseus/core";
 import { Schema, MapSchema, defineTypes } from "@colyseus/schema";
 
-const WORLD_W = 24000;
-const WORLD_H = 24000;
+const WORLD_W = 28000;
+const WORLD_H = 28000;
 const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "640";
+const CUBE_SHARED_RULES_VERSION = "643";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -463,26 +463,26 @@ const PET_TYPES = {
   saber:  { baseSpeed:100, friendly: false, flee: false, sizeMul: 1.45, color: "#d4a060", abilityCd: 11, elem: "Combat", coats:["#d4a060","#c49050","#e8c080","#a07040","#f0d0a0"] },
   clouded:{ baseSpeed:98,friendly:false,flee:false,sizeMul:1.28,color:"#c9ac7c",abilityCd:11,elem:"Wind",coats:["#c9ac7c","#b99669","#d6bc8d","#aa8b60"]},
 
-  fennec:{baseSpeed:104,friendly:true,flee:true,sizeMul:.82,color:"#e5b86d",abilityCd:12,elem:"Fire",coats:["#e5b86d","#d8a45d","#f0cc8b"]},
-  camel:{baseSpeed:64,friendly:true,flee:false,sizeMul:1.48,color:"#b99161",abilityCd:15,elem:"Water",coats:["#b99161","#caa777","#9f794e"]},
-  scorpion:{baseSpeed:70,friendly:false,flee:false,sizeMul:.88,color:"#7e6548",abilityCd:13,elem:"Poison",coats:["#7e6548","#5e4d38","#a2845b"]},
-  hyena:{baseSpeed:90,friendly:false,flee:false,sizeMul:1.16,color:"#ad9264",abilityCd:13,elem:"Sound",coats:["#ad9264","#947a52","#c2a879"]},
-  caracal:{baseSpeed:108,friendly:false,flee:false,sizeMul:1.02,color:"#b7754d",abilityCd:11,elem:"Wind",coats:["#b7754d","#a56545","#cd8e62"]},
-  polarbear:{baseSpeed:52,friendly:false,flee:false,sizeMul:1.62,color:"#edf3f3",abilityCd:17,elem:"Ice",coats:["#edf3f3","#dce8ea","#f8fbfb"]},
-  arcticfox:{baseSpeed:102,friendly:true,flee:true,sizeMul:.94,color:"#e9f1f5",abilityCd:12,elem:"Ice",coats:["#e9f1f5","#d4e4ec","#f7fbff"]},
-  walrus:{baseSpeed:42,friendly:false,flee:false,sizeMul:1.62,color:"#94735f",abilityCd:16,elem:"Water",coats:["#94735f","#7c6050","#ad8970"]},
-  muskox:{baseSpeed:58,friendly:false,flee:false,sizeMul:1.48,color:"#5d4838",abilityCd:16,elem:"Earth",coats:["#5d4838","#49392e","#765c47"]},
-  snowyowl:{baseSpeed:76,friendly:true,flee:true,sizeMul:1.0,color:"#f0f2ee",abilityCd:13,elem:"Wind",coats:["#f0f2ee","#dde4e3","#fafcf8"]},
-  mountaingoat:{baseSpeed:88,friendly:true,flee:false,sizeMul:1.08,color:"#b9b4a7",abilityCd:14,elem:"Earth",coats:["#b9b4a7","#a39d91","#d0ccc1"]},
-  eagle:{baseSpeed:102,friendly:false,flee:false,sizeMul:1.10,color:"#8a6537",abilityCd:14,elem:"Lightning",coats:["#8a6537","#6d4e2c","#a67a43"]},
-  cougar:{baseSpeed:105,friendly:false,flee:false,sizeMul:1.22,color:"#c39a68",abilityCd:12,elem:"Combat",coats:["#c39a68","#ad8558","#d6b07b"]},
-  bighorn:{baseSpeed:78,friendly:false,flee:false,sizeMul:1.28,color:"#9a8064",abilityCd:15,elem:"Earth",coats:["#9a8064","#806a54","#b19a7c"]},
-  marmot:{baseSpeed:74,friendly:true,flee:true,sizeMul:.78,color:"#8d6b4e",abilityCd:11,elem:"Sound",coats:["#8d6b4e","#74563f","#a58262"]},
-  jaguar:{baseSpeed:100,friendly:false,flee:false,sizeMul:1.26,color:"#d2a23d",abilityCd:13,elem:"Shadow",coats:["#d2a23d","#bd8e32","#e2b85a"]},
-  toucan:{baseSpeed:82,friendly:true,flee:true,sizeMul:.88,color:"#272523",abilityCd:12,elem:"Sound",coats:["#272523","#34302c","#1c1c1c"]},
-  tapir:{baseSpeed:60,friendly:true,flee:false,sizeMul:1.34,color:"#5d5147",abilityCd:16,elem:"Earth",coats:["#5d5147","#4d433c","#706158"]},
-  capybara:{baseSpeed:66,friendly:true,flee:false,sizeMul:1.12,color:"#9b7352",abilityCd:14,elem:"Water",coats:["#9b7352","#865f43","#ad8460"]},
-  anaconda:{baseSpeed:60,friendly:false,flee:false,sizeMul:1.50,color:"#4f7040",abilityCd:15,elem:"Combat",coats:["#4f7040","#3d5e32","#69875a"]},};
+  fennec:{baseSpeed:104,friendly:true,flee:true,sizeMul:.90,color:"#e5b86d",abilityCd:12,elem:"Fire",coats:["#e5b86d","#d8a45d","#f0cc8b"]},
+  camel:{baseSpeed:64,friendly:true,flee:false,sizeMul:1.62,color:"#b99161",abilityCd:15,elem:"Water",coats:["#b99161","#caa777","#9f794e"]},
+  scorpion:{baseSpeed:70,friendly:false,flee:false,sizeMul:.96,color:"#7e6548",abilityCd:13,elem:"Poison",coats:["#7e6548","#5e4d38","#a2845b"]},
+  hyena:{baseSpeed:90,friendly:false,flee:false,sizeMul:1.26,color:"#ad9264",abilityCd:13,elem:"Sound",coats:["#ad9264","#947a52","#c2a879"]},
+  caracal:{baseSpeed:108,friendly:false,flee:false,sizeMul:1.10,color:"#b7754d",abilityCd:11,elem:"Wind",coats:["#b7754d","#a56545","#cd8e62"]},
+  polarbear:{baseSpeed:52,friendly:false,flee:false,sizeMul:1.78,color:"#edf3f3",abilityCd:17,elem:"Ice",coats:["#edf3f3","#dce8ea","#f8fbfb"]},
+  arcticfox:{baseSpeed:102,friendly:true,flee:true,sizeMul:1.02,color:"#e9f1f5",abilityCd:12,elem:"Ice",coats:["#e9f1f5","#d4e4ec","#f7fbff"]},
+  walrus:{baseSpeed:42,friendly:false,flee:false,sizeMul:1.80,color:"#94735f",abilityCd:16,elem:"Water",coats:["#94735f","#7c6050","#ad8970"]},
+  muskox:{baseSpeed:58,friendly:false,flee:false,sizeMul:1.62,color:"#5d4838",abilityCd:16,elem:"Earth",coats:["#5d4838","#49392e","#765c47"]},
+  snowyowl:{baseSpeed:76,friendly:true,flee:true,sizeMul:1.08,color:"#f0f2ee",abilityCd:13,elem:"Wind",coats:["#f0f2ee","#dde4e3","#fafcf8"]},
+  mountaingoat:{baseSpeed:88,friendly:true,flee:false,sizeMul:1.18,color:"#b9b4a7",abilityCd:14,elem:"Earth",coats:["#b9b4a7","#a39d91","#d0ccc1"]},
+  eagle:{baseSpeed:102,friendly:false,flee:false,sizeMul:1.20,color:"#8a6537",abilityCd:14,elem:"Lightning",coats:["#8a6537","#6d4e2c","#a67a43"]},
+  cougar:{baseSpeed:105,friendly:false,flee:false,sizeMul:1.34,color:"#c39a68",abilityCd:12,elem:"Combat",coats:["#c39a68","#ad8558","#d6b07b"]},
+  bighorn:{baseSpeed:78,friendly:false,flee:false,sizeMul:1.40,color:"#9a8064",abilityCd:15,elem:"Earth",coats:["#9a8064","#806a54","#b19a7c"]},
+  marmot:{baseSpeed:74,friendly:true,flee:true,sizeMul:.86,color:"#8d6b4e",abilityCd:11,elem:"Sound",coats:["#8d6b4e","#74563f","#a58262"]},
+  jaguar:{baseSpeed:100,friendly:false,flee:false,sizeMul:1.40,color:"#d2a23d",abilityCd:13,elem:"Shadow",coats:["#d2a23d","#bd8e32","#e2b85a"]},
+  toucan:{baseSpeed:82,friendly:true,flee:true,sizeMul:.96,color:"#272523",abilityCd:12,elem:"Sound",coats:["#272523","#34302c","#1c1c1c"]},
+  tapir:{baseSpeed:60,friendly:true,flee:false,sizeMul:1.48,color:"#5d5147",abilityCd:16,elem:"Earth",coats:["#5d5147","#4d433c","#706158"]},
+  capybara:{baseSpeed:66,friendly:true,flee:false,sizeMul:1.22,color:"#9b7352",abilityCd:14,elem:"Water",coats:["#9b7352","#865f43","#ad8460"]},
+  anaconda:{baseSpeed:60,friendly:false,flee:false,sizeMul:1.68,color:"#4f7040",abilityCd:15,elem:"Combat",coats:["#4f7040","#3d5e32","#69875a"]},};
 
 const ANIMAL_BALANCE = {
   dog:    { hpMul:1.15, damageTaken:0.88, attack:6.5 },
@@ -794,11 +794,18 @@ function shadeHex(hex, amt) {
   try { const n=parseInt(hex.replace("#",""),16); const r=clamp((n>>16)+amt,0,255), g=clamp(((n>>8)&255)+amt,0,255), b=clamp((n&255)+amt,0,255); return `#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`; } catch { return hex; }
 }
 
+const ANIMAL_PLANT_EATERS=new Set(["rabbit","deer","camel","muskox","mountaingoat","bighorn","marmot","tapir","capybara"]);
+function animalDietSizeMultiplier(type){
+  if(ANIMAL_PLANT_EATERS.has(type))return .88;
+  if(type==="scorpion")return 1.32;
+  return 1.14;
+}
 function animalRadius(type, stage) {
-  const mul=(PET_TYPES[type]?.sizeMul)||1; let base=18;
-  if(stage==="adult") base=36; else if(stage==="boss") base=52; else if(stage==="superboss") base=68; else if(stage==="bigmomma") base=92;
-  let extra=1; if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.18:1.1;
-  return base*mul*extra;
+  const mul=(PET_TYPES[type]?.sizeMul)||1,dietMul=animalDietSizeMultiplier(type); let base=22;
+  if(stage==="adult") base=45; else if(stage==="boss") base=68; else if(stage==="superboss") base=96; else if(stage==="bigmomma") base=140;
+  let extra=1;
+  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="polarbear"||type==="walrus"||type==="camel"||type==="muskox"||type==="anaconda"||type==="tapir")?1.20:(type==="wolf"||type==="boar"||type==="jaguar"||type==="bighorn"||type==="cougar")?1.16:1.08;
+  return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
   const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98}[type];
