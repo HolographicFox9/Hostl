@@ -5450,6 +5450,58 @@ button:focus-visible{
   body.mobile-home-layout #home .home-side-actions #homeUpdatesBtn{min-height:35px !important;padding:6px 8px !important;font-size:11px !important;}
 }
 </style>
+
+<style id="hostl-game651-home-preview-footprints">
+/* 651: show the current player beside the name and move Home actions into the
+   center-right breathing room instead of pinning them to the far edge. */
+#home .home-hero{
+  grid-template-columns:minmax(560px,1.28fr) 210px minmax(210px,.62fr) !important;
+  column-gap:22px !important;
+}
+#home .home-main-panel{grid-column:1 !important;}
+#home .home-side-panel.home-shop-launcher{
+  grid-column:2 !important;
+  align-self:center !important;
+  justify-self:center !important;
+  width:100% !important;
+  transform:translateY(3px);
+}
+#home .home-side-actions{width:190px !important;margin:0 auto !important;}
+#home .home-name-row{
+  width:min(520px,100%) !important;
+  margin-left:0 !important;
+  margin-right:0 !important;
+}
+#home .home-inline-player-preview{
+  flex:0 0 58px;width:58px;height:58px;padding:0;border-radius:14px;
+  border:2px solid color-mix(in srgb,var(--ht-muted,#d8c59a) 38%,transparent);
+  background:color-mix(in srgb,var(--ht-panel2,#203129) 82%,black 18%);
+  box-shadow:0 4px 0 rgba(8,12,9,.55),inset 0 1px 0 rgba(255,255,255,.08);
+  display:grid;place-items:center;cursor:pointer;overflow:hidden;
+}
+#home .home-inline-player-preview:hover{border-color:var(--ht-accent,#8fbf6a);filter:brightness(1.08);}
+#home #homeInlinePreview{width:54px;height:54px;display:block;image-rendering:auto;}
+#home .home-name-fields{min-width:0;flex:1 1 auto;display:grid;grid-template-columns:auto minmax(130px,1fr);gap:5px 9px;align-items:center;}
+#home .home-name-fields .home-field-label{grid-column:1;}
+#home .home-name-fields #username{grid-column:2;grid-row:1 / span 2;width:100%;box-sizing:border-box;}
+#home .home-look-hint{grid-column:1;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--ht-muted,#c7c0a8);opacity:.74;white-space:nowrap;}
+#home .home-name-row #choosePlayerDesignBtn{margin-left:2px !important;}
+@media(max-width:980px){
+  #home .home-hero{grid-template-columns:minmax(0,1fr) 190px !important;}
+  #home .home-main-panel{grid-column:1 !important;}
+  #home .home-side-panel.home-shop-launcher{grid-column:2 !important;}
+}
+@media(max-width:760px){
+  #home .home-hero{grid-template-columns:1fr !important;}
+  #home .home-main-panel,#home .home-side-panel.home-shop-launcher{grid-column:1 !important;}
+  #home .home-name-row{width:100% !important;}
+  #home .home-inline-player-preview{flex-basis:48px;width:48px;height:48px;}
+  #home #homeInlinePreview{width:44px;height:44px;}
+  #home .home-name-fields{grid-template-columns:1fr;gap:3px;}
+  #home .home-name-fields #username,#home .home-name-fields .home-field-label,#home .home-look-hint{grid-column:1;grid-row:auto;}
+}
+</style>
+
 </head>
 <body>
 <div id="bootLoadingScreen" class="boot-loaded" role="status" aria-live="polite">
@@ -5816,8 +5868,14 @@ button:focus-visible{
           <p class="sub">Choose your look, shop, and start when you want.</p>
 
           <div class="home-name-row">
-            <span class="home-field-label">Player Name</span>
-            <input type="text" id="username" placeholder="Choose username" maxlength="14" value="">
+            <button class="home-inline-player-preview" id="homeInlinePreviewBtn" type="button" title="Your current look — open Cosmetics">
+              <canvas id="homeInlinePreview" width="64" height="64" aria-label="Current player appearance"></canvas>
+            </button>
+            <div class="home-name-fields">
+              <span class="home-field-label">Player Name</span>
+              <span class="home-look-hint">Classic Cube • color editable</span>
+              <input type="text" id="username" placeholder="Choose username" maxlength="14" value="">
+            </div>
             <button class="btn" id="choosePlayerDesignBtn" type="button">Character Design</button>
           </div>
 
@@ -6306,7 +6364,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 38000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "650";
+const CUBE_SHARED_RULES_VERSION = "651";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8363,7 +8421,10 @@ const PET_TYPES = {
   toucan: { name:"Toucan", emoji:"🦜", elem:"Sound", color:"#272523", abilityCd:12, desc:"Beak call — a focused sound bolt that ricochets once", baseSpeed:82, friendly:true, sizeMul:.96, flee:true, style:"beakcall", coats:["#272523","#34302c","#1c1c1c"] },
   tapir: { name:"Tapir", emoji:"🐗", elem:"Earth", color:"#5d5147", abilityCd:16, desc:"Mud roll — rolls forward leaving an earth wake that damages what crosses it", baseSpeed:60, friendly:true, sizeMul:1.48, flee:false, style:"mudroll", coats:["#5d5147","#4d433c","#706158"] },
   capybara: { name:"Capybara", emoji:"🦫", elem:"Water", color:"#9b7352", abilityCd:14, desc:"Calm current — a healing water pulse for allies with a small enemy push", baseSpeed:66, friendly:true, sizeMul:1.22, flee:false, style:"calmcurrent", coats:["#9b7352","#865f43","#ad8460"] },
-  anaconda: { name:"Anaconda", emoji:"🐍", elem:"Combat", color:"#4f7040", abilityCd:15, desc:"Constrict — grabs the nearest target, crushing and slowing it without venom", baseSpeed:60, friendly:false, sizeMul:1.68, flee:false, style:"constrict", coats:["#4f7040","#3d5e32","#69875a"] },};
+  anaconda: { name:"Anaconda", emoji:"🐍", elem:"Combat", color:"#4f7040", abilityCd:15, desc:"Constrict — grabs the nearest target, crushing and slowing it without venom", baseSpeed:60, friendly:false, sizeMul:1.68, flee:false, style:"constrict", coats:["#4f7040","#3d5e32","#69875a"] },
+  queenbee: { name:"Queen Bee", emoji:"🐝", elem:"Poison", color:"#d2b33b", abilityCd:15, desc:"Royal swarm — calls tiny poison bees that swarm nearby targets and leave a damage-over-time sting", baseSpeed:74, friendly:false, sizeMul:1.42, flee:false, style:"beeswarm", coats:["#d2b33b","#f0d35e","#8a5d20"] },
+  workerbee: { name:"Worker Bee", emoji:"🐝", elem:"Poison", color:"#d9b84b", abilityCd:11, desc:"Poison charge — charges into the target and applies stackable poison damage over time", baseSpeed:92, friendly:false, sizeMul:1.06, flee:false, style:"workersting", coats:["#d9b84b","#f0d774","#8b6a22"] },
+  dronebee: { name:"Drone Bee", emoji:"🐝", elem:"Normal", color:"#f3f3f0", abilityCd:10, desc:"Ram — slams into the target with a strong body hit", baseSpeed:86, friendly:false, sizeMul:.90, flee:false, style:"droneram", coats:["#f3f3f0","#dfddd8","#c3bfb5"] },};
 
 // Species are intentionally different instead of sharing one generic health pool.
 // hpMul = natural toughness, damageTaken < 1 = better defense, attack = base bite power.
@@ -8382,6 +8443,9 @@ const ANIMAL_BALANCE = {
   boar:   { hpMul:1.62, damageTaken:0.70, attack:9.0 },
   saber:  { hpMul:1.00, babyHpMul:1.78, damageTaken:0.98, attack:12.0 },
   clouded:{ hpMul:0.98, babyHpMul:1.52, damageTaken:0.96, attack:11.1 },
+  queenbee:{ hpMul:1.28, damageTaken:0.92, attack:10.5 },
+  workerbee:{ hpMul:1.02, damageTaken:0.98, attack:9.2 },
+  dronebee:{ hpMul:0.94, damageTaken:1.02, attack:10.8 },
 };
 
 const ANIMAL_STAGE_HP = { baby:28, adult:100, boss:320, superboss:900, bigmomma:5200 };
@@ -8508,6 +8572,9 @@ toucan:{baby:{damage:12,per:1},adult:{damage:20,per:1.5},boss:{damage:30,per:2},
 tapir:{baby:{damage:14,per:1},adult:{damage:22,per:1.5},boss:{damage:32,per:2},superboss:{damage:42,per:2.5},bigmomma:{damage:52,per:3}},
 capybara:{baby:{damage:16,per:1},adult:{damage:24,per:1.5},boss:{damage:34,per:2},superboss:{damage:44,per:2.5},bigmomma:{damage:54,per:3}},
 anaconda:{baby:{damage:18,per:1},adult:{damage:26,per:1.5},boss:{damage:36,per:2},superboss:{damage:46,per:2.5},bigmomma:{damage:56,per:3}},
+queenbee:{baby:{damage:8,dot:8,per:0},adult:{damage:16,dot:14,per:0},boss:{damage:22,dot:20,per:0},superboss:{damage:30,dot:28,per:0},bigmomma:{damage:42,dot:40,per:0}},
+workerbee:{baby:{damage:8,dot:6,per:0},adult:{damage:14,dot:10,per:0},boss:{damage:20,dot:14,per:0},superboss:{damage:26,dot:18,per:0},bigmomma:{damage:34,dot:24,per:0}},
+dronebee:{baby:{damage:12,per:0},adult:{damage:20,per:0},boss:{damage:28,per:0},superboss:{damage:38,per:0},bigmomma:{damage:50,per:0}},
   deer: {
     baby:{damage:16,per:2}, adult:{damage:24,per:2}, boss:{damage:34,per:2}, superboss:{damage:40,per:2}, bigmomma:{damage:60,per:2}
   },
@@ -8603,7 +8670,7 @@ const PET_RARITY = Object.freeze({
   wolf:"Uncommon", bear:"Uncommon", fox:"Uncommon",
   boar:"Rare", deer:"Rare", owl:"Rare",
   snake:"Legendary", saber:"Legendary", clouded:"Rare",
-  fennec:"Common",camel:"Uncommon",scorpion:"Rare",hyena:"Uncommon",caracal:"Rare",polarbear:"Rare",arcticfox:"Common",walrus:"Uncommon",muskox:"Rare",snowyowl:"Rare",mountaingoat:"Common",eagle:"Rare",cougar:"Rare",bighorn:"Uncommon",marmot:"Common",jaguar:"Legendary",toucan:"Common",tapir:"Uncommon",capybara:"Common",anaconda:"Legendary",
+  fennec:"Common",camel:"Uncommon",scorpion:"Rare",hyena:"Uncommon",caracal:"Rare",polarbear:"Rare",arcticfox:"Common",walrus:"Uncommon",muskox:"Rare",snowyowl:"Rare",mountaingoat:"Common",eagle:"Rare",cougar:"Rare",bighorn:"Uncommon",marmot:"Common",jaguar:"Legendary",toucan:"Common",tapir:"Uncommon",capybara:"Common",anaconda:"Legendary",queenbee:"Rare",workerbee:"Uncommon",dronebee:"Common",
   dragon:"Starter"
 });
 const PET_RARITY_CARD_WEIGHT = Object.freeze({Common:2.4,Uncommon:1.5,Rare:.82,Legendary:.28,Starter:.55});
@@ -8645,6 +8712,9 @@ const PET_UNLOCK = {
   tapir:{ cards:75,servs:950,rarity:PET_RARITY.tapir },
   capybara:{ cards:75,servs:950,rarity:PET_RARITY.capybara },
   anaconda:{ cards:75,servs:950,rarity:PET_RARITY.anaconda },
+  queenbee:{ cards:90,servs:1200,rarity:PET_RARITY.queenbee },
+  workerbee:{ cards:75,servs:1000,rarity:PET_RARITY.workerbee },
+  dronebee:{ cards:60,servs:850,rarity:PET_RARITY.dronebee },
 };
 const PET_CARD_STAGE_ORDER = ["baby", "adult", "boss", "superboss"];
 const PET_CARD_STAGE_COST = {
@@ -8895,6 +8965,9 @@ const ANIMAL_SPECIES_SPEED_PROFILE = Object.freeze({
   boar:   { baby:1.03, adult:0.98, boss:0.93, superboss:0.88, bigmomma:0.84, massBlend:0.85 },
   saber:  { baby:1.15, adult:1.12, boss:1.08, superboss:1.04, bigmomma:1.00, massBlend:0.55 },
   clouded:{ baby:1.18, adult:1.14, boss:1.10, superboss:1.06, bigmomma:1.02, massBlend:0.50 },
+  queenbee:{ baby:1.08, adult:1.02, boss:0.99, superboss:0.96, bigmomma:0.92, massBlend:0.26 },
+  workerbee:{ baby:1.18, adult:1.13, boss:1.08, superboss:1.03, bigmomma:0.98, massBlend:0.18 },
+  dronebee:{ baby:1.14, adult:1.09, boss:1.04, superboss:1.00, bigmomma:0.96, massBlend:0.22 },
 });
 function animalSpeed(type, stage, owned = false, extraWeightMul = 1) {
   const base = (PET_TYPES[type] && PET_TYPES[type].baseSpeed) || 60;
@@ -15518,7 +15591,7 @@ const BIOME_ZONES = {
 };
 const BIOME_PROFILES = {
   forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","saber"] },
-  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["clouded","jaguar","toucan","tapir","capybara","anaconda","dragon"] },
+  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["queenbee","workerbee","dronebee","clouded","jaguar","toucan","tapir","capybara","anaconda","dragon"] },
   arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["polarbear","arcticfox","walrus","muskox","snowyowl"] },
   desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","camel","scorpion","hyena","caracal","snake"] },
   mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["mountaingoat","eagle","cougar","bighorn","marmot"] },
@@ -15537,7 +15610,8 @@ const BIOME_RESOURCE_INFO = Object.freeze({
   mountainGem:{biome:"mountains",material:"mountainGem",name:"Gem Cluster",color:"#8dc7d9",category:"stone",hp:7},
   mountainStoneFruit:{biome:"mountains",material:"stoneFruit",name:"Stone Fruit",color:"#9a8cad",category:"soft",hp:4},
   rainforestVine:{biome:"rainforest",material:"jungleVine",name:"Jungle Vine",color:"#4f9f56",category:"wood",hp:4},
-  rainforestFruit:{biome:"rainforest",material:"jungleBerry",name:"Jungle Fruit",color:"#f06d55",category:"soft",hp:3}
+  rainforestFruit:{biome:"rainforest",material:"jungleBerry",name:"Jungle Fruit",color:"#f06d55",category:"soft",hp:3},
+  rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#d0ad4c",category:"soft",hp:7}
 });
 const BIOME_MATERIAL_META = Object.fromEntries(Object.values(BIOME_RESOURCE_INFO).map(v=>[v.material,{name:v.name,color:v.color,biome:v.biome}]));
 const BIOME_ORDER = ["forest","rainforest","arctic","desert","mountains"];
@@ -16316,7 +16390,7 @@ function placeBiomeFeatures() {
   }
   const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",scale=isCactus?rand(1.55,2.15):rand(.9,1.35),solid=(info.category==="stone"?17:(isCactus?14:12))*scale;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp:info.hp,maxHp:info.hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
   placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest");
-  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest");
+  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestHive",12,"rainforest");
   placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
   placeUnique("desertCactusGood",22,"desert"); placeUnique("desertCactusBad",18,"desert"); placeUnique("desertSandstone",24,"desert");
   placeUnique("mountainIron",30,"mountains"); placeUnique("mountainQuartz",26,"mountains"); placeUnique("mountainGem",22,"mountains"); placeUnique("mountainStoneFruit",24,"mountains");
@@ -16347,7 +16421,7 @@ function placeGoldChunks() {
   for(let i=0;i<82;i++){for(let t=0;t<55;t++){const pos=randomLandPoint(170);if(solidOverlaps(pos.x,pos.y,16))continue;goldChunks.push({x:pos.x,y:pos.y,size:"small",r:16,goldLeft:6,pulse:0});break;}}
 }
 
-const WILD_SPECIES = ["fox","wolf","bear","cat","dog","rabbit","owl","snake","deer","boar","saber","clouded","fennec","camel","scorpion","hyena","caracal","polarbear","arcticfox","walrus","muskox","snowyowl","mountaingoat","eagle","cougar","bighorn","marmot","jaguar","toucan","tapir","capybara","anaconda","dragon"];
+const WILD_SPECIES = ["fox","wolf","bear","cat","dog","rabbit","owl","snake","deer","boar","saber","clouded","fennec","camel","scorpion","hyena","caracal","polarbear","arcticfox","walrus","muskox","snowyowl","mountaingoat","eagle","cougar","bighorn","marmot","jaguar","toucan","tapir","capybara","anaconda","queenbee","workerbee","dronebee","dragon"];
 // World population now follows the same rarity tiers shown in the pet/card UI.
 const WILD_RARITY_TARGET = Object.freeze({Common:1.45,Uncommon:.82,Rare:.44,Legendary:.16,Starter:.28});
 const WILD_TYPE_TARGETS = Object.fromEntries(WILD_SPECIES.map(type => [type, WILD_RARITY_TARGET[petRarity(type)] || .7]));
@@ -16371,6 +16445,7 @@ const WILD_PREY = {
   polarbear:new Set(["arcticfox","walrus"]), arcticfox:new Set(["marmot"]), walrus:new Set(), muskox:new Set(), snowyowl:new Set(["arcticfox","marmot"]),
   mountaingoat:new Set(), eagle:new Set(["marmot","rabbit"]), cougar:new Set(["mountaingoat","marmot"]), bighorn:new Set(), marmot:new Set(),
   jaguar:new Set(["capybara","tapir"]), toucan:new Set(), tapir:new Set(), capybara:new Set(), anaconda:new Set(["capybara","tapir"]),
+  queenbee:new Set(), workerbee:new Set(), dronebee:new Set(),
   dragon: new Set(["rabbit","snake"]),
 };
 function wildCanPreyOn(predatorType, preyType) {
@@ -19541,6 +19616,12 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
     else{abilityFx=abilityFx.filter(f=>!(f.type==="arcticShardOrbit"&&f.sourcePet===pet));abilityFx.push({type:"arcticShardOrbit",x:px,y:py,life:1e9,maxLife:1e9,sourcePet:pet,anchorPet:pet,petR:pet.r,orbitR:Math.max(pet.r+28,48),damage:dmg,phase:0});}
   }else if(pet.type==="walrus"){
     const t=petAbilityTargetOffline(pet,300),dmg=stats.damage||2;if(t){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8,r:petAbilityRangeFor(pet,85,1.8),baseR:petAbilityRangeFor(pet,85,1.8)});game.shake=5;}
+  }else if(pet.type==="queenbee"){
+    const range=petAbilityRangeFor(pet,135,2.8),dmg=stats.damage||16,dot=stats.dot||14;const hits=petAbilityAreaOffline(pet,px,py,range,dmg*.42,{knock:12});for(const h of hits||[])applyOfflineFixedDot(h.obj,h.isAnimal,pet,dot,5,"#7ed657");abilityFx.push({type:"sonicBurst",x:px,y:py,life:1,maxLife:1,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
+  }else if(pet.type==="workerbee"){
+    const t=petAbilityTargetOffline(pet,180),dmg=stats.damage||14,dot=stats.dot||10;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);applyOfflineFixedDot(t.obj,t.isAnimal,pet,dot,5,"#79d866");const aa=angTo(px,py,t.obj.x,t.obj.y);pet.x=clamp(px+Math.cos(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_W-20);pet.y=clamp(py+Math.sin(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_H-20);resolveAnimalWorld(pet);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:pet.x,targetY:pet.y,angle:aa,life:.55,maxLife:.55,shockScale:.36});spark(t.obj.x,t.obj.y,"#97df63",12,90);}
+  }else if(pet.type==="dronebee"){
+    const t=petAbilityTargetOffline(pet,210),dmg=stats.damage||20;if(t){const aa=angTo(px,py,t.obj.x,t.obj.y),dash=Math.min(120,Math.max(40,dist(px,py,t.obj.x,t.obj.y)-Math.max(10,t.obj.r||18)));pet.x=clamp(px+Math.cos(aa)*dash,20,WORLD_W-20);pet.y=clamp(py+Math.sin(aa)*dash,20,WORLD_H-20);resolveAnimalWorld(pet);damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:pet.x,targetY:pet.y,angle:aa,life:.62,maxLife:.62,shockScale:.46});spark(t.obj.x,t.obj.y,"#f4f0e4",12,92);}
   }else if(pet.type==="muskox"){
     const range=petAbilityRangeFor(pet,125,2.3),dmg=stats.damage||18;petAbilityAreaOffline(pet,px,py,range,dmg,{knock:18});pet._braceUntil=performance.now()+3000;abilityFx.push({type:"earthRingBurst",x:px,y:py,life:1,maxLife:1,r:range,baseR:range});
   }else if(pet.type==="snowyowl"){
@@ -19766,6 +19847,14 @@ function tryWildEatBerryOffline(a,dt){
   if(!b)return false;const c=resourceSolidCenter(b),d=dist(a.x,a.y,c.x,c.y);if(d>(a.r||18)+(b.solidR||12)+8){smoothTurn(a,angTo(a.x,a.y,c.x,c.y),dt,3.6);a.x+=Math.cos(a.angle)*(a.speed||60)*.48*dt;a.y+=Math.sin(a.angle)*(a.speed||60)*.48*dt;return true;}
   b.hp=Math.max(0,(b.hp||1)-Math.max(.25,(b.maxHp||8)*.035));b.pulse=1;a.hp=Math.min(a.maxHp,a.hp+a.maxHp*.06);a._berryCooldownUntil=game.time+rand(8,15);a._berryTarget=null;if(b.hp<=0){b.alive=false;b.respawnAt=game.time+rand(12,22);}return true;
 }
+function wildAbilityAreaOffline(source,x,y,range,damage,opts={}){
+  const hits=[];
+  const add=(target,isAnimal)=>{if(!target||target.dead)return;const tr=(target===player)?PLAYER_R:(target.r||18);if(dist(x,y,target.x,target.y)>range+tr*.25)return; if(target===player){hitPlayer(damage,source); if(opts.stun)applyOfflineAbilityStun(target,opts.stun); if(opts.slowWeak)applyOfflineSlowWeak(target,opts.slowWeak,opts.slowMul||.55,opts.weakMul||.68); if(opts.knock||opts.pull){const ang=opts.pull?angTo(target.x,target.y,x,y):angTo(x,y,target.x,target.y),force=opts.pull||opts.knock; target.x+=Math.cos(ang)*force; target.y+=Math.sin(ang)*force;} hits.push({target,isAnimal:false}); return;} damageCreatureFromEnemy(target,source,damage); if(opts.stun)applyOfflineAbilityStun(target,opts.stun); if(opts.slowWeak)applyOfflineSlowWeak(target,opts.slowWeak,opts.slowMul||.55,opts.weakMul||.68); if(opts.knock||opts.pull){const ang=opts.pull?angTo(target.x,target.y,x,y):angTo(x,y,target.x,target.y),force=(opts.pull||opts.knock)*animalKnockbackScale(target); target.x+=Math.cos(ang)*force; target.y+=Math.sin(ang)*force;} hits.push({target,isAnimal:true});};
+  add(player,false);
+  for(const pet of pets)if(pet&&pet!==source&&!pet.dead)add(pet,true);
+  return hits;
+}
+
 function wildUseAbility(a) {
   // Wild babies only bite/flee. Baby powers unlock only after the animal is tamed.
   if ((a.abilityCd || 0) > 0 || a.dead || a.sleeping || a.stage === "baby") return false;
@@ -19796,6 +19885,12 @@ function wildUseAbility(a) {
     const st=petAbilityStats(a),dmg=st.damage||10,base=angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++)projectiles.push({x:px+Math.cos(base+i*.12)*(a.r+10),y:py+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,hostile:true,kind:"iceShard",color:"#bfeeff",source:a,targetObj:target});
   } else if (a.type === "walrus") {
     const st=petAbilityStats(a),dmg=st.damage||2;if(dTarget<300){makeWalrusSpikePrisonOffline(a,target,dmg);abilityFx.push({type:"earthRingBurst",x:tx,y:ty,life:.8,maxLife:.8,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}
+  } else if (a.type === "queenbee") {
+    const st=petAbilityStats(a),dmg=st.damage||16,dot=st.dot||14,range=petAbilityRangeFor(a,130,2.7);const hits=wildAbilityAreaOffline(a,px,py,range,dmg*.42,{knock:12});for(const q of hits||[])applyOfflineFixedDot(q.target,false,a,dot,5,"#7ed657",true);abilityFx.push({type:"sonicBurst",x:px,y:py,life:.9,maxLife:.9,r:range,baseR:range,color:"#ffe27c"});
+  } else if (a.type === "workerbee") {
+    const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(dTarget<185){damageTargetFromWild(a,target,dmg);applyOfflineFixedDot(target,true,a,dot,5,"#79d866",true);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:tx,targetY:ty,angle:angTo(px,py,tx,ty),life:.5,maxLife:.5,shockScale:.3});}
+  } else if (a.type === "dronebee") {
+    const st=petAbilityStats(a),dmg=st.damage||20;if(dTarget<210){damageTargetFromWild(a,target,dmg);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:tx,targetY:ty,angle:angTo(px,py,tx,ty),life:.58,maxLife:.58,shockScale:.42});}
   } else if (a.type === "muskox") { abilityFx.push({type:"earth",x:px,y:py,life:.75,r:0}); if(dTarget<145)damageTargetFromWild(a,target,18);
   } else if (a.type === "snowyowl") { abilityFx.push({type:"wind",x:px,y:py,life:.7,r:0}); if(dTarget<210)damageTargetFromWild(a,target,14);
   } else if (a.type === "mountaingoat") { abilityFx.push({type:"earth",x:px,y:py,life:.6,r:0}); if(dTarget<125)damageTargetFromWild(a,target,18);
@@ -22569,23 +22664,42 @@ function updatePlayerFootprints(){
 }
 function drawGroundFootprints(){
   const now=game.time;
+  const traceCube=(sx=1,sy=1,bevel=2.6)=>{
+    const w=12*sx,h=12*sy;
+    ctx.beginPath();
+    ctx.moveTo(-w*.5+bevel,-h*.5);
+    ctx.lineTo(w*.5-bevel,-h*.5);
+    ctx.lineTo(w*.5,-h*.5+bevel);
+    ctx.lineTo(w*.5,h*.5-bevel);
+    ctx.lineTo(w*.5-bevel,h*.5);
+    ctx.lineTo(-w*.5+bevel,h*.5);
+    ctx.lineTo(-w*.5,h*.5-bevel);
+    ctx.lineTo(-w*.5,-h*.5+bevel);
+    ctx.closePath();
+  };
   for(let i=groundFootprints.length-1;i>=0;i--){
     const f=groundFootprints[i],age=now-f.born;
-    if(age<0||age>(f.biome==="arctic"?10:6)){groundFootprints.splice(i,1);continue;}
+    if(age<0||age>(f.biome==="arctic"?10:6.4)){groundFootprints.splice(i,1);continue;}
     ctx.save();
     if(f.biome==="arctic"){
-      const t=clamp(age/10,0,1);
-      const c=mixHex("#8da9b1","#d9edf2",t);
-      ctx.translate(f.x,f.y);ctx.rotate(f.angle);ctx.fillStyle=c;ctx.globalAlpha=.76*(1-t*.35);
-      ctx.beginPath();ctx.ellipse(0,0,4.8,8.5,0,0,TAU);ctx.fill();
-      ctx.beginPath();ctx.ellipse(0,-7.2,5.4,3.2,0,0,TAU);ctx.fill();
+      const t=clamp(age/10,0,1),c=mixHex("#7f9eab","#d9edf2",t);
+      ctx.translate(f.x,f.y);ctx.rotate(f.angle+Math.PI/4);ctx.fillStyle=c;ctx.globalAlpha=.78*(1-t*.28);
+      traceCube(1.00,1.00,2.2);ctx.fill();
+      ctx.strokeStyle=`rgba(107,145,160,${.32*(1-t)})`;ctx.lineWidth=1.0;traceCube(.80,.80,1.8);ctx.stroke();
     }else{
-      const t=clamp(age/6,0,1),wind=t*t;
-      ctx.translate(f.x+f.driftX*wind,f.y+f.driftY*wind);ctx.rotate(f.angle+f.spin*wind);
-      ctx.fillStyle="#9b7d4e";ctx.globalAlpha=.58*(1-t);
-      ctx.beginPath();ctx.ellipse(0,0,4.6*(1-t*.18),8.1*(1-t*.12),0,0,TAU);ctx.fill();
-      ctx.beginPath();ctx.ellipse(0,-6.8,5.1*(1-t*.15),3.0,0,0,TAU);ctx.fill();
-      ctx.strokeStyle="rgba(183,150,91,.32)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-8+f.driftX*wind*.2,4);ctx.lineTo(8+f.driftX*wind*.45,1);ctx.stroke();
+      const t=clamp(age/6.4,0,1),wind=Math.pow(t,.70),gust=Math.sin(t*Math.PI)*(.5+.5*groundNoise(f.x,f.y,61));
+      const wx=f.driftX*wind*2.4,wy=f.driftY*wind*1.75;
+      ctx.translate(f.x+wx,f.y+wy);ctx.rotate(f.angle+Math.PI/4+f.spin*wind*1.1);
+      ctx.fillStyle="#7a5b30";ctx.globalAlpha=.92*(1-t*.90);traceCube(1.18+wind*.26,1.08-wind*.10,2.7);ctx.fill();
+      ctx.strokeStyle=`rgba(236,200,129,${.72*(1-t)})`;ctx.lineWidth=1.35;traceCube(.88+wind*.12,.82,2.0);ctx.stroke();
+      ctx.strokeStyle=`rgba(108,75,38,${.72*(1-t)})`;ctx.lineWidth=1.8+wind*.9;ctx.beginPath();ctx.moveTo(-7,8);ctx.lineTo(3+gust*4,10);ctx.lineTo(11+wind*9,3);ctx.stroke();
+      ctx.fillStyle="#a9834c";ctx.globalAlpha=.58*(1-t);
+      for(let k=0;k<5;k++){
+        const kk=(k+1)/5,px=10+wind*(8+12*kk),py=(k-2)*2.2+Math.sin(k*2.1+f.spin)*3+wy*.05;
+        ctx.beginPath();ctx.rect(px,py,2.6*(1-t*.38),1.6);ctx.fill();
+      }
+      ctx.strokeStyle=`rgba(196,152,87,${.52*(1-t)})`;ctx.lineWidth=1.1;
+      for(let k=0;k<4;k++){ctx.beginPath();ctx.moveTo(4+k*3,-7+k*3);ctx.lineTo(20+wind*19+k*3,-9+k*3+wy*.05);ctx.stroke();}
     }
     ctx.restore();
   }
@@ -22784,6 +22898,13 @@ function drawResource(r) {
       ctx.fillStyle="#f07a42";ctx.strokeStyle=ink;ctx.lineWidth=2.3;ctx.beginPath();ctx.ellipse(0,1,16,12,.08,0,TAU);ctx.fill();ctx.stroke();
       ctx.fillStyle="#ffc16c";ctx.globalAlpha=.72;ctx.beginPath();ctx.ellipse(-5,-3,5,2.8,-.25,0,TAU);ctx.fill();ctx.globalAlpha=1;
       ctx.fillStyle="#2f7138";ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-2,-10);ctx.quadraticCurveTo(3,-20,13,-15);ctx.quadraticCurveTo(8,-7,-1,-7);ctx.closePath();ctx.fill();ctx.stroke();
+    }else if(r.type==="rainforestHive"){
+      const hex=(x,y,s,col)=>{ctx.fillStyle=col;ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<6;i++){const aa=-Math.PI/6+i*TAU/6,px=x+Math.cos(aa)*s,py=y+Math.sin(aa)*s;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();ctx.stroke();};
+      ctx.fillStyle="#8f6b2d";ctx.beginPath();ctx.ellipse(0,0,23,19,.05,0,TAU);ctx.fill();
+      for(const [hx,hy,hs,col] of [[-9,-8,7,"#d9b04a"],[4,-10,8,"#e4bf57"],[-12,6,7,"#c89a3f"],[4,7,8,"#ddb651"],[17,-1,6,"#c9963e"],[-1,-1,8,"#efc85f"]])hex(hx,hy,hs,col);
+      ctx.fillStyle="#3d2b12";ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(6,1,8,6.5,.1,0,TAU);ctx.fill();ctx.stroke();
+      ctx.fillStyle="rgba(255,242,184,.35)";ctx.beginPath();ctx.ellipse(-6,-8,9,4.2,-.35,0,TAU);ctx.fill();
+      for(const [bx,by] of [[-18,-14],[20,10],[-24,6]]){ctx.fillStyle="#2a2116";ctx.beginPath();ctx.arc(bx,by,1.8,0,TAU);ctx.fill();ctx.fillStyle="rgba(118,210,255,.55)";ctx.beginPath();ctx.ellipse(bx-2.4,by-1.5,3.8,1.6,-.6,0,TAU);ctx.fill();ctx.beginPath();ctx.ellipse(bx+2.4,by+1.5,3.8,1.6,.6,0,TAU);ctx.fill();}
     }else if(r.type==="forestHerb"){
       for(let i=0;i<7;i++){const a=i/7*TAU,d=i%2?10:13;leaf(Math.cos(a)*d,Math.sin(a)*d,11,5,a,"#79b85d");}
       ctx.fillStyle="#a9d47c";circ(0,0,5.5);
@@ -23420,7 +23541,7 @@ function drawMountedSaddleOnCustom(baseW, baseH, sx, sy, sw, sh) {
 }
 
 
-const BIOME_VECTOR_TYPES = new Set(["fennec","camel","scorpion","hyena","caracal","polarbear","arcticfox","walrus","muskox","snowyowl","mountaingoat","eagle","cougar","bighorn","marmot","jaguar","toucan","tapir","capybara","anaconda"]);
+const BIOME_VECTOR_TYPES = new Set(["fennec","camel","scorpion","hyena","caracal","polarbear","arcticfox","walrus","muskox","snowyowl","mountaingoat","eagle","cougar","bighorn","marmot","jaguar","toucan","tapir","capybara","anaconda","queenbee","workerbee","dronebee"]);
 function drawBiomeVectorAnimal(a){
   if(!BIOME_VECTOR_TYPES.has(a.type))return false;
   const r=a.r,info=PET_TYPES[a.type]||{},col=a.coat||info.color||"#aaa",dark=shadeColor(col,-32),light=shadeColor(col,28),outline="#1b1a18";
@@ -23431,6 +23552,31 @@ function drawBiomeVectorAnimal(a){
   ctx.save();
   ctx.translate(0,step*.25);
   ctx.lineJoin="round";ctx.lineCap="round";
+  if(a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee"){
+    const queen=a.type==="queenbee",worker=a.type==="workerbee",drone=a.type==="dronebee";
+    const flap=(moving?Math.sin(phase*2.4):Math.sin(phase*1.1)*.35),wingLift=Math.abs(flap);
+    const headSwing=Math.sin(phase*(moving?1.8:.9))*r*.10;
+    const stingOut=((Number(a.attackAnim)||0)*.9 + (moving?.12:.04))*r*(queen?.30:worker?.22:.18);
+    const bodyLen=queen?r*1.60:worker?r*1.36:r*1.18, bodyH=queen?r*.90:worker?r*.74:r*.64;
+    const thoraxW=queen?r*.78:worker?r*.66:r*.58, thoraxH=queen?r*.68:worker?r*.58:r*.50;
+    const headR=queen?r*.34:worker?r*.30:r*.27;
+    const baseCol=drone?"#f1efe9":queen?"#d2b33b":"#d7b54b", stripeCol=drone?"#c8c4bb":"#5f4213", wingCol="rgba(118,210,255,.52)", wingStroke="rgba(50,112,142,.68)";
+    const bodyX=-r*.04,headX=bodyX+bodyLen*.42+headSwing,thoraxX=bodyX+bodyLen*.08;
+    const wing=(side,off)=>{ctx.save();ctx.translate(thoraxX-r*.05,side*(thoraxH*.46+1));ctx.rotate(side*(.80+wingLift*.42)+off);ctx.fillStyle=wingCol;ctx.strokeStyle=wingStroke;ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(0,0,queen?r*.78:worker?r*.68:r*.58,queen?r*.32:worker?r*.28:r*.24,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();};
+    wing(-1,-flap*.22); wing(1,flap*.22);
+    ctx.strokeStyle="#40321c";ctx.lineWidth=Math.max(1.8,r*.08);
+    for(const [lx,ly,la,len] of [[-r*.15,-bodyH*.42,-1.0,r*.52],[-r*.02,-bodyH*.06,-.52,r*.56],[r*.15,bodyH*.26,.25,r*.52],[-r*.15,bodyH*.42,1.0,r*.52],[-r*.02,bodyH*.06,.52,r*.56],[r*.15,-bodyH*.26,-.25,r*.52]]){ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+Math.cos(la)*len,ly+Math.sin(la)*len);ctx.stroke();}
+    ctx.fillStyle=baseCol;ctx.strokeStyle=outline;ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(bodyX,0,bodyLen*.5,bodyH*.5,0,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle=stripeCol;for(const sx of[-bodyLen*.18,0,bodyLen*.18]){ctx.beginPath();ctx.ellipse(bodyX+sx,0,bodyLen*.055,bodyH*.46,0,0,TAU);ctx.fill();}
+    ctx.fillStyle=queen?shadeColor(baseCol,-18):shadeColor(baseCol,-8);ctx.beginPath();ctx.ellipse(thoraxX,0,thoraxW,thoraxH,0,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle=drone?"#e8e6e0":"#d8bd54";ctx.beginPath();ctx.arc(headX,0,headR,0,TAU);ctx.fill();ctx.stroke();
+    ctx.strokeStyle=outline;ctx.lineWidth=1.7;for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(headX+headR*.25,side*headR*.28);ctx.quadraticCurveTo(headX+headR*.85,side*(headR*.95+Math.sin(phase+side)*r*.05),headX+headR*1.28,side*(headR*1.15+Math.sin(phase*1.4+side)*r*.08));ctx.stroke();}
+    eye(headX+headR*.06,-headR*.10); if(!a.sleeping) eye(headX+headR*.06,headR*.10);
+    ctx.fillStyle="#593e15";ctx.beginPath();ctx.moveTo(bodyX-bodyLen*.52-stingOut,0);ctx.lineTo(bodyX-bodyLen*.40,-bodyH*.12);ctx.lineTo(bodyX-bodyLen*.40,bodyH*.12);ctx.closePath();ctx.fill();
+    if(queen){ctx.fillStyle="#f1dc78";ctx.strokeStyle=outline;ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(thoraxX-headR*.15,-thoraxH*.95);ctx.lineTo(thoraxX+headR*.08,-thoraxH*.45);ctx.lineTo(thoraxX+headR*.34,-thoraxH*.94);ctx.lineTo(thoraxX+headR*.56,-thoraxH*.46);ctx.lineTo(thoraxX+headR*.82,-thoraxH*.92);ctx.lineTo(thoraxX+headR*.68,-thoraxH*.20);ctx.lineTo(thoraxX-headR*.02,-thoraxH*.16);ctx.closePath();ctx.fill();ctx.stroke();}
+    ctx.restore();
+    return true;
+  }
   // Tail/body/head are independent silhouettes, matching the existing animal construction language.
   if(a.type==="scorpion"){
     // Scorpion tail is drawn after the body so it stays visibly on top.
@@ -26874,24 +27020,19 @@ function setHomeControlsEnabled(enabled) {
 }
 
 function drawHomePreview() {
-  const c = document.getElementById("homePreview");
-  if (!c) return;
-  const x = c.getContext("2d");
-  const w = c.width || 96;
-  const h = c.height || 96;
-  const s = Math.min(w, h) / 48;
-
-  x.clearRect(0, 0, w, h);
-  x.fillStyle = meta.color || COLORS[0];
-  x.strokeStyle = "rgba(0,0,0,0.35)";
-  x.lineWidth = 2 * s;
-  x.beginPath();
-  x.roundRect(8*s, 8*s, 32*s, 32*s, 6*s);
-  x.fill(); x.stroke();
-
-  x.fillStyle = "#12202b";
-  x.beginPath(); x.arc(28*s, 18*s, 3*s, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.arc(28*s, 28*s, 3*s, 0, Math.PI * 2); x.fill();
+  const canvases=[document.getElementById("homePreview"),document.getElementById("homeInlinePreview")].filter(Boolean);
+  for(const c of canvases){
+    const x=c.getContext("2d"),w=c.width||96,h=c.height||96,s=Math.min(w,h)/48;
+    x.clearRect(0,0,w,h);
+    // Classic Cube preview uses the same saved color as the in-game player.
+    x.fillStyle=meta.color||COLORS[0];
+    x.strokeStyle="rgba(0,0,0,0.42)";x.lineWidth=2*s;
+    x.beginPath();x.roundRect(8*s,8*s,32*s,32*s,6*s);x.fill();x.stroke();
+    x.fillStyle="rgba(255,255,255,.16)";x.beginPath();x.roundRect(11*s,10*s,15*s,6*s,3*s);x.fill();
+    x.fillStyle="#12202b";
+    x.beginPath();x.arc(28*s,18*s,3*s,0,Math.PI*2);x.fill();
+    x.beginPath();x.arc(28*s,28*s,3*s,0,Math.PI*2);x.fill();
+  }
 }
 function setupHome() {
   const home = el("home");
@@ -27174,6 +27315,7 @@ el("chooseStarterPetOverlay").addEventListener("mousedown", (e) => {
 });
 
 el("choosePlayerDesignBtn").addEventListener("click", openPlayerDesign);
+if(el("homeInlinePreviewBtn"))el("homeInlinePreviewBtn").addEventListener("click", openPlayerDesign);
 el("homeCosmeticsBtn").addEventListener("click", openPlayerDesign);
 el("closePlayerDesign").addEventListener("click", closePlayerDesign);
 el("playerDesignOverlay").addEventListener("mousedown", (e) => {
