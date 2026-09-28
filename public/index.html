@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 28000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "644";
+const CUBE_SHARED_RULES_VERSION = "645";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8251,18 +8251,18 @@ const PET_TYPES = {
            sizeMul: 1.45, flee: false, style: "dash",
            coats: ["#d4a060","#c49050","#e8c080","#a07040","#f0d0a0"] },
   clouded: { name: "Clouded Leopard", emoji: "🐆", elem: "Wind", color: "#c9ac7c", abilityCd: 11,
-           desc: "Gale slip — throws crossing wind blades while darting sideways", baseSpeed: 98, friendly: false,
-           sizeMul: 1.28, flee: false, style: "galeslip",
+           desc: "Tornado trap — launches a tornado forward that traps its target and prevents attacks", baseSpeed: 98, friendly: false,
+           sizeMul: 1.28, flee: false, style: "tornado",
            coats: ["#c9ac7c","#b99669","#d6bc8d","#aa8b60"] },
 
-  fennec: { name:"Fennec Fox", emoji:"🦊", elem:"Fire", color:"#e5b86d", abilityCd:12, desc:"Heat mirage — a close heat burst that pushes enemies away", baseSpeed:104, friendly:true, sizeMul:.90, flee:true, style:"mirage", coats:["#e5b86d","#d8a45d","#f0cc8b"] },
-  camel: { name:"Camel", emoji:"🐪", elem:"Water", color:"#b99161", abilityCd:15, desc:"Water spray — a long cooling stream that hits forward and restores some health", baseSpeed:64, friendly:true, sizeMul:1.62, flee:false, style:"spray", coats:["#b99161","#caa777","#9f794e"] },
-  scorpion: { name:"Scorpion", emoji:"🦂", elem:"Poison", color:"#7e6548", abilityCd:13, desc:"Venom sting — a fast tail strike that applies strong poison directly", baseSpeed:70, friendly:false, sizeMul:.96, flee:false, style:"sting", coats:["#7e6548","#5e4d38","#a2845b"] },
-  hyena: { name:"Hyena", emoji:"🐾", elem:"Sound", color:"#ad9264", abilityCd:13, desc:"Laugh shock — staggered sound rings that knock enemies off balance", baseSpeed:90, friendly:false, sizeMul:1.26, flee:false, style:"laugh", coats:["#ad9264","#947a52","#c2a879"] },
-  caracal: { name:"Caracal", emoji:"🐈", elem:"Wind", color:"#b7754d", abilityCd:11, desc:"Ear-slice gust — twin narrow wind cuts from either side", baseSpeed:108, friendly:false, sizeMul:1.10, flee:false, style:"windcut", coats:["#b7754d","#a56545","#cd8e62"] },
-  polarbear: { name:"Polar Bear", emoji:"🐻‍❄️", elem:"Ice", color:"#edf3f3", abilityCd:17, desc:"Ice shove — a heavy forward frost wave that slows and pushes", baseSpeed:52, friendly:false, sizeMul:1.78, flee:false, style:"iceshove", coats:["#edf3f3","#dce8ea","#f8fbfb"] },
-  arcticfox: { name:"Arctic Fox", emoji:"🦊", elem:"Ice", color:"#e9f1f5", abilityCd:12, desc:"Snow veil — freezes nearby enemies briefly while the fox slips away", baseSpeed:102, friendly:true, sizeMul:1.02, flee:true, style:"snowveil", coats:["#e9f1f5","#d4e4ec","#f7fbff"] },
-  walrus: { name:"Walrus", emoji:"🦭", elem:"Water", color:"#94735f", abilityCd:16, desc:"Tidal slam — a short heavy splash with huge knockback", baseSpeed:42, friendly:false, sizeMul:1.80, flee:false, style:"tidalslam", coats:["#94735f","#7c6050","#ad8970"] },
+  fennec: { name:"Fennec Fox", emoji:"🦊", elem:"Fire", color:"#e5b86d", abilityCd:12, desc:"Fire orbit — three fireballs swirl around the fox for 4 seconds and hit separately", baseSpeed:104, friendly:true, sizeMul:.90, flee:true, style:"fireorbit", coats:["#e5b86d","#d8a45d","#f0cc8b"] },
+  camel: { name:"Camel", emoji:"🐪", elem:"Water", color:"#b99161", abilityCd:15, desc:"Spit shot — spits a heavy projectile straight where the camel is facing", baseSpeed:64, friendly:true, sizeMul:1.62, flee:false, style:"spit", coats:["#b99161","#caa777","#9f794e"] },
+  scorpion: { name:"Scorpion", emoji:"🦂", elem:"Poison", color:"#7e6548", abilityCd:13, desc:"Claw grab + sting — grabs the target, crushes it, then stings and applies venom damage over time", baseSpeed:70, friendly:false, sizeMul:.96, flee:false, style:"grabsting", coats:["#7e6548","#5e4d38","#a2845b"] },
+  hyena: { name:"Hyena", emoji:"🐾", elem:"Fire", color:"#ad9264", abilityCd:13, desc:"Fire circle — creates a burning radius for 5 seconds; targets take impact damage plus a 50% burn DoT", baseSpeed:90, friendly:false, sizeMul:1.26, flee:false, style:"firecircle", coats:["#ad9264","#947a52","#c2a879"] },
+  caracal: { name:"Caracal", emoji:"🐈", elem:"Lightning", color:"#b7754d", abilityCd:11, desc:"Lightning bite — bites and stuns a target while removing a percentage of its maximum health", baseSpeed:108, friendly:false, sizeMul:1.10, flee:false, style:"lightningbite", coats:["#b7754d","#a56545","#cd8e62"] },
+  polarbear: { name:"Polar Bear", emoji:"🐻‍❄️", elem:"Ice", color:"#edf3f3", abilityCd:17, desc:"Ice claws — forms two frozen claws and slashes the target twice", baseSpeed:52, friendly:false, sizeMul:1.78, flee:false, style:"iceclaws", coats:["#edf3f3","#dce8ea","#f8fbfb"] },
+  arcticfox: { name:"Arctic Fox", emoji:"🦊", elem:"Ice", color:"#e9f1f5", abilityCd:12, desc:"Ice shard volley — makes three large shards; they orbit without a target and launch once a target appears", baseSpeed:102, friendly:true, sizeMul:1.02, flee:true, style:"iceshards", coats:["#e9f1f5","#d4e4ec","#f7fbff"] },
+  walrus: { name:"Walrus", emoji:"🦭", elem:"Stone", color:"#94735f", abilityCd:16, desc:"Spike prison — raises stone spike walls around the faced target for 4 seconds; the prison grows with stage", baseSpeed:42, friendly:false, sizeMul:1.80, flee:false, style:"spikeprison", coats:["#94735f","#7c6050","#ad8970"] },
   muskox: { name:"Musk Ox", emoji:"🐂", elem:"Earth", color:"#5d4838", abilityCd:16, desc:"Ground brace — stomps a stone shock ring and briefly resists knockback", baseSpeed:58, friendly:false, sizeMul:1.62, flee:false, style:"brace", coats:["#5d4838","#49392e","#765c47"] },
   snowyowl: { name:"Snowy Owl", emoji:"🦉", elem:"Wind", color:"#f0f2ee", abilityCd:13, desc:"Whiteout fan — a broad wind fan that pushes several targets", baseSpeed:76, friendly:true, sizeMul:1.08, flee:true, style:"whiteout", coats:["#f0f2ee","#dde4e3","#fafcf8"] },
   mountaingoat: { name:"Mountain Goat", emoji:"🐐", elem:"Earth", color:"#b9b4a7", abilityCd:14, desc:"Cliff kick — a hard physical-earth kick that launches one target", baseSpeed:88, friendly:true, sizeMul:1.18, flee:false, style:"cliffkick", coats:["#b9b4a7","#a39d91","#d0ccc1"] },
@@ -8395,16 +8395,16 @@ const PET_ABILITY_DAMAGE_TABLE = {
     baby:{damage:8,per:2}, adult:{damage:15,per:2}, boss:{damage:26,per:2}, superboss:{damage:36,per:2}, bigmomma:{damage:42,per:2}
   },
   clouded: {
-    baby:{damage:20,per:1}, adult:{damage:28,per:1}, boss:{damage:38,per:1}, superboss:{damage:48,per:1}, bigmomma:{damage:58,per:1}
+    baby:{damage:5,per:1}, adult:{damage:10,per:1}, boss:{damage:15,per:1}, superboss:{damage:20,per:1}, bigmomma:{damage:25,per:1}
   },
-  fennec:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
-camel:{baby:{damage:12,per:1},adult:{damage:20,per:1.5},boss:{damage:30,per:2},superboss:{damage:40,per:2.5},bigmomma:{damage:50,per:3}},
-scorpion:{baby:{damage:14,per:1},adult:{damage:22,per:1.5},boss:{damage:32,per:2},superboss:{damage:42,per:2.5},bigmomma:{damage:52,per:3}},
-hyena:{baby:{damage:16,per:1},adult:{damage:24,per:1.5},boss:{damage:34,per:2},superboss:{damage:44,per:2.5},bigmomma:{damage:54,per:3}},
-caracal:{baby:{damage:18,per:1},adult:{damage:26,per:1.5},boss:{damage:36,per:2},superboss:{damage:46,per:2.5},bigmomma:{damage:56,per:3}},
-polarbear:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
-arcticfox:{baby:{damage:12,per:1},adult:{damage:20,per:1.5},boss:{damage:30,per:2},superboss:{damage:40,per:2.5},bigmomma:{damage:50,per:3}},
-walrus:{baby:{damage:14,per:1},adult:{damage:22,per:1.5},boss:{damage:32,per:2},superboss:{damage:42,per:2.5},bigmomma:{damage:52,per:3}},
+  fennec:{baby:{damage:15,per:0},adult:{damage:20,per:0},boss:{damage:25,per:0},superboss:{damage:40,per:0},bigmomma:{damage:50,per:0}},
+camel:{baby:{damage:30,per:0},adult:{damage:40,per:0},boss:{damage:50,per:0},superboss:{damage:60,per:0},bigmomma:{damage:68,per:0}},
+scorpion:{baby:{grab:10,sting:20,dot:15,per:0},adult:{grab:15,sting:30,dot:20,per:0},boss:{grab:20,sting:40,dot:30,per:0},superboss:{grab:30,sting:50,dot:40,per:0},bigmomma:{grab:60,sting:80,dot:40,per:0}},
+hyena:{baby:{damage:10,per:0},adult:{damage:30,per:0},boss:{damage:37,per:0},superboss:{damage:50,per:0},bigmomma:{damage:59,per:0}},
+caracal:{baby:{pct:.25,per:0},adult:{pct:.30,per:0},boss:{pct:.35,per:0},superboss:{pct:.40,per:0},bigmomma:{pct:.50,per:0}},
+polarbear:{baby:{damage:5,per:0},adult:{damage:15,per:0},boss:{damage:20,per:0},superboss:{damage:26,per:0},bigmomma:{damage:40,per:0}},
+arcticfox:{baby:{damage:10,per:0},adult:{damage:18,per:0},boss:{damage:20,per:0},superboss:{damage:25,per:0},bigmomma:{damage:37,per:0}},
+walrus:{baby:{damage:2,per:0},adult:{damage:10,per:0},boss:{damage:12,per:0},superboss:{damage:20,per:0},bigmomma:{damage:34,per:0}},
 muskox:{baby:{damage:16,per:1},adult:{damage:24,per:1.5},boss:{damage:34,per:2},superboss:{damage:44,per:2.5},bigmomma:{damage:54,per:3}},
 snowyowl:{baby:{damage:18,per:1},adult:{damage:26,per:1.5},boss:{damage:36,per:2},superboss:{damage:46,per:2.5},bigmomma:{damage:56,per:3}},
 mountaingoat:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
@@ -10841,18 +10841,20 @@ function applyAbilityEvent(data={}) {
   const wildAnimalId=String(data.wildAnimalId||"");
   const pet=net.petVisuals.get(petId)||net.remotePetVisuals.get(petId)||net.animalVisuals.get(wildAnimalId)||null;
   const persistentRing=["iceRing","whirlpool","plantRing","lightRingBurst","earthRingBurst"].includes(type);
+  const anchoredCustom=["fennecOrbit","hyenaFireField","arcticShardOrbit"].includes(type);
   const requestedLife=Math.max(0,Number(data.life)||0);
   const life=persistentRing?Math.max(7,requestedLife):(requestedLife||1.0);
   const range=Math.max(r+24,Number(data.range)||r+44);
-  const fxX=type==="lightningStrike"?(Number(data.targetX)||x):x;
-  const fxY=type==="lightningStrike"?(Number(data.targetY)||y):y;
+  const targetPlaced=["lightningStrike","scorpionGrab","iceClaws","earthRingBurst","tornadoTrap"].includes(type);
+  const fxX=targetPlaced?(Number(data.targetX)||x):x;
+  const fxY=targetPlaced?(Number(data.targetY)||y):y;
   const fxStage=uploadedAnimalStageKey(data.stage||pet?.stage||"adult");
   const pounceShockScale=Math.max(.35,Number(data.shockScale)||petAbilityStageSize(fxStage));
   abilityFx.push({
     type,x:fxX,y:fxY,life,maxLife:life,r:range,baseR:range,petR:r,stage:fxStage,shockScale:pounceShockScale,
     color:ELEM_GLOW[elem]||"#ffffff",phase:0,tick:0,angle:Number(data.angle)||0,
     fromX:Number(data.fromX)||x,fromY:Number(data.fromY)||y,toX:Number(data.targetX)||x,toY:Number(data.targetY)||y,
-    anchorPet:(persistentRing||type==="sonicBurst")?pet:null,persistentRing
+    anchorPet:(persistentRing||anchoredCustom||type==="sonicBurst")?pet:null,persistentRing
   });
   spark(x,y,ELEM_GLOW[elem]||"#ffffff",type==="sonicBurst"?20:12,type==="sonicBurst"?155:115);
   if(type==="pounce"){
@@ -18544,10 +18546,21 @@ function hitPlayer(dmg, attacker = null) {
 // ---------- projectiles & towers ----------
 function updatePetBlasts(dt) {
   for (const b of petBlasts) {
+    if((b.kind==="tornado"||b.kind==="iceShard")&&b.targetObj&&!b.targetObj.dead){
+      const ta=angTo(b.x,b.y,b.targetObj.x,b.targetObj.y),spd=b.kind==="tornado"?330:560;
+      const cur=Math.atan2(b.vy,b.vx),turn=clamp(Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),-2.8*dt,2.8*dt),na=cur+turn;
+      b.vx=Math.cos(na)*spd;b.vy=Math.sin(na)*spd;
+    }else if(b.kind==="tornado"){
+      b.wander=(Number(b.wander)||Math.atan2(b.vy,b.vx))+Math.sin((game.time+(b.seed||0))*3.4)*.9*dt;
+      const spd=300;b.vx=Math.cos(b.wander)*spd;b.vy=Math.sin(b.wander)*spd;
+    }
     const x0=b.x,y0=b.y,x1=b.x+b.vx*dt,y1=b.y+b.vy*dt;
     b.x=x1;b.y=y1;b.life-=dt;
     if(b.kind==="fire"&&Math.random()<.65)spark(b.x,b.y,"#ff9a45",1,24);
     else if(b.kind==="poison"&&Math.random()<.45)spark(b.x,b.y,"#68d468",1,20);
+    else if(b.kind==="tornado"&&Math.random()<.7)spark(b.x,b.y,"#d9f6ff",1,28);
+    else if(b.kind==="iceShard"&&Math.random()<.35)spark(b.x,b.y,"#cdefff",1,20);
+    else if(b.kind==="spit"&&Math.random()<.25)spark(b.x,b.y,"#d8efa3",1,16);
     if(b.life<=0){b.dead=true;continue;}
     let best={t:2,type:"",obj:null};
     const consider=(t,type,obj)=>{if(t!=null&&t<best.t)best={t,type,obj};};
@@ -18562,12 +18575,14 @@ function updatePetBlasts(dt) {
         const en=best.obj;if(b.sourcePet&&!b.sourcePet.dead)en.revengeTarget=b.sourcePet;
         damageEnemy(en,b.dmg,false,(b.sourcePet&&!b.sourcePet.dead)?b.sourcePet:player);
         if(b.stun)applyOfflineAbilityStun(en,b.stun);
+        if(b.kind==="tornado")abilityFx.push({type:"tornadoTrap",x:en.x,y:en.y,life:2.2,maxLife:2.2,r:Math.max(30,(en.r||18)+18),phase:0});
         if(b.dotTime&&b.sourcePet)applyOfflinePoison(en,false,b.sourcePet,b.dmg);
         if(b.knock){const a=Math.atan2(b.vy,b.vx);en.x+=Math.cos(a)*b.knock;en.y+=Math.sin(a)*b.knock;resolveEnemyWorld(en);}
       }else if(best.type==="wild"){
         const wa=best.obj,dealt=animalDamageTaken(wa.type,wa.stage,b.dmg);wa.hp-=dealt;wa.flash=.12;
         if(b.sourcePet&&!b.sourcePet.dead)wildlifeHitByPet(wa,b.sourcePet,dealt);else{markCreatureHit(wa,4);wa.sleeping=false;wa.enraged=true;}
         if(b.stun)applyOfflineAbilityStun(wa,b.stun);
+        if(b.kind==="tornado")abilityFx.push({type:"tornadoTrap",x:wa.x,y:wa.y,life:2.2,maxLife:2.2,r:Math.max(30,(wa.r||18)+18),phase:0});
         if(b.dotTime&&b.sourcePet)applyOfflinePoison(wa,true,b.sourcePet,b.dmg);
         if(b.knock&&wa.hp>0){const q=Math.atan2(b.vy,b.vx),push=b.knock*animalKnockbackScale(wa);wa.x+=Math.cos(q)*push;wa.y+=Math.sin(q)*push;resolveAnimalWorld(wa);}
         if(wa.hp<=0&&!wa.dead){const killer=(b.sourcePet&&!b.sourcePet.dead)?b.sourcePet:null;setKilledBy(wa,killer||player);wa.dead=true;game.kills++;awardPetXpContributors(wa,killer);}
@@ -18590,6 +18605,7 @@ function updateProjectiles(dt) {
         p.vx=dx/Math.max(1,d)*THROW_AXE_RETURN_SPEED;p.vy=dy/Math.max(1,d)*THROW_AXE_RETURN_SPEED;
       }
     }
+    if((p.kind==="tornado"||p.kind==="iceShard")&&p.targetObj&&!p.targetObj.dead){const ta=angTo(p.x,p.y,p.targetObj.x,p.targetObj.y),spd=p.kind==="tornado"?330:560,cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-2.8*dt,2.8*dt);p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;}else if(p.kind==="tornado"){p.wander=(Number(p.wander)||Math.atan2(p.vy,p.vx))+Math.sin((game.time+(p.seed||0))*3.4)*.9*dt;const spd=300;p.vx=Math.cos(p.wander)*spd;p.vy=Math.sin(p.wander)*spd;}
     const x0=p.x, y0=p.y, x1=p.x+p.vx*dt, y1=p.y+p.vy*dt;
     p.x=x1; p.y=y1; if(p.kind!=="throwAxe")p.life-=dt;
     if (p.life <= 0) { p.dead=true; continue; }
@@ -18629,7 +18645,8 @@ function updateProjectiles(dt) {
       if(!net.room&&p.kind==="throwAxe"&&best.type==="solid"&&best.obj?.type&&best.obj.alive&&best.obj.type!=="pond"&&best.obj.type!=="river"){
         gatherResource(best.obj,TOOLS.Axe,"Axe");
       }
-      spark(p.x,p.y,p.kind==="arcaneBolt"?"#c77dff":p.kind==="throwAxe"?"#e6d7a6":"#9fdfff",5,65);
+      if(p.kind==="tornado"&&(best.type==="player"||best.type==="pet"||best.type==="enemy"||best.type==="wild")){applyOfflineAbilityStun(best.obj,2.2);abilityFx.push({type:"tornadoTrap",x:best.obj.x,y:best.obj.y,life:2.2,maxLife:2.2,r:Math.max(30,(best.obj.r||PLAYER_R)+18),phase:0});}
+      spark(p.x,p.y,p.kind==="arcaneBolt"?"#c77dff":p.kind==="throwAxe"?"#e6d7a6":p.kind==="tornado"?"#d9f6ff":p.kind==="spit"?"#d8efa3":"#9fdfff",5,65);
       if(p.kind==="throwAxe"){p.returning=true;p.life=Math.max(p.life,.72);}else p.dead=true;
     }
     if(p.x<0||p.x>WORLD_W||p.y<0||p.y>WORLD_H)p.dead=true;
@@ -19264,6 +19281,32 @@ function applyOfflinePoison(target,isAnimal,pet,impactDamage){
   // Five-second DoT. Venom now bites much harder than before.
   target._petPoison={time:5,tick:0.55,dps:Math.max(.6,impactDamage*.32),isAnimal:!!isAnimal,pet};
 }
+function applyOfflineFixedDot(target,isAnimal,pet,totalDamage,duration=5,color="#ff7a3d",sourceWild=false){
+  if(!target||target.dead)return;
+  const dur=Math.max(.5,Number(duration)||5),total=Math.max(0,Number(totalDamage)||0);
+  target._abilityFixedDot={time:dur,tick:1,dps:total/dur,isAnimal:!!isAnimal,pet,color,sourceWild:!!sourceWild};
+}
+function targetMaxHealthOffline(target,isAnimal=false){
+  if(!target)return 0;
+  if(target===player)return Math.max(1,Number(player.maxHealth)||100);
+  if(isAnimal)return Math.max(1,Number(target.maxHp)||Number(target.hp)||1);
+  return Math.max(1,Number(target.maxHp)||Number(target.hp)||1);
+}
+function damagePercentTargetOffline(attacker,target,isAnimal,pct){
+  const raw=targetMaxHealthOffline(target,isAnimal)*clamp(Number(pct)||0,0,1);
+  if(target===player){hitPlayer(raw,attacker);return raw;}
+  return damagePetAbilityTargetOffline(attacker,target,isAnimal,raw);
+}
+function makeWalrusSpikePrisonOffline(source,target,spikeDmg){
+  if(!source||!target)return;
+  const stage=uploadedAnimalStageKey(source.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1;
+  const ring=Math.max((target.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27),count=6;
+  for(let i=0;i<count;i++){
+    const a=i/count*TAU,x=target.x+Math.cos(a)*ring,y=target.y+Math.sin(a)*ring;
+    walls.push({x,y,ttl:4,r:wallR,hp:999,maxHp:999,kind:"stoneSpike",spiked:true,spikeDmg,spikeCd:0,sourcePet:source.owned?source:null,hostileToPlayer:!source.owned,sourceAnimal:source.owned?null:source});
+    abilityFx.push({type:"stone",x,y,life:4,maxLife:4,r:wallR});
+  }
+}
 function damagePetAbilityTargetOffline(pet,target,isAnimal,rawDamage){
   if(!target||target.dead)return 0;
   const raw=Math.max(0,Number(rawDamage)||0);if(raw<=0)return 0;
@@ -19307,7 +19350,7 @@ function healOfflinePetTeam(amount,color="#8ff0a8"){
 }
 function updatePetAbilityStatuses(dt){
   if(net.room)return;
-  const targets=[...enemies,...animals];
+  const targets=[player,...enemies,...animals];
   for(const t of targets){
     if(!t)continue;
     if((t._abilityStunT||0)>0)t._abilityStunT=Math.max(0,t._abilityStunT-dt);
@@ -19327,10 +19370,20 @@ function updatePetAbilityStatuses(dt){
       dot.time-=dt;dot.tick-=dt;
       if(dot.tick<=0){
         dot.tick+=1;
-        damagePetAbilityTargetOffline(dot.pet,t,!!dot.isAnimal,dot.dps);
+        if(t===player)hitPlayer(dot.dps,dot.pet||null);else damagePetAbilityTargetOffline(dot.pet,t,!!dot.isAnimal,dot.dps);
         spark(t.x,t.y,"#68d468",4,45);
       }
       if(dot.time<=0||t.dead)delete t._petPoison;
+    }
+    const fixed=t._abilityFixedDot;
+    if(fixed&&fixed.time>0&&!t.dead){
+      fixed.time-=dt;fixed.tick-=dt;
+      if(fixed.tick<=0){
+        fixed.tick+=1;
+        if(t===player)hitPlayer(fixed.dps,fixed.pet||null);else if(fixed.sourceWild)damageCreatureFromEnemy(t,fixed.pet||null,fixed.dps);else damagePetAbilityTargetOffline(fixed.pet,t,!!fixed.isAnimal,fixed.dps);
+        spark(t.x,t.y,fixed.color||"#ff7a3d",4,45);
+      }
+      if(fixed.time<=0||t.dead)delete t._abilityFixedDot;
     }
   }
 }
@@ -19357,25 +19410,29 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
 
   // New biome animals are species-specific even when they share an element.
   if(pet.type==="clouded"){
-    const dmg=stats.damage||20,a=Number(pet.angle)||0,side=Math.random()<.5?-1:1,projScale=petProjectileStageSize(pet.stage);
-    for(const off of[-.16,.16])petBlasts.push({x:px+Math.cos(a)*(pet.r+8),y:py+Math.sin(a)*(pet.r+8),vx:Math.cos(a+off)*610,vy:Math.sin(a+off)*610,life:1.0,r:12*projScale,dmg:dmg*.62,kind:"owlSound",color:"#d9f6ff",sourcePet:pet,stun:.35});
-    pet.x=clamp(px+Math.cos(a+side*Math.PI/2)*Math.min(70,pet.r*3.2),20,WORLD_W-20);pet.y=clamp(py+Math.sin(a+side*Math.PI/2)*Math.min(70,pet.r*3.2),20,WORLD_H-20);resolveAnimalWorld(pet);abilityFx.push({type:"owlWave",x:px,y:py,life:.7,maxLife:.7,angle:a,r:petAbilityRangeFor(pet,100,2.2)});spark(px,py,"#d9f6ff",12,120);
+    const dmg=stats.damage||5,a=Number(pet.angle)||0,t=petAbilityTargetOffline(pet,650),ps=petProjectileStageSize(pet.stage);
+    petBlasts.push({x:px+Math.cos(a)*(pet.r+12),y:py+Math.sin(a)*(pet.r+12),vx:Math.cos(a)*300,vy:Math.sin(a)*300,life:2.8,r:19*ps,dmg,kind:"tornado",color:"#d9f6ff",sourcePet:pet,stun:2.2,targetObj:t?.obj||null,seed:Math.random()*10});
+    abilityFx.push({type:"owlWave",x:px,y:py,life:.45,maxLife:.45,angle:a,r:petAbilityRangeFor(pet,80,1.5)});spark(px,py,"#d9f6ff",14,125);
   }else if(pet.type==="fennec"){
-    const range=petAbilityRangeFor(pet,115,2.2),dmg=stats.damage||12;petAbilityAreaOffline(pet,px,py,range,dmg,{knock:44});abilityFx.push({type:"fireMuzzle",x:px,y:py,life:.65,maxLife:.65,angle:pet.angle||0,r:range});spark(px,py,"#ffb45f",15,130);
+    const dmg=stats.damage||15,orbitR=Math.max(pet.r+24,petAbilityRangeFor(pet,48,.6));
+    abilityFx.push({type:"fennecOrbit",x:px,y:py,life:4,maxLife:4,sourcePet:pet,anchorPet:pet,petR:pet.r,orbitR,damage:dmg,phase:0});spark(px,py,"#ff9a45",16,120);
   }else if(pet.type==="camel"){
-    const a=Number(pet.angle)||0,dmg=stats.damage||15;for(const off of[-.08,.08])petBlasts.push({x:px+Math.cos(a)*(pet.r+8),y:py+Math.sin(a)*(pet.r+8),vx:Math.cos(a+off)*470,vy:Math.sin(a+off)*470,life:1.35,r:10,dmg:dmg*.7,kind:"water",color:"#76d4ed",sourcePet:pet});pet.hp=clamp(pet.hp+dmg*.45,0,pet.maxHp);floatText(px,py-pet.r-8,`+${Math.round(dmg*.45)}`,"#8eeaff");
+    const a=Number(pet.angle)||0,dmg=stats.damage||30,ps=petProjectileStageSize(pet.stage);
+    petBlasts.push({x:px+Math.cos(a)*(pet.r+10),y:py+Math.sin(a)*(pet.r+10),vx:Math.cos(a)*520,vy:Math.sin(a)*520,life:1.55,r:12*ps,dmg,kind:"spit",color:"#cfe89a",sourcePet:pet});spark(px+Math.cos(a)*pet.r,py+Math.sin(a)*pet.r,"#d8efa3",8,65);
   }else if(pet.type==="scorpion"){
-    const t=petAbilityTargetOffline(pet,180),dmg=stats.damage||16;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);applyOfflinePoison(t.obj,t.isAnimal,pet,dmg*1.25);}spark(px,py,"#9bd75c",12,90);
+    const t=petAbilityTargetOffline(pet,175);if(t){const grab=stats.grab||10,sting=stats.sting||20,dot=stats.dot||15;applyOfflineAbilityStun(t.obj,1.25);damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,grab);damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,sting);applyOfflineFixedDot(t.obj,t.isAnimal,pet,dot,5,"#69c84f");abilityFx.push({type:"scorpionGrab",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8});spark(t.obj.x,t.obj.y,"#9bd75c",14,85);}
   }else if(pet.type==="hyena"){
-    const dmg=stats.damage||16;for(const mul of[.72,1]){const range=petAbilityRangeFor(pet,120*mul,2.2);petAbilityAreaOffline(pet,px,py,range,dmg*mul,{knock:34*mul});abilityFx.push({type:"sonicBurst",x:px,y:py,life:.75+mul*.35,maxLife:1.2,r:range,baseR:range,petR:pet.r,color:"#f2d39a",anchorPet:pet});}
+    const dmg=stats.damage||10,range=petAbilityRangeFor(pet,125,2.2);abilityFx.push({type:"hyenaFireField",x:px,y:py,life:5,maxLife:5,r:range,baseR:range,petR:pet.r,sourcePet:pet,anchorPet:pet,damage:dmg,phase:0});spark(px,py,"#ff6a2a",18,140);
   }else if(pet.type==="caracal"){
-    const a=Number(pet.angle)||0,dmg=stats.damage||18,ps=petProjectileStageSize(pet.stage);for(const off of[-.12,.12])petBlasts.push({x:px,y:py,vx:Math.cos(a+off)*650,vy:Math.sin(a+off)*650,life:.9,r:10*ps,dmg:dmg*.65,kind:"owlSound",color:"#cdefff",sourcePet:pet});
+    const t=petAbilityTargetOffline(pet,145),pct=Number(stats.pct)||.25;if(t){damagePercentTargetOffline(pet,t.obj,t.isAnimal,pct);applyOfflineAbilityStun(t.obj,1.8);abilityFx.push({type:"lightningStrike",x:t.obj.x,y:t.obj.y,fromX:px,fromY:py,life:.65,maxLife:.65,r:42});spark(t.obj.x,t.obj.y,"#ffe66d",15,100);}
   }else if(pet.type==="polarbear"){
-    const range=petAbilityRangeFor(pet,135,2.6),dmg=stats.damage||18;petAbilityAreaOffline(pet,px,py,range,dmg,{slowWeak:3,slowMul:.62,weakMul:.82,knock:45});abilityFx.push({type:"iceRing",x:px,y:py,life:1.2,maxLife:1.2,r:range,baseR:range,petR:pet.r,anchorPet:pet});
+    const t=petAbilityTargetOffline(pet,165),dmg=stats.damage||5;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);abilityFx.push({type:"iceClaws",x:t.obj.x,y:t.obj.y,life:.65,maxLife:.65});spark(t.obj.x,t.obj.y,"#c9f2ff",14,105);}
   }else if(pet.type==="arcticfox"){
-    const range=petAbilityRangeFor(pet,105,2.0),dmg=(stats.damage||14)*.5;petAbilityAreaOffline(pet,px,py,range,dmg,{slowWeak:2.2,slowMul:.35,weakMul:.88});pet.x=clamp(px-Math.cos(pet.angle||0)*55,20,WORLD_W-20);pet.y=clamp(py-Math.sin(pet.angle||0)*55,20,WORLD_H-20);resolveAnimalWorld(pet);abilityFx.push({type:"iceRing",x:px,y:py,life:.8,maxLife:.8,r:range,baseR:range,petR:pet.r});
+    const dmg=stats.damage||10,t=petAbilityTargetOffline(pet,600),ps=petProjectileStageSize(pet.stage);
+    if(t){const base=angTo(px,py,t.obj.x,t.obj.y);for(let i=0;i<3;i++)petBlasts.push({x:px+Math.cos(base+i*.12)*(pet.r+10),y:py+Math.sin(base+i*.12)*(pet.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,kind:"iceShard",color:"#bfeeff",sourcePet:pet,targetObj:t.obj});}
+    else{abilityFx=abilityFx.filter(f=>!(f.type==="arcticShardOrbit"&&f.sourcePet===pet));abilityFx.push({type:"arcticShardOrbit",x:px,y:py,life:1e9,maxLife:1e9,sourcePet:pet,anchorPet:pet,petR:pet.r,orbitR:Math.max(pet.r+28,48),damage:dmg,phase:0});}
   }else if(pet.type==="walrus"){
-    const range=petAbilityRangeFor(pet,110,2.4),dmg=stats.damage||20;petAbilityAreaOffline(pet,px,py,range,dmg,{knock:85});abilityFx.push({type:"whirlpool",x:px,y:py,life:.9,maxLife:.9,r:range,baseR:range,petR:pet.r});game.shake=7;
+    const t=petAbilityTargetOffline(pet,300),dmg=stats.damage||2;if(t){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8,r:petAbilityRangeFor(pet,85,1.8),baseR:petAbilityRangeFor(pet,85,1.8)});game.shake=5;}
   }else if(pet.type==="muskox"){
     const range=petAbilityRangeFor(pet,125,2.3),dmg=stats.damage||18;petAbilityAreaOffline(pet,px,py,range,dmg,{knock:18});pet._braceUntil=performance.now()+3000;abilityFx.push({type:"earthRingBurst",x:px,y:py,life:1,maxLife:1,r:range,baseR:range});
   }else if(pet.type==="snowyowl"){
@@ -19614,15 +19671,23 @@ function wildUseAbility(a) {
   const dTarget = dist(px, py, tx, ty);
   // Wild biome species use the same unique ability identity they keep when tamed.
   if (a.type === "clouded") {
-    abilityFx.push({type:"wind",x:px,y:py,life:.6,r:0}); if(dTarget<190){damageTargetFromWild(a,target,13); const q=angTo(px,py,tx,ty); if(target===player){player.x+=Math.cos(q)*34;player.y+=Math.sin(q)*34;}else{target.x+=Math.cos(q)*34*animalKnockbackScale(target);target.y+=Math.sin(q)*34*animalKnockbackScale(target);}}
-  } else if (a.type === "fennec") { abilityFx.push({type:"fire",x:px,y:py,life:.65,r:0}); if(dTarget<120)damageTargetFromWild(a,target,12);
-  } else if (a.type === "camel") { abilityFx.push({type:"water",x:px,y:py,life:.7,r:0}); if(dTarget<180)damageTargetFromWild(a,target,15); a.hp=clamp(a.hp+7,0,a.maxHp);
-  } else if (a.type === "scorpion") { if(dTarget<125){damageTargetFromWild(a,target,16);applyOfflinePoison(target,target!==player,a,20);} abilityFx.push({type:"poison",x:px,y:py,life:.55,r:0});
-  } else if (a.type === "hyena") { abilityFx.push({type:"sound",x:px,y:py,life:.7,r:0}); if(dTarget<150){damageTargetFromWild(a,target,15);applyOfflineAbilityStun(target,.75);}
-  } else if (a.type === "caracal") { abilityFx.push({type:"wind",x:px,y:py,life:.6,r:0}); if(dTarget<185)damageTargetFromWild(a,target,17);
-  } else if (a.type === "polarbear") { abilityFx.push({type:"ice",x:px,y:py,life:.8,r:0}); if(dTarget<150){damageTargetFromWild(a,target,18);applyOfflineSlowWeak(target,2.6,.62,.82);}
-  } else if (a.type === "arcticfox") { abilityFx.push({type:"ice",x:px,y:py,life:.7,r:0}); if(dTarget<120){damageTargetFromWild(a,target,8);applyOfflineSlowWeak(target,2.2,.35,.88);}
-  } else if (a.type === "walrus") { abilityFx.push({type:"water",x:px,y:py,life:.8,r:0}); if(dTarget<135)damageTargetFromWild(a,target,20);
+    const st=petAbilityStats(a),dmg=st.damage||5,ang=Number(a.angle)||angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);projectiles.push({x:px+Math.cos(ang)*(a.r+12),y:py+Math.sin(ang)*(a.r+12),vx:Math.cos(ang)*300,vy:Math.sin(ang)*300,life:2.8,r:19*ps,dmg,hostile:true,kind:"tornado",color:"#d9f6ff",source:a,targetObj:target,wander:ang,seed:Math.random()*10});abilityFx.push({type:"owlWave",x:px,y:py,life:.45,maxLife:.45,angle:ang,r:80});
+  } else if (a.type === "fennec") {
+    const st=petAbilityStats(a),dmg=st.damage||15,orbitR=Math.max(a.r+24,48*petAbilityStageSize(a.stage));abilityFx.push({type:"fennecOrbit",x:px,y:py,life:4,maxLife:4,sourcePet:a,sourceWild:true,petR:a.r,orbitR,damage:dmg,phase:0});
+  } else if (a.type === "camel") {
+    const st=petAbilityStats(a),dmg=st.damage||30,ang=Number(a.angle)||angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);projectiles.push({x:px+Math.cos(ang)*(a.r+10),y:py+Math.sin(ang)*(a.r+10),vx:Math.cos(ang)*520,vy:Math.sin(ang)*520,life:1.55,r:12*ps,dmg,hostile:true,kind:"spit",color:"#cfe89a",source:a});
+  } else if (a.type === "scorpion") {
+    const st=petAbilityStats(a);if(dTarget<175){const grab=st.grab||10,sting=st.sting||20,dot=st.dot||15;applyOfflineAbilityStun(target,1.25);damageTargetFromWild(a,target,grab);damageTargetFromWild(a,target,sting);applyOfflineFixedDot(target,true,a,dot,5,"#69c84f",true);abilityFx.push({type:"scorpionGrab",x:tx,y:ty,life:.8,maxLife:.8});}
+  } else if (a.type === "hyena") {
+    const st=petAbilityStats(a),dmg=st.damage||10,range=125*petAbilityStageSize(a.stage);abilityFx.push({type:"hyenaFireField",x:px,y:py,life:5,maxLife:5,r:range,baseR:range,petR:a.r,sourcePet:a,sourceWild:true,damage:dmg,phase:0});
+  } else if (a.type === "caracal") {
+    const st=petAbilityStats(a),pct=Number(st.pct)||.25;if(dTarget<145){const max=target===player?Math.max(1,player.maxHealth||100):Math.max(1,target.maxHp||target.hp||1);damageTargetFromWild(a,target,max*pct);applyOfflineAbilityStun(target,1.8);abilityFx.push({type:"lightningStrike",x:tx,y:ty,fromX:px,fromY:py,life:.65,maxLife:.65,r:42});}
+  } else if (a.type === "polarbear") {
+    const st=petAbilityStats(a),dmg=st.damage||5;if(dTarget<165){damageTargetFromWild(a,target,dmg);damageTargetFromWild(a,target,dmg);abilityFx.push({type:"iceClaws",x:tx,y:ty,life:.65,maxLife:.65});}
+  } else if (a.type === "arcticfox") {
+    const st=petAbilityStats(a),dmg=st.damage||10,base=angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++)projectiles.push({x:px+Math.cos(base+i*.12)*(a.r+10),y:py+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,hostile:true,kind:"iceShard",color:"#bfeeff",source:a,targetObj:target});
+  } else if (a.type === "walrus") {
+    const st=petAbilityStats(a),dmg=st.damage||2;if(dTarget<300){makeWalrusSpikePrisonOffline(a,target,dmg);abilityFx.push({type:"earthRingBurst",x:tx,y:ty,life:.8,maxLife:.8,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}
   } else if (a.type === "muskox") { abilityFx.push({type:"earth",x:px,y:py,life:.75,r:0}); if(dTarget<145)damageTargetFromWild(a,target,18);
   } else if (a.type === "snowyowl") { abilityFx.push({type:"wind",x:px,y:py,life:.7,r:0}); if(dTarget<210)damageTargetFromWild(a,target,14);
   } else if (a.type === "mountaingoat") { abilityFx.push({type:"earth",x:px,y:py,life:.6,r:0}); if(dTarget<125)damageTargetFromWild(a,target,18);
@@ -20582,6 +20647,21 @@ function updateAbilityFx(dt) {
       const t=clamp(1-fx.life/(fx.maxLife||.5),0,1);ctx.globalAlpha=1-t;ctx.fillStyle=fx.type==="fireMuzzle"?"#ff8b36":"#69cf69";ctx.translate(fx.x,fx.y);ctx.rotate(fx.angle||0);ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-26,-15*(1-t));ctx.lineTo(-18,0);ctx.lineTo(-26,15*(1-t));ctx.closePath();ctx.fill();
     } else if (fx.type === "pounce") {
       // Saber pounce visuals are rendered in drawAbilityFx().
+    } else if (fx.type === "fennecOrbit") {
+      const pet=fx.sourcePet||fx.anchorPet;if(pet&&!pet.dead){fx.x=pet.x;fx.y=pet.y;}else if(fx.sourcePet){fx.life=0;continue;}
+      if(!net.room&&fx.sourcePet&&!fx.sourcePet.dead){
+        if(!fx.ballHits)fx.ballHits=[new WeakMap(),new WeakMap(),new WeakMap()];
+        const orbit=Math.max(fx.sourcePet.r+24,Number(fx.orbitR)||42),targets=fx.sourceWild?[player,...player.pets.filter(q=>!q.dead)]:[...enemies,...animals.filter(a=>!a.dead&&!a.owned)];
+        for(let i=0;i<3;i++){const a=(fx.phase||0)*2.6+i*TAU/3,bx=fx.x+Math.cos(a)*orbit,by=fx.y+Math.sin(a)*orbit;
+          for(const t of targets){if(!t||t.dead)continue;const rr=(t.r||PLAYER_R)+12;if(dist(bx,by,t.x,t.y)>rr)continue;const next=fx.ballHits[i].get(t)||0;if(game.time<next)continue;fx.ballHits[i].set(t,game.time+.75);if(fx.sourceWild){if(t===player)hitPlayer(fx.damage||15,fx.sourcePet);else damageCreatureFromEnemy(t,fx.sourcePet,fx.damage||15);}else damagePetAbilityTargetOffline(fx.sourcePet,t,animals.includes(t),fx.damage||15);spark(bx,by,"#ff9a45",5,55);}
+        }
+      }
+    } else if (fx.type === "hyenaFireField") {
+      const pet=fx.sourcePet||fx.anchorPet;if(pet&&!pet.dead){fx.x=pet.x;fx.y=pet.y;}else if(fx.sourcePet){fx.life=0;continue;}
+      if(!net.room&&fx.sourcePet&&!fx.sourcePet.dead){if(!fx.hitSet)fx.hitSet=new WeakSet();const targets=fx.sourceWild?[player,...player.pets.filter(q=>!q.dead)]:[...enemies,...animals.filter(a=>!a.dead&&!a.owned)];for(const t of targets){if(!t||t.dead||fx.hitSet.has(t))continue;if(dist(fx.x,fx.y,t.x,t.y)>(fx.r||120)+(t.r||PLAYER_R)*.25)continue;fx.hitSet.add(t);if(fx.sourceWild){if(t===player)hitPlayer(fx.damage||10,fx.sourcePet);else damageCreatureFromEnemy(t,fx.sourcePet,fx.damage||10);applyOfflineFixedDot(t,true,fx.sourcePet,(fx.damage||10)*.5,5,"#ff6b35",true);}else{const isAnimal=animals.includes(t);damagePetAbilityTargetOffline(fx.sourcePet,t,isAnimal,fx.damage||10);applyOfflineFixedDot(t,isAnimal,fx.sourcePet,(fx.damage||10)*.5,5,"#ff6b35");}}}
+    } else if (fx.type === "arcticShardOrbit") {
+      const pet=fx.sourcePet||fx.anchorPet;if(pet&&!pet.dead){fx.x=pet.x;fx.y=pet.y;}else if(pet){fx.life=0;continue;}
+      if(!net.room&&fx.sourcePet&&!fx.launched){const t=petAbilityTargetOffline(fx.sourcePet,600);if(t){fx.launched=true;const base=angTo(fx.x,fx.y,t.obj.x,t.obj.y),ps=petProjectileStageSize(fx.sourcePet.stage);for(let i=0;i<3;i++){petBlasts.push({x:fx.x+Math.cos(base+i*.15)*(fx.sourcePet.r+12),y:fx.y+Math.sin(base+i*.15)*(fx.sourcePet.r+12),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg:fx.damage||10,kind:"iceShard",color:"#bfeeff",sourcePet:fx.sourcePet,targetObj:t.obj});}fx.life=.2;}}
     } else if (fx.followPet) {
       const pet = fx.followPet;
       if (pet && !pet.dead) {
@@ -21046,6 +21126,8 @@ function updatePlayer(dt) {
   const moveStartX = player.x, moveStartY = player.y;
   const mv = currentMoveVector();
   let dx = mv.x, dy = mv.y;
+  const playerAbilityStunned=(Number(player._abilityStunT)||0)>0;
+  if(playerAbilityStunned){dx=0;dy=0;}
   const len = Math.hypot(dx, dy);
   if (len > 0.001) {
     lastMovementInputAt = performance.now();
@@ -21110,11 +21192,11 @@ function updatePlayer(dt) {
     banner(`Entered ${biomeName} biome`);
   }
 
-  if (mouse.down) {
+  if (!playerAbilityStunned && mouse.down) {
     if (player.tool === "Bow" && !player.heldSpecial) fireBow();
     else meleeAttack();
   }
-  if (keys.has("f")) fireBow();
+  if (!playerAbilityStunned && keys.has("f")) fireBow();
 
   if (keys.has("r")) {
     keys.delete("r");
@@ -23160,6 +23242,12 @@ function drawProjectile(p) {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = "rgba(199,125,255,0.55)"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-3, 0); ctx.stroke();
+  } else if (p.kind === "tornado") {
+    ctx.rotate(game.time*8);ctx.strokeStyle="#d9f6ff";ctx.lineWidth=4;ctx.globalAlpha=.88;for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(0,0,7+i*6,i*.7,i*.7+Math.PI*1.45);ctx.stroke();}ctx.fillStyle="rgba(222,248,255,.30)";ctx.beginPath();ctx.arc(0,0,18,0,TAU);ctx.fill();
+  } else if (p.kind === "spit") {
+    ctx.fillStyle="#cfe89a";ctx.globalAlpha=.9;ctx.beginPath();ctx.ellipse(0,0,15,9,0,0,TAU);ctx.fill();ctx.fillStyle="#efffc3";ctx.beginPath();ctx.ellipse(4,-2,6,3,0,0,TAU);ctx.fill();
+  } else if (p.kind === "iceShard") {
+    ctx.fillStyle="#bfeeff";ctx.strokeStyle="#effcff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-8,-8);ctx.lineTo(-4,0);ctx.lineTo(-8,8);ctx.closePath();ctx.fill();ctx.stroke();
   } else {
     const shaft = p.hostile ? "#70492a" : "#4a3520";
     const fletch = p.hostile ? "#d9537d" : "#7ec0ee";
@@ -25274,6 +25362,18 @@ function drawAbilityFx() {
       drawPersistentWhirlpoolFx(fx);
     } else if (fx.type === "pounce") {
       drawSaberPounceShockFx(fx);
+    } else if (fx.type === "fennecOrbit") {
+      const orbit=Math.max((fx.petR||18)+24,Number(fx.orbitR)||42);for(let i=0;i<3;i++){const a=(fx.phase||0)*2.6+i*TAU/3,bx=fx.x+Math.cos(a)*orbit,by=fx.y+Math.sin(a)*orbit;ctx.fillStyle="#ff6a2a";ctx.shadowColor="#ff9a45";ctx.shadowBlur=12;circ(bx,by,10);ctx.fillStyle="#ffd05a";circ(bx+2,by-1,5);}ctx.shadowBlur=0;
+    } else if (fx.type === "hyenaFireField") {
+      const t=clamp(1-fx.life/(fx.maxLife||5),0,1);ctx.globalAlpha=.55+.18*Math.sin((fx.phase||0)*2);ctx.strokeStyle="#ff6a2a";ctx.lineWidth=7;ctx.beginPath();ctx.arc(fx.x,fx.y,fx.r||120,0,TAU);ctx.stroke();ctx.strokeStyle="#ffc14d";ctx.lineWidth=3;ctx.beginPath();ctx.arc(fx.x,fx.y,(fx.r||120)-10,0,TAU);ctx.stroke();for(let i=0;i<10;i++){const a=i/10*TAU+(fx.phase||0)*.45,rr=(fx.r||120)-6;ctx.fillStyle=i%2?"#ff8d35":"#ffd05a";circ(fx.x+Math.cos(a)*rr,fx.y+Math.sin(a)*rr,4+2*Math.sin((fx.phase||0)+i));}ctx.globalAlpha=1;
+    } else if (fx.type === "arcticShardOrbit") {
+      const orbit=Math.max((fx.petR||18)+28,Number(fx.orbitR)||46);for(let i=0;i<3;i++){const a=(fx.phase||0)*1.7+i*TAU/3,bx=fx.x+Math.cos(a)*orbit,by=fx.y+Math.sin(a)*orbit;ctx.save();ctx.translate(bx,by);ctx.rotate(a+Math.PI/2);ctx.fillStyle="#bfeeff";ctx.strokeStyle="#effcff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(8,9);ctx.lineTo(0,5);ctx.lineTo(-8,9);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
+    } else if (fx.type === "tornadoTrap") {
+      const t=clamp(1-fx.life/(fx.maxLife||2.2),0,1),rr=Math.max(28,fx.r||42);ctx.save();ctx.translate(fx.x,fx.y);ctx.rotate((fx.phase||0)*2.8);ctx.globalAlpha=.82*(1-t*.35);ctx.strokeStyle="#d9f6ff";ctx.lineWidth=5;for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(0,0,rr*(.40+i*.18),i*.7,i*.7+Math.PI*1.55);ctx.stroke();}ctx.fillStyle="rgba(215,246,255,.20)";ctx.beginPath();ctx.arc(0,0,rr*.95,0,TAU);ctx.fill();ctx.restore();
+    } else if (fx.type === "scorpionGrab") {
+      const t=clamp(1-fx.life/(fx.maxLife||.8),0,1);ctx.strokeStyle="#b8d56a";ctx.lineWidth=5;ctx.globalAlpha=1-t*.7;ctx.beginPath();ctx.arc(fx.x,fx.y,22+8*t,-.7,.7);ctx.stroke();ctx.beginPath();ctx.arc(fx.x,fx.y,22+8*t,Math.PI-.7,Math.PI+.7);ctx.stroke();
+    } else if (fx.type === "iceClaws") {
+      const t=clamp(1-fx.life/(fx.maxLife||.6),0,1);ctx.strokeStyle="#c9f2ff";ctx.lineWidth=6;ctx.globalAlpha=1-t;for(const off of[-10,10]){ctx.beginPath();ctx.moveTo(fx.x-28,fx.y+off-18);ctx.quadraticCurveTo(fx.x,fx.y+off,fx.x+30,fx.y+off+16);ctx.stroke();}
     } else if (fx.followPet) {
       if (fx.type === "fire") drawOrbitRing(fx, ["#ff6a2a", "#ffcc40", "#ff4020"], "flame");
       else if (fx.type === "sound") drawOrbitRing(fx, ["#a0e0ff", "#70c0ff", "#dff6ff"], "dot");
@@ -25832,6 +25932,15 @@ function draw(menuMode = false) {
       ctx.globalAlpha=.9;ctx.beginPath();ctx.ellipse(0,0,12,8,0,0,TAU);ctx.fill();ctx.globalAlpha=.45;ctx.beginPath();ctx.ellipse(-9,0,8,5,0,0,TAU);ctx.fill();
     } else if (b.kind === "owlSound") {
       ctx.fillStyle="#d8f5ff";ctx.globalAlpha=.55;ctx.beginPath();ctx.ellipse(0,0,18,11,0,0,TAU);ctx.fill();ctx.globalAlpha=.95;ctx.strokeStyle="#b6eaff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,16,-1.05,1.05);ctx.stroke();
+    } else if (b.kind === "tornado") {
+      ctx.rotate(-(Math.atan2(b.vy,b.vx)) + game.time*8);
+      ctx.strokeStyle="#d9f6ff";ctx.lineWidth=4;ctx.globalAlpha=.85;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(0,0,7+i*6,i*.7,i*.7+Math.PI*1.45);ctx.stroke();}
+      ctx.fillStyle="rgba(222,248,255,.35)";ctx.beginPath();ctx.arc(0,0,18,0,TAU);ctx.fill();
+    } else if (b.kind === "spit") {
+      ctx.fillStyle="#cfe89a";ctx.globalAlpha=.88;ctx.beginPath();ctx.ellipse(0,0,15,9,0,0,TAU);ctx.fill();ctx.fillStyle="#efffc3";ctx.beginPath();ctx.ellipse(4,-2,6,3,0,0,TAU);ctx.fill();
+    } else if (b.kind === "iceShard") {
+      ctx.fillStyle="#bfeeff";ctx.strokeStyle="#e8fbff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-8,-8);ctx.lineTo(-4,0);ctx.lineTo(-8,8);ctx.closePath();ctx.fill();ctx.stroke();
     } else {
       circ(0, 0, b.r);
     }

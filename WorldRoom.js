@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "644";
+const CUBE_SHARED_RULES_VERSION = "645";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -468,11 +468,11 @@ const PET_TYPES = {
   fennec:{baseSpeed:104,friendly:true,flee:true,sizeMul:.90,color:"#e5b86d",abilityCd:12,elem:"Fire",coats:["#e5b86d","#d8a45d","#f0cc8b"]},
   camel:{baseSpeed:64,friendly:true,flee:false,sizeMul:1.62,color:"#b99161",abilityCd:15,elem:"Water",coats:["#b99161","#caa777","#9f794e"]},
   scorpion:{baseSpeed:70,friendly:false,flee:false,sizeMul:.96,color:"#7e6548",abilityCd:13,elem:"Poison",coats:["#7e6548","#5e4d38","#a2845b"]},
-  hyena:{baseSpeed:90,friendly:false,flee:false,sizeMul:1.26,color:"#ad9264",abilityCd:13,elem:"Sound",coats:["#ad9264","#947a52","#c2a879"]},
-  caracal:{baseSpeed:108,friendly:false,flee:false,sizeMul:1.10,color:"#b7754d",abilityCd:11,elem:"Wind",coats:["#b7754d","#a56545","#cd8e62"]},
+  hyena:{baseSpeed:90,friendly:false,flee:false,sizeMul:1.26,color:"#ad9264",abilityCd:13,elem:"Fire",coats:["#ad9264","#947a52","#c2a879"]},
+  caracal:{baseSpeed:108,friendly:false,flee:false,sizeMul:1.10,color:"#b7754d",abilityCd:11,elem:"Lightning",coats:["#b7754d","#a56545","#cd8e62"]},
   polarbear:{baseSpeed:52,friendly:false,flee:false,sizeMul:1.78,color:"#edf3f3",abilityCd:17,elem:"Ice",coats:["#edf3f3","#dce8ea","#f8fbfb"]},
   arcticfox:{baseSpeed:102,friendly:true,flee:true,sizeMul:1.02,color:"#e9f1f5",abilityCd:12,elem:"Ice",coats:["#e9f1f5","#d4e4ec","#f7fbff"]},
-  walrus:{baseSpeed:42,friendly:false,flee:false,sizeMul:1.80,color:"#94735f",abilityCd:16,elem:"Water",coats:["#94735f","#7c6050","#ad8970"]},
+  walrus:{baseSpeed:42,friendly:false,flee:false,sizeMul:1.80,color:"#94735f",abilityCd:16,elem:"Stone",coats:["#94735f","#7c6050","#ad8970"]},
   muskox:{baseSpeed:58,friendly:false,flee:false,sizeMul:1.62,color:"#5d4838",abilityCd:16,elem:"Earth",coats:["#5d4838","#49392e","#765c47"]},
   snowyowl:{baseSpeed:76,friendly:true,flee:true,sizeMul:1.08,color:"#f0f2ee",abilityCd:13,elem:"Wind",coats:["#f0f2ee","#dde4e3","#fafcf8"]},
   mountaingoat:{baseSpeed:88,friendly:true,flee:false,sizeMul:1.18,color:"#b9b4a7",abilityCd:14,elem:"Earth",coats:["#b9b4a7","#a39d91","#d0ccc1"]},
@@ -517,15 +517,15 @@ bear:{baby:{damage:16,per:1},adult:{damage:20,per:1},boss:{damage:27,per:1},supe
 rabbit:{baby:{blast:5,ring:7,per:1},adult:{blast:10,ring:18,per:1},boss:{blast:28,ring:20,per:1},superboss:{blast:39,ring:34,per:1},bigmomma:{blast:50,ring:40,per:1}},
 owl:{baby:{damage:10,per:2,stun:2},adult:{damage:16,per:2,stun:6},boss:{damage:18,per:2,stun:6},superboss:{damage:20,per:2,stun:6},bigmomma:{damage:25,per:2,stun:6}},
 snake:{baby:{damage:8,per:2},adult:{damage:15,per:2},boss:{damage:26,per:2},superboss:{damage:36,per:2},bigmomma:{damage:42,per:2}},
-clouded:{baby:{damage:20,per:1},adult:{damage:28,per:1},boss:{damage:38,per:1},superboss:{damage:48,per:1},bigmomma:{damage:58,per:1}},
-fennec:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
-camel:{baby:{damage:12,per:1},adult:{damage:20,per:1.5},boss:{damage:30,per:2},superboss:{damage:40,per:2.5},bigmomma:{damage:50,per:3}},
-scorpion:{baby:{damage:14,per:1},adult:{damage:22,per:1.5},boss:{damage:32,per:2},superboss:{damage:42,per:2.5},bigmomma:{damage:52,per:3}},
-hyena:{baby:{damage:16,per:1},adult:{damage:24,per:1.5},boss:{damage:34,per:2},superboss:{damage:44,per:2.5},bigmomma:{damage:54,per:3}},
-caracal:{baby:{damage:18,per:1},adult:{damage:26,per:1.5},boss:{damage:36,per:2},superboss:{damage:46,per:2.5},bigmomma:{damage:56,per:3}},
-polarbear:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
-arcticfox:{baby:{damage:12,per:1},adult:{damage:20,per:1.5},boss:{damage:30,per:2},superboss:{damage:40,per:2.5},bigmomma:{damage:50,per:3}},
-walrus:{baby:{damage:14,per:1},adult:{damage:22,per:1.5},boss:{damage:32,per:2},superboss:{damage:42,per:2.5},bigmomma:{damage:52,per:3}},
+clouded:{baby:{damage:5,per:1},adult:{damage:10,per:1},boss:{damage:15,per:1},superboss:{damage:20,per:1},bigmomma:{damage:25,per:1}},
+fennec:{baby:{damage:15,per:0},adult:{damage:20,per:0},boss:{damage:25,per:0},superboss:{damage:40,per:0},bigmomma:{damage:50,per:0}},
+camel:{baby:{damage:30,per:0},adult:{damage:40,per:0},boss:{damage:50,per:0},superboss:{damage:60,per:0},bigmomma:{damage:68,per:0}},
+scorpion:{baby:{grab:10,sting:20,dot:15,per:0},adult:{grab:15,sting:30,dot:20,per:0},boss:{grab:20,sting:40,dot:30,per:0},superboss:{grab:30,sting:50,dot:40,per:0},bigmomma:{grab:60,sting:80,dot:40,per:0}},
+hyena:{baby:{damage:10,per:0},adult:{damage:30,per:0},boss:{damage:37,per:0},superboss:{damage:50,per:0},bigmomma:{damage:59,per:0}},
+caracal:{baby:{pct:.25,per:0},adult:{pct:.30,per:0},boss:{pct:.35,per:0},superboss:{pct:.40,per:0},bigmomma:{pct:.50,per:0}},
+polarbear:{baby:{damage:5,per:0},adult:{damage:15,per:0},boss:{damage:20,per:0},superboss:{damage:26,per:0},bigmomma:{damage:40,per:0}},
+arcticfox:{baby:{damage:10,per:0},adult:{damage:18,per:0},boss:{damage:20,per:0},superboss:{damage:25,per:0},bigmomma:{damage:37,per:0}},
+walrus:{baby:{damage:2,per:0},adult:{damage:10,per:0},boss:{damage:12,per:0},superboss:{damage:20,per:0},bigmomma:{damage:34,per:0}},
 muskox:{baby:{damage:16,per:1},adult:{damage:24,per:1.5},boss:{damage:34,per:2},superboss:{damage:44,per:2.5},bigmomma:{damage:54,per:3}},
 snowyowl:{baby:{damage:18,per:1},adult:{damage:26,per:1.5},boss:{damage:36,per:2},superboss:{damage:46,per:2.5},bigmomma:{damage:56,per:3}},
 mountaingoat:{baby:{damage:10,per:1},adult:{damage:18,per:1.5},boss:{damage:28,per:2},superboss:{damage:38,per:2.5},bigmomma:{damage:48,per:3}},
@@ -1345,7 +1345,7 @@ export class WorldRoom extends Room {
     this.playerInputNetState=new Map();
     this.fxQueue=[]; this.fxFlushAccum=0; this.pendingPlayerHits=new Map(); this.hitFlushAccum=0;
     this.pendingAnimalPushes=new Map(); this.pushFlushAccum=0;
-    this.petDeathTimers=new Map(); this.abilityDots=new Map(); this.solidGrid=new Map(); this.dynamicGrid=new Map(); this.chestRewards=new Map(); this.chatLastSent=new Map(); this.waveTimer=4;
+    this.petDeathTimers=new Map(); this.abilityDots=new Map(); this.activePetAbilities=[]; this.activeWildAbilities=[]; this.solidGrid=new Map(); this.dynamicGrid=new Map(); this.chestRewards=new Map(); this.chatLastSent=new Map(); this.waveTimer=4;
     // Every named HOSTL world has a permanent generation seed. This means a
     // world rebuild/restart produces the exact same resource, gold, chest and
     // starting-wildlife layout for every player who chooses that world.
@@ -2543,11 +2543,50 @@ export class WorldRoom extends Room {
   abilityStatusAlive(ref){const o=this.targetObject(ref);if(!o)return false;if(ref.kind==="player"&&!this.isPlayerCombatReady(ref.id))return false;if(ref.kind==="pet"&&o.ownerId&&!this.isPlayerCombatReady(o.ownerId))return false;return ref.kind==="player"?!o.dead&&o.health>0:!o.dead&&o.hp>0;}
   applyAbilityStun(ref,seconds){const o=this.targetObject(ref);if(!o)return;o._abilityStunUntil=Math.max(Number(o._abilityStunUntil)||0,this.state.worldTime+Math.max(0,Number(seconds)||0));}
   applyAbilitySlowWeak(ref,seconds,slowMul=.55,weakMul=.68){const o=this.targetObject(ref);if(!o)return;const until=this.state.worldTime+Math.max(0,Number(seconds)||0);o._abilitySlowUntil=Math.max(Number(o._abilitySlowUntil)||0,until);o._abilityWeakUntil=Math.max(Number(o._abilityWeakUntil)||0,until);o._abilitySlowMul=Math.min(Number(o._abilitySlowMul)||1,slowMul);o._abilityWeakMul=Math.min(Number(o._abilityWeakMul)||1,weakMul);if(Number.isFinite(Number(o.speed))){if(!Number.isFinite(Number(o._abilityBaseSpeed)))o._abilityBaseSpeed=Number(o.speed)||0;o.speed=o._abilityBaseSpeed*o._abilitySlowMul;}if(Number.isFinite(Number(o.dmg))){if(!Number.isFinite(Number(o._abilityBaseDmg)))o._abilityBaseDmg=Number(o.dmg)||0;o.dmg=o._abilityBaseDmg*o._abilityWeakMul;}}
-  applyAbilityPoison(ref,impactDamage,ownerId,sourcePetId){if(!this.abilityStatusAlive(ref))return;const key=`${ref.kind}:${ref.id}`;this.abilityDots.set(key,{ref:{kind:ref.kind,id:ref.id},time:5,tick:1,dps:Math.max(.6,(Number(impactDamage)||0)*.32),ownerId,sourcePetId});}
+  applyAbilityPoison(ref,impactDamage,ownerId,sourcePetId){if(!this.abilityStatusAlive(ref))return;const key=`poison:${ref.kind}:${ref.id}:${sourcePetId||ownerId||"wild"}`;this.abilityDots.set(key,{ref:{kind:ref.kind,id:ref.id},time:5,tick:1,dps:Math.max(.6,(Number(impactDamage)||0)*.32),ownerId,sourcePetId,sourceKind:"pet"});}
+  applyAbilityFixedDot(ref,totalDamage,duration=5,ownerId="",sourcePetId="",sourceAnimalId=""){
+    if(!this.abilityStatusAlive(ref))return;const dur=Math.max(.5,Number(duration)||5),total=Math.max(0,Number(totalDamage)||0),key=`fixed:${ref.kind}:${ref.id}:${sourcePetId||sourceAnimalId||ownerId||"world"}`;
+    this.abilityDots.set(key,{ref:{kind:ref.kind,id:ref.id},time:dur,tick:1,dps:total/dur,ownerId,sourcePetId,sourceAnimalId,sourceKind:sourceAnimalId?"animal":"pet"});
+  }
+  damagePercentRef(ref,pct,attackerKind="animal",attackerId=""){
+    const o=this.targetObject(ref);if(!o)return false;const max=ref.kind==="player"?Math.max(1,Number(o.maxHealth)||100):Math.max(1,Number(o.maxHp)||Number(o.hp)||1);return this.damageTarget(ref,max*clamp(Number(pct)||0,0,1),attackerKind,attackerId);
+  }
+  abilityTargetsAround(ownerId,x,y,range){const out=[];for(const[id,en]of this.state.enemies)if(!en.dead&&dist(x,y,en.x,en.y)<=range+(en.r||16)*.25)out.push({ref:{kind:"enemy",id},obj:en});for(const[id,a]of this.state.animals)if(!a.dead&&a.hp>0&&dist(x,y,a.x,a.y)<=range+(a.r||18)*.25)out.push({ref:{kind:"animal",id},obj:a});for(const[id,pl]of this.state.players)if(id!==ownerId&&!pl.dead&&dist(x,y,pl.x,pl.y)<=range+PLAYER_R*.25)out.push({ref:{kind:"player",id},obj:pl});for(const[id,q]of this.state.pets)if(q.ownerId!==ownerId&&!q.dead&&dist(x,y,q.x,q.y)<=range+(q.r||18)*.25)out.push({ref:{kind:"pet",id},obj:q});return out;}
+  launchArcticShardVolley(ownerId,petId,p,target,damage){if(!p||!target)return;const base=angTo(p.x,p.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(p.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:p.x+Math.cos(base+i*.12)*(p.r+10),y:p.y+Math.sin(base+i*.12)*(p.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:false,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId,petBlast:true,knock:0,sourcePetId:petId});const q=this.state.projectiles.get(pid);if(q)q._targetRef={kind:target.ref.kind,id:target.ref.id};}}
+  updateActivePetAbilities(dt){
+    const now=this.state.worldTime,next=[];
+    for(const fx of this.activePetAbilities){fx.time-=dt;const p=this.state.pets.get(fx.petId);if(!p||p.dead||fx.time<=0)continue;
+      if(fx.type==="fennecOrbit"){
+        if(!fx.hits)fx.hits=new Map();const orbit=Math.max(p.r+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
+        for(let i=0;i<3;i++){const a=phase+i*TAU/3,bx=p.x+Math.cos(a)*orbit,by=p.y+Math.sin(a)*orbit;for(const h of this.abilityTargetsAround(fx.ownerId,bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.petAbilityDamage(h.ref,fx.damage,fx.ownerId,fx.petId);}}
+      }else if(fx.type==="hyenaFireField"){
+        if(!fx.hit)fx.hit=new Set();for(const h of this.abilityTargetsAround(fx.ownerId,p.x,p.y,fx.range)){const key=`${h.ref.kind}:${h.ref.id}`;if(fx.hit.has(key))continue;fx.hit.add(key);this.petAbilityDamage(h.ref,fx.damage,fx.ownerId,fx.petId);this.applyAbilityFixedDot(h.ref,fx.damage*.5,5,fx.ownerId,fx.petId,"");}
+      }else if(fx.type==="arcticShardOrbit"){
+        const t=this.petAbilityTarget(fx.ownerId,fx.petId,p,600);if(t){this.launchArcticShardVolley(fx.ownerId,fx.petId,p,t,fx.damage);this.broadcast("abilityEvent",{petId:fx.petId,ownerId:fx.ownerId,elem:"Ice",x:p.x,y:p.y,r:p.r,stage:p.stage,fxType:"owlWave",angle:angTo(p.x,p.y,t.obj.x,t.obj.y),range:95,life:.45});continue;}
+      }
+      next.push(fx);
+    }
+    this.activePetAbilities=next;
+  }
+  wildAbilityTargetsAround(x,y,range){const out=[];for(const[id,pl]of this.state.players)if(!pl.dead&&this.isPlayerCombatReady(id)&&dist(x,y,pl.x,pl.y)<=range+PLAYER_R*.25)out.push({ref:{kind:"player",id},obj:pl});for(const[id,q]of this.state.pets)if(!q.dead&&this.isPlayerCombatReady(q.ownerId)&&dist(x,y,q.x,q.y)<=range+(q.r||18)*.25)out.push({ref:{kind:"pet",id},obj:q});return out;}
+  launchWildArcticShardVolley(animalId,a,target,damage){if(!a||!target)return;const base=angTo(a.x,a.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:a.x+Math.cos(base+i*.12)*(a.r+10),y:a.y+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:true,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId:animalId,petBlast:false,knock:0,sourcePetId:""});const q=this.state.projectiles.get(pid);if(q){q._targetRef={kind:target.ref.kind,id:target.ref.id};q._sourceAnimalId=animalId;}}}
+  updateActiveWildAbilities(dt){
+    const now=this.state.worldTime,next=[];
+    for(const fx of this.activeWildAbilities){fx.time-=dt;const a=this.state.animals.get(fx.animalId);if(!a||a.dead||a.hp<=0||fx.time<=0)continue;
+      if(fx.type==="fennecOrbit"){
+        if(!fx.hits)fx.hits=new Map();const orbit=Math.max((a.r||18)+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
+        for(let i=0;i<3;i++){const q=phase+i*TAU/3,bx=a.x+Math.cos(q)*orbit,by=a.y+Math.sin(q)*orbit;for(const h of this.wildAbilityTargetsAround(bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.damageTarget(h.ref,fx.damage,"animal",fx.animalId);}}
+      }else if(fx.type==="hyenaFireField"){
+        if(!fx.hit)fx.hit=new Set();for(const h of this.wildAbilityTargetsAround(a.x,a.y,fx.range)){const key=`${h.ref.kind}:${h.ref.id}`;if(fx.hit.has(key))continue;fx.hit.add(key);this.damageTarget(h.ref,fx.damage,"animal",fx.animalId);this.applyAbilityFixedDot(h.ref,fx.damage*.5,5,"","",fx.animalId);}
+      }
+      next.push(fx);
+    }
+    this.activeWildAbilities=next;
+  }
   updateAbilityStatuses(dt){
     const now=this.state.worldTime,groups=[this.state.players,this.state.pets,this.state.animals,this.state.enemies];
     for(const group of groups)for(const[,o]of group){if(!o)continue;if(o._abilitySlowUntil&&now>=o._abilitySlowUntil){if(Number.isFinite(Number(o._abilityBaseSpeed)))o.speed=o._abilityBaseSpeed;delete o._abilityBaseSpeed;delete o._abilitySlowUntil;delete o._abilitySlowMul;}if(o._abilityWeakUntil&&now>=o._abilityWeakUntil){if(Number.isFinite(Number(o._abilityBaseDmg)))o.dmg=o._abilityBaseDmg;delete o._abilityBaseDmg;delete o._abilityWeakUntil;delete o._abilityWeakMul;}}
-    for(const[key,dot]of Array.from(this.abilityDots.entries())){dot.time-=dt;dot.tick-=dt;if(dot.time<=0||!this.abilityStatusAlive(dot.ref)){this.abilityDots.delete(key);continue;}if(dot.tick<=0){dot.tick+=1;const o=this.targetObject(dot.ref);if(!o){this.abilityDots.delete(key);continue;}if(dot.ref.kind==="enemy")this.hitEnemy(dot.ref.id,o,dot.dps,dot.ownerId,false,{kind:"pet",id:dot.sourcePetId});else if(dot.ref.kind==="animal")this.hitWild(dot.ref.id,o,dot.dps,dot.ownerId,false,{kind:"pet",id:dot.sourcePetId});else this.damageTarget(dot.ref,dot.dps,"pet",dot.sourcePetId);}}
+    for(const[key,dot]of Array.from(this.abilityDots.entries())){dot.time-=dt;dot.tick-=dt;if(dot.time<=0||!this.abilityStatusAlive(dot.ref)){this.abilityDots.delete(key);continue;}if(dot.tick<=0){dot.tick+=1;const o=this.targetObject(dot.ref);if(!o){this.abilityDots.delete(key);continue;}if(dot.sourceAnimalId)this.damageTarget(dot.ref,dot.dps,"animal",dot.sourceAnimalId);else if(dot.ref.kind==="enemy")this.hitEnemy(dot.ref.id,o,dot.dps,dot.ownerId,false,{kind:"pet",id:dot.sourcePetId});else if(dot.ref.kind==="animal")this.hitWild(dot.ref.id,o,dot.dps,dot.ownerId,false,{kind:"pet",id:dot.sourcePetId});else this.damageTarget(dot.ref,dot.dps,"pet",dot.sourcePetId);}}
   }
   petAbilityTarget(ownerId,petId,p,range=520){const focus=this.petFocusTargets.get(petId);if(focus&&this.abilityStatusAlive(focus)){const o=this.targetObject(focus),d=dist(p.x,p.y,o.x,o.y);if(d<=range)return{ref:focus,obj:o,d};}let best=null,bestD=range;for(const[id,en]of this.state.enemies){if(en.dead)continue;const d=dist(p.x,p.y,en.x,en.y);if(d<bestD){best={ref:{kind:"enemy",id},obj:en,d};bestD=d;}}for(const[id,a]of this.state.animals){if(a.dead||a.hp<=0)continue;const d=dist(p.x,p.y,a.x,a.y);if(d<bestD){best={ref:{kind:"animal",id},obj:a,d};bestD=d;}}for(const[id,pl]of this.state.players){if(id===ownerId||pl.dead)continue;const d=dist(p.x,p.y,pl.x,pl.y);if(d<bestD){best={ref:{kind:"player",id},obj:pl,d};bestD=d;}}for(const[id,q]of this.state.pets){if(q.dead||q.ownerId===ownerId)continue;const d=dist(p.x,p.y,q.x,q.y);if(d<bestD){best={ref:{kind:"pet",id},obj:q,d};bestD=d;}}return best;}
   petAbilityDamage(ref,raw,ownerId,petId){const o=this.targetObject(ref);if(!o)return false;if(ref.kind==="enemy"){this.hitEnemy(ref.id,o,raw,ownerId,false,{kind:"pet",id:petId});return true;}if(ref.kind==="animal"){this.hitWild(ref.id,o,raw,ownerId,false,{kind:"pet",id:petId});return true;}return this.damageTarget(ref,raw,"pet",petId);}
@@ -2562,15 +2601,23 @@ export class WorldRoom extends Room {
     this.petDamageResourcesAround(ownerId,p,p.x,p.y,p.r+42,true);
 
     if(p.type==="clouded"){
-      const dmg=stats.damage||20,side=Math.random()<.5?-1:1,ps=petProjectileStageSize(p.stage);for(const off of[-.16,.16])this.addProjectile({x:p.x,y:p.y,vx:Math.cos(angle+off)*610,vy:Math.sin(angle+off)*610,life:1.0,r:12*ps,hostile:false,kind:"owlSound",color:"#d9f6ff",dmg:dmg*.62,ownerId,petBlast:true,knock:0,sourcePetId:id});p.x=clamp(p.x+Math.cos(angle+side*Math.PI/2)*Math.min(70,p.r*3.2),20,WORLD_W-20);p.y=clamp(p.y+Math.sin(angle+side*Math.PI/2)*Math.min(70,p.r*3.2),20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);sendFx("owlWave",{angle,range:petAbilityRangeFor(p,100,2.2),life:.7});
-    }else if(p.type==="fennec"){const range=petAbilityRangeFor(p,115,2.2),dmg=stats.damage||12;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:44});sendFx("fireMuzzle",{angle,range,life:.65});
-    }else if(p.type==="camel"){const dmg=stats.damage||15,ps=petProjectileStageSize(p.stage);for(const off of[-.08,.08])this.addProjectile({x:p.x,y:p.y,vx:Math.cos(angle+off)*470,vy:Math.sin(angle+off)*470,life:1.35,r:10*ps,hostile:false,kind:"water",color:"#76d4ed",dmg:dmg*.7,ownerId,petBlast:true,knock:0,sourcePetId:id});p.hp=clamp(p.hp+dmg*.45,0,p.maxHp);sendFx("whirlpool",{range:70,life:.6});
-    }else if(p.type==="scorpion"){const t=this.petAbilityTarget(ownerId,id,p,180),dmg=stats.damage||16;if(t){this.petAbilityDamage(t.ref,dmg,ownerId,id);this.applyAbilityPoison(t.ref,dmg*1.25,ownerId,id);}sendFx("poisonMuzzle",{angle,life:.45});
-    }else if(p.type==="hyena"){const dmg=stats.damage||16;for(const mul of[.72,1])this.petAbilityArea(ownerId,id,p,p.x,p.y,petAbilityRangeFor(p,120*mul,2.2),dmg*mul,{knock:34*mul});sendFx("sonicBurst",{range:petAbilityRangeFor(p,120,2.2),life:1.2});
-    }else if(p.type==="caracal"){const dmg=stats.damage||18,ps=petProjectileStageSize(p.stage);for(const off of[-.12,.12])this.addProjectile({x:p.x,y:p.y,vx:Math.cos(angle+off)*650,vy:Math.sin(angle+off)*650,life:.9,r:10*ps,hostile:false,kind:"owlSound",color:"#cdefff",dmg:dmg*.65,ownerId,petBlast:true,knock:0,sourcePetId:id});sendFx("owlWave",{angle,range:100,life:.6});
-    }else if(p.type==="polarbear"){const range=petAbilityRangeFor(p,135,2.6),dmg=stats.damage||18;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{slowWeak:3,slowMul:.62,weakMul:.82,knock:45});sendFx("iceRing",{range,life:1.2});
-    }else if(p.type==="arcticfox"){const range=petAbilityRangeFor(p,105,2),dmg=(stats.damage||14)*.5;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{slowWeak:2.2,slowMul:.35,weakMul:.88});p.x=clamp(p.x-Math.cos(angle)*55,20,WORLD_W-20);p.y=clamp(p.y-Math.sin(angle)*55,20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);sendFx("iceRing",{range,life:.8});
-    }else if(p.type==="walrus"){const range=petAbilityRangeFor(p,110,2.4),dmg=stats.damage||20;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:85});sendFx("whirlpool",{range,life:.9});
+      const dmg=stats.damage||5,t=this.petAbilityTarget(ownerId,id,p,650),ps=petProjectileStageSize(p.stage),pid=this.addProjectile({x:p.x+Math.cos(angle)*(p.r+12),y:p.y+Math.sin(angle)*(p.r+12),vx:Math.cos(angle)*300,vy:Math.sin(angle)*300,life:2.8,r:19*ps,hostile:false,kind:"tornado",color:"#d9f6ff",dmg,ownerId,petBlast:true,knock:0,sourcePetId:id});const q=this.state.projectiles.get(pid);if(q){q._targetRef=t?{kind:t.ref.kind,id:t.ref.id}:null;q._wander=angle;q._wanderSeed=Math.random()*10;}sendFx("owlWave",{angle,range:petAbilityRangeFor(p,80,1.5),life:.45});
+    }else if(p.type==="fennec"){
+      const dmg=stats.damage||15,orbitR=Math.max(p.r+24,petAbilityRangeFor(p,48,.6));this.activePetAbilities.push({type:"fennecOrbit",petId:id,ownerId,time:4,damage:dmg,orbitR,phase:0,hits:new Map()});sendFx("fennecOrbit",{range:orbitR,life:4});
+    }else if(p.type==="camel"){
+      const dmg=stats.damage||30,ps=petProjectileStageSize(p.stage);this.addProjectile({x:p.x+Math.cos(angle)*(p.r+10),y:p.y+Math.sin(angle)*(p.r+10),vx:Math.cos(angle)*520,vy:Math.sin(angle)*520,life:1.55,r:12*ps,hostile:false,kind:"spit",color:"#cfe89a",dmg,ownerId,petBlast:true,knock:0,sourcePetId:id});sendFx("fireMuzzle",{angle,range:60,life:.3});
+    }else if(p.type==="scorpion"){
+      const t=this.petAbilityTarget(ownerId,id,p,175);if(t){const grab=stats.grab||10,sting=stats.sting||20,dot=stats.dot||15;this.applyAbilityStun(t.ref,1.25);this.petAbilityDamage(t.ref,grab,ownerId,id);this.petAbilityDamage(t.ref,sting,ownerId,id);this.applyAbilityFixedDot(t.ref,dot,5,ownerId,id,"");sendFx("scorpionGrab",{targetX:t.obj.x,targetY:t.obj.y,life:.8,range:36});}else sendFx("poisonMuzzle",{angle,life:.35});
+    }else if(p.type==="hyena"){
+      const dmg=stats.damage||10,range=petAbilityRangeFor(p,125,2.2);this.activePetAbilities.push({type:"hyenaFireField",petId:id,ownerId,time:5,damage:dmg,range,hit:new Set()});sendFx("hyenaFireField",{range,life:5});
+    }else if(p.type==="caracal"){
+      const t=this.petAbilityTarget(ownerId,id,p,145),pct=Number(stats.pct)||.25;if(t){this.damagePercentRef(t.ref,pct,"pet",id);this.applyAbilityStun(t.ref,1.8);sendFx("lightningStrike",{fromX:p.x,fromY:p.y,targetX:t.obj.x,targetY:t.obj.y,range:42,life:.65});}
+    }else if(p.type==="polarbear"){
+      const t=this.petAbilityTarget(ownerId,id,p,165),dmg=stats.damage||5;if(t){this.petAbilityDamage(t.ref,dmg,ownerId,id);this.petAbilityDamage(t.ref,dmg,ownerId,id);sendFx("iceClaws",{targetX:t.obj.x,targetY:t.obj.y,range:48,life:.65});}
+    }else if(p.type==="arcticfox"){
+      const dmg=stats.damage||10,t=this.petAbilityTarget(ownerId,id,p,600);if(t){this.launchArcticShardVolley(ownerId,id,p,t,dmg);sendFx("owlWave",{angle:angTo(p.x,p.y,t.obj.x,t.obj.y),range:95,life:.45});}else{this.activePetAbilities=this.activePetAbilities.filter(f=>!(f.type==="arcticShardOrbit"&&f.petId===id));this.activePetAbilities.push({type:"arcticShardOrbit",petId:id,ownerId,time:1e9,damage:dmg});sendFx("arcticShardOrbit",{range:Math.max(p.r+28,48),life:1e9});}
+    }else if(p.type==="walrus"){
+      const t=this.petAbilityTarget(ownerId,id,p,300),dmg=stats.damage||2;if(t){const stage=uploadedAnimalStageKey(p.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((t.obj.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const a=i/6*TAU,wx=t.obj.x+Math.cos(a)*ring,wy=t.obj.y+Math.sin(a)*ring;this.addWall(wx,wy,wallR,4,ownerId,{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:id});}sendFx("earthRingBurst",{targetX:t.obj.x,targetY:t.obj.y,range:ring+wallR,life:.8});}
     }else if(p.type==="muskox"){const range=petAbilityRangeFor(p,125,2.3),dmg=stats.damage||18;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:18});sendFx("earthRingBurst",{range,life:1});
     }else if(p.type==="snowyowl"){const dmg=stats.damage||14,ps=petProjectileStageSize(p.stage);for(const off of[-.28,-.14,0,.14,.28])this.addProjectile({x:p.x,y:p.y,vx:Math.cos(angle+off)*520,vy:Math.sin(angle+off)*520,life:1,r:10*ps,hostile:false,kind:"owlSound",color:"#ecfbff",dmg:dmg*.42,ownerId,petBlast:true,knock:0,sourcePetId:id});sendFx("owlWave",{angle,range:120,life:.75});
     }else if(p.type==="mountaingoat"){const t=this.petAbilityTarget(ownerId,id,p,180),dmg=stats.damage||18;if(t){this.petAbilityDamage(t.ref,dmg,ownerId,id);const q=angTo(p.x,p.y,t.obj.x,t.obj.y);t.obj.x=clamp(t.obj.x+Math.cos(q)*75,20,WORLD_W-20);t.obj.y=clamp(t.obj.y+Math.sin(q)*75,20,WORLD_H-20);}sendFx("earthRingBurst",{range:65,life:.6});
@@ -2677,18 +2724,36 @@ export class WorldRoom extends Room {
     if(!a||!target||a.stage==="baby"||(a.abilityCd||0)>0||a.sleeping||a.hp<=0)return false;
     const info=PET_TYPES[a.type]||{};const elem=info.elem||"";
     a.abilityCd=Math.max(4.5,(info.abilityCd||12)*.72);
-    this.broadcast("abilityEvent",{petId:"",ownerId:"",elem,x:a.x,y:a.y,r:a.r,wildAnimalId:id});
+    if(!["clouded","fennec","camel","scorpion","hyena","caracal","polarbear","arcticfox","walrus"].includes(a.type))this.broadcast("abilityEvent",{petId:"",ownerId:"",elem,x:a.x,y:a.y,r:a.r,wildAnimalId:id});
     const d=dist(a.x,a.y,target.x,target.y);
     // New biome wildlife keeps the same species-specific move it uses after taming.
-    if(a.type==="clouded"){if(d<190){this.damageTarget(ref,Math.max(10,(petAbilityStats(a).damage||20)*.62),"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,36);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"GALE SLIP",color:"#d9f6ff"});}
-    else if(a.type==="fennec"){if(d<120){this.damageTarget(ref,12,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,42);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"HEAT MIRAGE",color:"#ff9a55"});}
-    else if(a.type==="camel"){if(d<180)this.damageTarget(ref,15,"animal",id);a.hp=clamp(a.hp+7,0,a.maxHp);this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"WATER SPRAY",color:"#76d4ed"});}
-    else if(a.type==="scorpion"){if(d<125){const dmg=16;this.damageTarget(ref,dmg,"animal",id);this.applyAbilityPoison(ref,dmg*1.25,"","");}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"VENOM STING",color:"#78d66a"});}
-    else if(a.type==="hyena"){if(d<150){this.damageTarget(ref,15,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,34);this.applyAbilityStun(ref,.75);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"LAUGH SHOCK",color:"#f2db9a"});}
-    else if(a.type==="caracal"){if(d<185)this.damageTarget(ref,17,"animal",id);this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"EAR-SLICE GUST",color:"#cdefff"});}
-    else if(a.type==="polarbear"){if(d<150){this.damageTarget(ref,18,"animal",id);this.applyAbilitySlowWeak(ref,2.6,.62,.82);this.pushWildAbilityTarget(ref,target,a.x,a.y,42);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ICE SHOVE",color:"#bcecff"});}
-    else if(a.type==="arcticfox"){if(d<120){this.damageTarget(ref,8,"animal",id);this.applyAbilitySlowWeak(ref,2.2,.35,.88);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"SNOW VEIL",color:"#e9fbff"});}
-    else if(a.type==="walrus"){if(d<135){this.damageTarget(ref,20,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,78);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"TIDAL SLAM",color:"#71cae6"});}
+    if(a.type==="clouded"){
+      const dmg=petAbilityStats(a).damage||10,ang=Number.isFinite(a.angle)?a.angle:angTo(a.x,a.y,target.x,target.y),pid=this.addProjectile({x:a.x+Math.cos(ang)*(a.r+12),y:a.y+Math.sin(ang)*(a.r+12),vx:Math.cos(ang)*330,vy:Math.sin(ang)*330,life:2.8,r:Math.max(16,18*petProjectileStageSize(a.stage)),hostile:true,kind:"tornado",color:"#d9f6ff",dmg,ownerId:id,petBlast:false,knock:0,sourcePetId:""});const q=this.state.projectiles.get(pid);if(q){q._targetRef={kind:ref.kind,id:ref.id};q._sourceAnimalId=id;q._wander=ang;q._wanderSeed=Math.random()*TAU;}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"TORNADO TRAP",color:"#d9f6ff"});
+    }
+    else if(a.type==="fennec"){
+      const dmg=petAbilityStats(a).damage||15,orbitR=Math.max((a.r||18)+24,48);this.activeWildAbilities.push({type:"fennecOrbit",animalId:id,time:4,damage:dmg,orbitR,phase:0,hits:new Map()});this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Fire",fxType:"fennecOrbit",x:a.x,y:a.y,r:a.r,stage:a.stage,range:orbitR,life:4});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"FIRE ORBIT",color:"#ff8b36"});
+    }
+    else if(a.type==="camel"){
+      const dmg=petAbilityStats(a).damage||30,ang=Number.isFinite(a.angle)?a.angle:angTo(a.x,a.y,target.x,target.y);this.addProjectile({x:a.x+Math.cos(ang)*(a.r+10),y:a.y+Math.sin(ang)*(a.r+10),vx:Math.cos(ang)*620,vy:Math.sin(ang)*620,life:1.35,r:11*petProjectileStageSize(a.stage),hostile:true,kind:"spit",color:"#b9d76a",dmg,ownerId:id,petBlast:false,knock:0,sourcePetId:""});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"SPIT",color:"#b9d76a"});
+    }
+    else if(a.type==="scorpion"){
+      const st=petAbilityStats(a);if(d<145){this.applyAbilityStun(ref,1.25);this.damageTarget(ref,st.grab||10,"animal",id);this.damageTarget(ref,st.sting||20,"animal",id);this.applyAbilityFixedDot(ref,st.dot||15,5,"","",id);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"scorpionGrab",x:a.x,y:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,life:.7});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"CLAW + STING",color:"#78d66a"});
+    }
+    else if(a.type==="hyena"){
+      const dmg=petAbilityStats(a).damage||10,range=Math.max(125,(a.r||18)*2.2);this.activeWildAbilities.push({type:"hyenaFireField",animalId:id,time:5,damage:dmg,range,hit:new Set()});this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Fire",fxType:"hyenaFireField",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:5});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"FIRE CIRCLE",color:"#ff6b35"});
+    }
+    else if(a.type==="caracal"){
+      const pct=petAbilityStats(a).pct||.25;if(d<155){this.damagePercentRef(ref,pct,"animal",id);this.applyAbilityStun(ref,1.8);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Lightning",fxType:"lightningStrike",x:a.x,y:a.y,fromX:a.x,fromY:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,life:.75});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"LIGHTNING BITE",color:"#ffe14f"});
+    }
+    else if(a.type==="polarbear"){
+      const dmg=petAbilityStats(a).damage||5;if(d<175){this.damageTarget(ref,dmg,"animal",id);this.damageTarget(ref,dmg,"animal",id);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Ice",fxType:"iceClaws",x:a.x,y:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,life:.7});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"ICE CLAWS ×2",color:"#bcecff"});
+    }
+    else if(a.type==="arcticfox"){
+      const dmg=petAbilityStats(a).damage||10;this.launchWildArcticShardVolley(id,a,{ref,obj:target},dmg);this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ICE SHARDS ×3",color:"#bfeeff"});
+    }
+    else if(a.type==="walrus"){
+      const dmg=petAbilityStats(a).damage||2;if(d<320){const stage=uploadedAnimalStageKey(a.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((target.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const aa=i/6*TAU,wx=target.x+Math.cos(aa)*ring,wy=target.y+Math.sin(aa)*ring,wid=this.addWall(wx,wy,wallR,4,"",{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:""});this.hostileWildWalls.set(wid,id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Stone",fxType:"earthRingBurst",x:a.x,y:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,range:ring+wallR,life:.8});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"SPIKE PRISON",color:"#a9a9a2"});
+    }
     else if(a.type==="muskox"){if(d<145){this.damageTarget(ref,18,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,18);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"GROUND BRACE",color:"#9c805c"});}
     else if(a.type==="snowyowl"){if(d<210)this.damageTarget(ref,14,"animal",id);this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"WHITEOUT FAN",color:"#ecfbff"});}
     else if(a.type==="mountaingoat"){if(d<125){this.damageTarget(ref,18,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,72);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"CLIFF KICK",color:"#b99c72"});}
@@ -3909,6 +3974,7 @@ export class WorldRoom extends Room {
         if(!p.returning&&p.life<=THROW_AXE_RETURN_AT)p.returning=true;
         if(p.returning){const owner=this.state.players.get(p.ownerId);if(!owner||owner.dead){this.state.projectiles.delete(id);continue;}const dx=owner.x-p.x,dy=owner.y-p.y,d=Math.hypot(dx,dy);if(d<28||p.life<=0){this.state.projectiles.delete(id);continue;}p.vx=dx/Math.max(1,d)*THROW_AXE_RETURN_SPEED;p.vy=dy/Math.max(1,d)*THROW_AXE_RETURN_SPEED;}
       }
+      if((p.kind==="tornado"||p.kind==="iceShard")&&p._targetRef&&this.abilityStatusAlive(p._targetRef)){const o=this.targetObject(p._targetRef),ta=angTo(p.x,p.y,o.x,o.y),spd=p.kind==="tornado"?330:560,cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-2.8*dt,2.8*dt);p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;}else if(p.kind==="tornado"){p._wander=(Number(p._wander)||Math.atan2(p.vy,p.vx))+Math.sin((this.state.worldTime+(p._wanderSeed||0))*3.4)*.9*dt;const spd=300;p.vx=Math.cos(p._wander)*spd;p.vy=Math.sin(p._wander)*spd;}
       const x0=p.x,y0=p.y,x1=p.x+p.vx*dt,y1=p.y+p.vy*dt;
       p.x=x1;p.y=y1;
       if(p.life<=0||p.x<0||p.y<0||p.x>WORLD_W||p.y>WORLD_H){this.state.projectiles.delete(id);continue;}
@@ -3959,10 +4025,14 @@ export class WorldRoom extends Room {
           if(c&&r&&r.alive)this.handleResourceHit(c,{id:best.solid.id,tool:"Axe",tier:p.toolTier},{projectile:true});
         }
         else if(best.type==="solid"&&p.petBlast&&best.solid?.kind==="resource"&&p.sourcePetId){const pet=this.state.pets.get(p.sourcePetId),r=this.state.resources.get(best.solid.id);if(pet&&r)this.petHitResource(p.ownerId,pet,best.solid.id,r,true);}
-        if(p.petBlast&&p.sourcePetId&&(p.kind==="owlSound"||p.kind==="poison")){
+        if(p.hostile&&p.kind==="tornado"){
+          let ref=null,hit=null;if(best.type==="player"){ref={kind:"player",id:best.pid};hit=best.pl;}else if(best.type==="pet"){ref={kind:"pet",id:best.petId};hit=best.pet;}else if(best.type==="wild"){ref={kind:"animal",id:best.aid};hit=best.a;}
+          if(ref&&this.abilityStatusAlive(ref)){this.applyAbilityStun(ref,2.2);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:String(p._sourceAnimalId||""),elem:"Wind",fxType:"tornadoTrap",x:p.x,y:p.y,targetX:hit?.x||p.x,targetY:hit?.y||p.y,r:Math.max(30,(hit?.r||PLAYER_R)+18),life:2.2});}
+        }
+        if(p.petBlast&&p.sourcePetId&&(p.kind==="owlSound"||p.kind==="poison"||p.kind==="tornado")){
           const source=this.state.pets.get(p.sourcePetId),stats=source?petAbilityStats(source):{};let ref=null;
           if(best.type==="enemy")ref={kind:"enemy",id:best.eid};else if(best.type==="wild")ref={kind:"animal",id:best.aid};else if(best.type==="pvp")ref={kind:"player",id:best.pid};
-          if(ref&&this.abilityStatusAlive(ref)){if(p.kind==="owlSound")this.applyAbilityStun(ref,stats.stun||2);else this.applyAbilityPoison(ref,p.dmg,p.ownerId,p.sourcePetId);}
+          if(ref&&this.abilityStatusAlive(ref)){if(p.kind==="owlSound")this.applyAbilityStun(ref,stats.stun||2);else if(p.kind==="tornado"){this.applyAbilityStun(ref,2.2);const hit=this.targetObject(ref);this.broadcast("abilityEvent",{petId:p.sourcePetId,ownerId:p.ownerId,elem:"Wind",fxType:"tornadoTrap",x:p.x,y:p.y,targetX:hit?.x||p.x,targetY:hit?.y||p.y,r:Math.max(30,(hit?.r||PLAYER_R)+18),life:2.2});}else this.applyAbilityPoison(ref,p.dmg,p.ownerId,p.sourcePetId);}
         }
         if(p.kind==="throwAxe"){p.returning=true;p.life=Math.max(p.life,.72);}else this.state.projectiles.delete(id);
       }
@@ -3997,7 +4067,12 @@ export class WorldRoom extends Room {
           else this.hitWild(rec.id,o,w.spikeDmg,w.ownerId,false,{kind:"pet",id:w.sourcePetId});
           this.wallSpikeNext.set(key,now+.50);
         }
-        // A wild Dog wall can repeatedly damage every player who remains on it.
+        // Player-owned pet spike walls (including Walrus prisons) can hurt enemy players/pets on contact.
+        if(w.sourcePetId&&w.ownerId){
+          for(const[pid,pl]of this.state.players){if(pid===w.ownerId||pl.dead||dist(w.x,w.y,pl.x,pl.y)>w.r+PLAYER_R)continue;const key=`${id}:player:${pid}`,next=this.wallSpikeNext.get(key)||0;if(now<next)continue;this.damageTarget({kind:"player",id:pid},w.spikeDmg,"pet",w.sourcePetId);this.wallSpikeNext.set(key,now+.50);}
+          for(const[petId,pet]of this.state.pets){if(pet.ownerId===w.ownerId||pet.dead||!animalProjectileTouch(pet,w.x,w.y,w.r+2))continue;const key=`${id}:pet:${petId}`,next=this.wallSpikeNext.get(key)||0;if(now<next)continue;this.damageTarget({kind:"pet",id:petId},w.spikeDmg,"pet",w.sourcePetId);this.wallSpikeNext.set(key,now+.50);}
+        }
+        // A wild spike wall can repeatedly damage every player or pet who remains on it.
         const wildAnimalId=this.hostileWildWalls.get(id);
         if(wildAnimalId){
           for(const[pid,pl]of this.state.players){
@@ -4005,6 +4080,13 @@ export class WorldRoom extends Room {
             const key=`${id}:player:${pid}`,next=this.wallSpikeNext.get(key)||0;
             if(now<next)continue;
             this.damageTarget({kind:"player",id:pid},w.spikeDmg||10,"animal",wildAnimalId);
+            this.wallSpikeNext.set(key,now+.50);
+          }
+          for(const[petId,pet]of this.state.pets){
+            if(pet.dead||!animalProjectileTouch(pet,w.x,w.y,w.r+2))continue;
+            const key=`${id}:pet:${petId}`,next=this.wallSpikeNext.get(key)||0;
+            if(now<next)continue;
+            this.damageTarget({kind:"pet",id:petId},w.spikeDmg||10,"animal",wildAnimalId);
             this.wallSpikeNext.set(key,now+.50);
           }
         }
@@ -4071,6 +4153,8 @@ export class WorldRoom extends Room {
     dt=Math.min(dt,.05);
     this.updateTime(dt);
     this.updateAbilityStatuses(dt);
+    this.updateActivePetAbilities(dt);
+    this.updateActiveWildAbilities(dt);
     for(const[id,p]of this.state.players){
       p.animalCarryT=0;const regen=this.runPerks(id).regen;
       if(regen>0&&!p.dead&&p.health<p.maxHealth)p.health=Math.min(p.maxHealth,p.health+regen*dt);
