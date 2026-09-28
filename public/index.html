@@ -6215,9 +6215,9 @@ if (window.visualViewport) window.visualViewport.addEventListener("resize", sche
 resize(true);
 
 // ---------- constants ----------
-const WORLD_W = 28000, WORLD_H = 28000;
+const WORLD_W = 38000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "646";
+const CUBE_SHARED_RULES_VERSION = "647";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8295,9 +8295,11 @@ const ANIMAL_BALANCE = {
   clouded:{ hpMul:0.98, babyHpMul:1.52, damageTaken:0.96, attack:11.1 },
 };
 
-const ANIMAL_STAGE_HP = { baby:28, adult:100, boss:320, superboss:900, bigmomma:1900 };
+const ANIMAL_STAGE_HP = { baby:28, adult:100, boss:320, superboss:900, bigmomma:5200 };
 const ANIMAL_STAGE_ATTACK = { baby:0.55, adult:1.15, boss:1.80, superboss:2.45, bigmomma:3.00 };
-const ANIMAL_STAGE_DAMAGE_TAKEN = { baby:1.04, adult:1.00, boss:0.96, superboss:0.92, bigmomma:0.88 };
+const ANIMAL_STAGE_DAMAGE_TAKEN = { baby:1.04, adult:1.00, boss:0.96, superboss:0.92, bigmomma:0.58 };
+const BIG_MOMMA_HP_MUL = {bear:1.55,polarbear:1.65,walrus:1.55,camel:1.35,muskox:1.45,saber:1.45,jaguar:1.35,anaconda:1.50,scorpion:1.25,wolf:1.25,boar:1.35,bighorn:1.30,cougar:1.25,hyena:1.20,clouded:1.25,dragon:1.35,rabbit:.78,marmot:.82,fennec:.88,toucan:.82,owl:.90,snowyowl:.90};
+const BIG_MOMMA_DEF_MUL = {bear:.68,polarbear:.64,walrus:.67,muskox:.72,saber:.72,anaconda:.73,scorpion:.78,boar:.75,camel:.82,bighorn:.80,wolf:.82,jaguar:.80,hyena:.84,clouded:.82,rabbit:1.08,marmot:1.04,fennec:1.02,toucan:1.04};
 
 
 const PET_STAT_UPGRADE_MAX = 10;
@@ -8352,7 +8354,7 @@ function animalDamageTaken(type, stage, rawDamage) {
   if (raw <= 0) return 0;
   const b = animalBalance(type);
   const stageMul = ANIMAL_STAGE_DAMAGE_TAKEN[stage] ?? 1;
-  const speciesStage = stage === "bigmomma" && type === "bear" ? 0.72 : stage === "bigmomma" && type === "boar" ? 0.78 : 1;
+  const speciesStage = stage === "bigmomma" ? (BIG_MOMMA_DEF_MUL[type] ?? 1) : 1;
   return Math.max(0.1, raw * b.damageTaken * stageMul * speciesStage);
 }
 function dogWallStats(stage, level=1) {
@@ -8768,7 +8770,8 @@ function typeHp(type, stage) {
   const base = ANIMAL_STAGE_HP[stage] ?? ANIMAL_STAGE_HP.adult;
   const b = animalBalance(type);
   const babyMul = stage === "baby" ? (b.babyHpMul || 1) : 1;
-  return Math.max(12, Math.round(base * b.hpMul * babyMul));
+  const bigMul = stage === "bigmomma" ? (BIG_MOMMA_HP_MUL[type] ?? 1) : 1;
+  return Math.max(12, Math.round(base * b.hpMul * babyMul * bigMul));
 }
 function typeDmg(type, stage) {
   const b = animalBalance(type);
@@ -10876,7 +10879,7 @@ function applyPlayerActionEvent(data={}) {
   const action=String(data.action||"attack");
   const tool=String(data.tool||v.tool||"Fist");
   v.swingWeapon=tool;
-  v.attackTimer=action==="shoot"?0.20:0.26;
+  v.attackTimer=action==="shoot"?0.20:(tool==="Axe"&&String(data.weaponChoice||v.skillWeaponChoice||"")==="doubleAxe"?.58:.26);
   if(data.throwing){v._throwAxePendingUntil=game.time+.35;v.skillWeaponChoice="throwingAxe";v.toolTiers=v.toolTiers||{};v.toolTiers.Axe=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
   v.punchSide=(v.punchSide||1)*-1;
   if(Number.isFinite(Number(data.angle))){
@@ -10889,7 +10892,7 @@ function applyPhaseNetworkEvent(data={}) {
   const phase=TIME_PHASES[Number(data.phase)||0]; if(!phase)return;
   if(phase.name==="Dawn") banner("Dawn — basic Hostls are arriving: sword users and brawlers.");
   if(phase.name==="Night") { sfx.night(); banner("Night — Riders and Tamers have joined the Hostls."); }
-  if(phase.name==="Midnight") banner("Midnight — Rangers and Chimest emerge, and the Forest Moonmark awakens!");
+  if(phase.name==="Midnight") banner("Midnight — Rangers and Chimest emerge.");
   if(phase.name==="Morning") { banner("Morning — sunlight! The Hostls are retreating."); if(game.started && !player.dead) unlockAchievement("survive_night"); }
 }
 function drawRemotePets(){ for(const p of net.remotePetVisuals.values()) if(inView(p.x,p.y,60)) drawAnimal(p); }
@@ -11116,21 +11119,17 @@ async function connectMultiplayer(options={}) {
     room.onMessage("playerAction", applyPlayerActionEvent);
     room.onMessage("phaseEvent", applyPhaseNetworkEvent);
     room.onMessage("moonmarkSpawned", (data = {}) => {
-      banner("MIDNIGHT HUNT — the Moonmarked Hostl is marked on your minimap!");
+      banner("MOONMARK AWAKENS — a giant stationary biome boss is marked on your minimap!");
     });
     room.onMessage("moonmarkClaimed", (data = {}) => {
       unlockAchievement("moonmark_hunter");
-      banner("Forest Moonmark claimed — survive until Morning for First Light!");
+      banner("Moonmark defeated — your pack and Skills surge with its power!");
       const x=Number(data.x), y=Number(data.y);
       if(Number.isFinite(x)&&Number.isFinite(y)) { spark(x,y,"#d7b7ff",16,150); floatText(x,y-34,"MOONMARK", "#e4c7ff"); }
     });
     room.onMessage("moonmarkRewardSummary", (data = {}) => {
-      const xp = Math.max(0, Number(data.petXp) || 0);
-      const gold = Math.max(0, Number(data.gold) || 0);
-      const cards = Math.max(0, Number(data.cards) || 0);
-      const species = String(data.species || "");
-      const nm = PET_TYPES[species]?.name || species || "Pet";
-      banner(`MOONMARK REWARD — +${gold} gold, +${xp} XP to every pet, +${cards} ${nm} Cards!`);
+      const gold=Math.max(0,Number(data.gold)||0),cards=Math.max(0,Number(data.cards)||0),species=String(data.species||""),nm=PET_TYPES[species]?.name||species||"Pet";
+      banner(`MOONMARK DOWN — every pet +1 stage + bonus XP, +3 Skills, Home materials, +${gold} gold and +${cards} ${nm} Cards!`);
     });
     room.onMessage("firstLight", (data = {}) => {
       banner("FIRST LIGHT — your stolen Moonmark heals your pack and blasts retreating Hostls!");
@@ -15415,17 +15414,18 @@ const MOONMARK_BIOMES = {
   mountains:{ id:"mountains", name:"Peak Crusher", element:"Stone", color:"#9d9aa6", accent:"#ddd9ef", mapColor:"#4f4f58", xp:320 },
   rainforest:{ id:"rainforest", name:"Jungle Howl", element:"Vine", color:"#2fb06a", accent:"#ccffd6", mapColor:"#165b34", xp:320 }
 };
+const MOONMARK_RADIUS = 390;
 // Expanded main island: Forest + Rain Forest + Arctic.
 // The Clouded Leopard stays in the Rain Forest; Arctic wildlife gets its own home.
 const ISLAND_CX = WORLD_W * 0.5, ISLAND_CY = WORLD_H * 0.5;
 const ISLAND_RADIUS = Math.min(WORLD_W, WORLD_H) * 0.415;
 const ISLAND_SHORE_WIDTH = 230;
 const BIOME_ZONES = {
-  forest:{id:"forest",cx:WORLD_W*0.39,cy:WORLD_H*0.57},
-  rainforest:{id:"rainforest",cx:WORLD_W*0.68,cy:WORLD_H*0.57},
+  forest:{id:"forest",cx:WORLD_W*0.41,cy:WORLD_H*0.57},
+  rainforest:{id:"rainforest",cx:WORLD_W*0.65,cy:WORLD_H*0.57},
   arctic:{id:"arctic",cx:WORLD_W*0.50,cy:WORLD_H*0.25},
   desert:{id:"desert",cx:WORLD_W*0.50,cy:WORLD_H*0.80},
-  mountains:{id:"mountains",cx:WORLD_W*0.20,cy:WORLD_H*0.52},
+  mountains:{id:"mountains",cx:WORLD_W*0.13,cy:WORLD_H*0.52},
 };
 const BIOME_PROFILES = {
   forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","saber"] },
@@ -15466,7 +15466,9 @@ function islandRadiusAtAngle(angle,pad=0){
   scale+=Math.exp(-Math.pow(islandAngleDelta(theta,-.78)/.48,2))*.07;
   scale-=Math.exp(-Math.pow(islandAngleDelta(theta,2.35)/.52,2))*.13;
   scale-=Math.exp(-Math.pow(islandAngleDelta(theta,-2.55)/.34,2))*.06;
-  scale=Math.max(.74,Math.min(1.18,scale));
+  // Mountains live on added western land instead of replacing the original Forest.
+  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,Math.PI)/.62,2))*.60;
+  scale=Math.max(.74,Math.min(1.75,scale));
   return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
 }
 function isInsideIsland(x,y,pad=0){ const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx); return d <= islandRadiusAtAngle(angle,pad); }
@@ -15500,7 +15502,7 @@ function desertBoundaryY(x){
 }
 function mountainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CX-ISLAND_RADIUS*.50 + Math.sin(yn*Math.PI*1.7+.6)*WORLD_W*.020 + Math.sin(yn*Math.PI*3.9-.9)*WORLD_W*.007;
+  return ISLAND_CX-ISLAND_RADIUS*1.10 + Math.sin(yn*Math.PI*1.7+.6)*WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*WORLD_H*.004;
 }
 function worldBiomeAt(x,y){
   if(!isInsideIsland(x,y,0))return "ocean";
@@ -15517,6 +15519,14 @@ function speciesHomeBiome(type){
 function randomPointInBiome(biomeId,pad=120){
   const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest";
   const safePad=Math.max(0,Number(pad)||0),maxR=Math.max(180,ISLAND_RADIUS-safePad-70);
+  if(wanted==="mountains"){
+    for(let tries=0;tries<520;tries++){
+      const y=rand(ISLAND_CY-ISLAND_RADIUS*.48,ISLAND_CY+ISLAND_RADIUS*.48),edge=mountainBoundaryX(y)-safePad-25;
+      if(edge<=safePad+40)continue;
+      const x=rand(Math.max(safePad,120),edge);
+      if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};
+    }
+  }
   for(let tries=0;tries<360;tries++){
     const a=rand(0,TAU),rr=Math.sqrt(Math.random())*maxR;
     const x=ISLAND_CX+Math.cos(a)*rr,y=ISLAND_CY+Math.sin(a)*rr;
@@ -16215,7 +16225,7 @@ function placeBiomeFeatures() {
     const scale=rand(1.05,1.65),solid=10.8*scale;
     if (!solidOverlaps(pos.x, pos.y, solid+10)) addGeneratedResource({type:"bush",x:pos.x,y:pos.y,hp:8,maxHp:8,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:24*scale,scale,rot:0});
   }
-  const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),scale=rand(.9,1.35),solid=(info.category==="stone"?17:12)*scale;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp:info.hp,maxHp:info.hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
+  const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",scale=isCactus?rand(1.55,2.15):rand(.9,1.35),solid=(info.category==="stone"?17:(isCactus?14:12))*scale;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp:info.hp,maxHp:info.hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
   placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest");
   placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest");
   placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
@@ -17186,6 +17196,13 @@ function throwSpecialAxe(){
   projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*THROW_AXE_SPEED,vy:Math.sin(a)*THROW_AXE_SPEED,life:THROW_AXE_LIFE,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false,toolTier:tier});
   consumeHydration(.9);
 }
+function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
+  if(!a||a.dead||(a.owned&&!a.releasedWild))return;const info=PET_TYPES[a.type];let dmg=animalDamageTaken(a.type,a.stage,baseDamage);a.hp-=dmg;gainSkillXp(1,"combat-hit");a.flash=.12;markCreatureHit(a,4.2);a.sleeping=false;a.enraged=true;a.combat=8;
+  if(a.stage==="baby"||info?.flee){if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.32){a.desperateAggro=true;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(!a.tameFailedAggro){a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+4;a.wanderA=angTo(player.x,player.y,a.x,a.y);}}else{a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}
+  spark(a.x,a.y,crit?"#ffe08a":"#e0563f",6,90);floatText(a.x,a.y-a.r-8,(crit?"CRIT ":"")+Math.round(dmg),crit?"#ffe08a":"#f2836a");
+  if(a.hp<=0&&!a.dead){a.hp=0;a.dead=true;if(a.releasedWild){a.hostileTarget=null;a.combat=0;floatText(a.x,a.y-a.r-24,"DEFEATED","#efe6d2");}game.kills++;gainSkillXp(a.stage==="bigmomma"?24:a.stage==="superboss"?18:a.stage==="boss"?14:10,"kill");const drop=pickWeighted([{v:"wood",w:2},{v:"stone",w:2},{v:"gold",w:1}]);player[drop]+=drop==="gold"?1:2;floatText(a.x,a.y-20,"+"+(drop==="gold"?1:2)+" "+drop,"#efe6d2");spark(a.x,a.y,info?.color||"#e0563f",12,120);if(Math.random()<Math.min(.35,.08*runCardChanceMul())){if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[a.type]=(meta.speciesCards[a.type]||0)+1;saveMeta();floatText(a.x,a.y-38,`+1 ${info?.name||a.type} Card!`,"#c77dff");}awardPetXpContributors(a,null);}
+}
+
 function meleeAttack() {
   if (player.heldSpecial === "Bucket") { useBucket(); return; }
   if (player.heldSpecial === "Berry") {
@@ -17241,11 +17258,10 @@ function meleeAttack() {
     if (en.dead) continue;
     const d = dist(player.x, player.y, en.x, en.y);
     if (d < t.range + en.r && isFacing(en.x, en.y)) {
-      let dmg = t.dmg * runDamageMul() * (t.doubleHit?2:1);
-      const crit = Math.random() < 0.15;
-      if (crit) dmg *= 2;
-      damageEnemy(en, dmg, crit);
-      hitSomething = true;
+      const splitDouble=player.tool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
+      let dmg=t.dmg*runDamageMul()*(t.doubleHit&&!splitDouble?2:1);const crit=Math.random()<.15;if(crit)dmg*=2;
+      if(splitDouble){const hit=()=>{if(game.started&&!game.over&&!net.room&&!en.dead)damageEnemy(en,dmg,crit);};setTimeout(hit,220);setTimeout(hit,385);}else damageEnemy(en,dmg,crit);
+      hitSomething=true;
     }
   }
   for (const a of animals) {
@@ -17253,10 +17269,10 @@ function meleeAttack() {
     const info = PET_TYPES[a.type];
     const ah = animalTargetDamageHitboxes(a).find(h => dist(player.x, player.y, h.x, h.y) < t.range + h.r && isFacing(h.x, h.y));
     if (ah) {
-      let dmg = t.dmg * runDamageMul() * (t.doubleHit?2:1);
-      const crit = Math.random() < 0.12;
-      if (crit) dmg *= 2;
-      dmg = animalDamageTaken(a.type, a.stage, dmg);
+      const splitDouble=player.tool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
+      let rawDmg=t.dmg*runDamageMul()*(t.doubleHit&&!splitDouble?2:1);const crit=Math.random()<.12;if(crit)rawDmg*=2;
+      if(splitDouble){const hit=()=>{if(game.started&&!game.over&&!net.room&&!a.dead)applyDoubleAxeSecondAnimalHitOffline(a,rawDmg,crit);};setTimeout(hit,220);setTimeout(hit,385);hitSomething=true;continue;}
+      let dmg = animalDamageTaken(a.type, a.stage, rawDmg);
       a.hp -= dmg;
       if(!net.room)gainSkillXp(1,"combat-hit");
       a.flash = 0.12;
@@ -17627,27 +17643,26 @@ function fireBow() {
 
 function grantMoonmarkRewardsOffline(en) {
   unlockAchievement("moonmark_hunter");
-  const goldReward = 50;
-  const petXpReward = 1200;
-  const cardReward = 30;
-  const speciesList = Object.keys(PET_TYPES);
-  const species = speciesList.length ? speciesList[randi(0, speciesList.length - 1)] : "dog";
-
-  player.gold += goldReward;
-  if (!meta.speciesCards) meta.speciesCards = {};
-  meta.speciesCards[species] = (meta.speciesCards[species] || 0) + cardReward;
-  for (const pet of player.pets) {
-    if (!pet || pet.dead) continue;
-    givePetExp(pet, petXpReward);
-    floatText(pet.x, pet.y - pet.r - 34, `+${petXpReward} XP`, "#ffe66d");
+  const goldReward=75,cardReward=30,speciesList=Object.keys(PET_TYPES),species=speciesList.length?speciesList[randi(0,speciesList.length-1)]:"dog";
+  player.gold+=goldReward;
+  if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[species]=(meta.speciesCards[species]||0)+cardReward;
+  const nextStage={baby:"adult",adult:"boss",boss:"superboss"};
+  for(const pet of player.pets){
+    if(!pet)continue;
+    const next=nextStage[pet.stage]||"";
+    if(next){pet.stage=next;pet.r=animalRadius(pet.type,next);pet.maxHp=upgradedPetMaxHp(pet.type,next);pet.hp=pet.maxHp;pet.speed=upgradedPetSpeed(pet.type,next);pet.level=1;pet.exp=0;floatText(pet.x,pet.y-pet.r-34,`→ ${stageDisplayName(next)}`,"#ffe66d");}
+    const bonus=Math.max(20,Math.round(expToNext(pet.stage,pet.level||1)*.28));if(pet.dead)pet.exp=Math.max(0,Number(pet.exp)||0)+bonus;else givePetExp(pet,bonus);
   }
-  saveMeta();
-  buildCardInventory();
-  syncHud(); syncHotbar();
-  const nm = PET_TYPES[species]?.name || species;
-  floatText(en.x, en.y - 58, `+${goldReward} GOLD`, "#f2c94c");
-  floatText(en.x, en.y - 76, `+${cardReward} ${nm} CARDS`, "#c77dff");
-  banner(`MOONMARK REWARD — +${goldReward} gold, +${petXpReward} XP to every pet, +${cardReward} ${nm} Cards!`);
+  // Three skill numbers are granted at once, but pendingSkillMilestone still makes
+  // the player choose the three rewards one at a time in order.
+  player.skillLevel=Math.max(0,Math.floor(Number(player.skillLevel)||0))+3;updateSkillHud();animateSkillHud("level-up");syncSkillMilestonePrompt();
+  // Moonmark cache feeds permanent Home builds and animal-skill recipes.
+  const cache={ironPlate:2,toolKit:1,animalNotes:3,predatorStudy:1};
+  if(accountState.loggedIn){accountState.materials=accountState.materials||{};for(const [id,qty] of Object.entries(cache))accountState.materials[id]=Math.max(0,Math.floor(Number(accountState.materials[id])||0))+qty;saveAccountSession();syncAccountUi();try{renderMaterialsAndRecipes();}catch(_){}}
+  saveMeta();buildCardInventory();syncHud();syncHotbar();
+  const nm=PET_TYPES[species]?.name||species;
+  floatText(en.x,en.y-en.r-58,`+${goldReward} GOLD`,"#f2c94c");
+  banner(`MOONMARK DOWN — every pet +1 stage + bonus XP, +3 Skills, and a Home Moonmark Cache!`);
 }
 
 function damageEnemy(en, dmg, crit, attacker = player) {
@@ -17655,7 +17670,7 @@ function damageEnemy(en, dmg, crit, attacker = player) {
   if(attacker===player&&!net.room&&dmg>0)gainSkillXp(1,"combat-hit");
   en.hp -= dmg; en.flash = 0.12;
   en.revengeTarget = (attacker && combatTargetAlive(attacker)) ? attacker : player;
-  const knock = 7;
+  const knock = en.moonMarked ? 0 : 7;
   const a = angTo(player.x, player.y, en.x, en.y);
   en.x += Math.cos(a) * knock; en.y += Math.sin(a) * knock;
   spark(en.x, en.y, crit ? "#ffe08a" : "#e0563f", crit ? 10 : 5, 100);
@@ -17667,7 +17682,7 @@ function damageEnemy(en, dmg, crit, attacker = player) {
     if(attacker===player&&!net.room)gainSkillXp(en.moonMarked?35:10,"kill");
     if (en.moonMarked) {
       game.firstLightReady = true;
-      banner("Forest Moonmark claimed — survive until Morning for First Light!");
+      banner("Moonmark defeated — your pack and Skills surge with its power!");
       floatText(en.x, en.y - 38, "MOONMARK", "#e4c7ff");
       spark(en.x, en.y, "#d7b7ff", 18, 170);
       grantMoonmarkRewardsOffline(en);
@@ -17862,10 +17877,10 @@ function spawnEnemy(strong, forcedRole = "", moonMarked = false, moonBiomeId = "
   let x = rand(60, WORLD_W - 60);
   let y = rand(60, WORLD_H - 60);
   if (moonMarked) {
-    const moonPos = moonmarkSpawnPointOffline(52, chosenMoonBiome);
+    const moonPos = moonmarkSpawnPointOffline(MOONMARK_RADIUS, chosenMoonBiome);
     if (!moonPos) return null;
     x = moonPos.x; y = moonPos.y;
-    clearMoonmarkSpawnAreaOffline(x, y, 52);
+    clearMoonmarkSpawnAreaOffline(x, y, MOONMARK_RADIUS);
   } else {
     for (let tries = 0; tries < 24; tries++) {
       const tx = rand(60, WORLD_W - 60), ty = rand(60, WORLD_H - 60);
@@ -17893,17 +17908,18 @@ function spawnEnemy(strong, forcedRole = "", moonMarked = false, moonBiomeId = "
             role === "Swordsman" ? "#8f2e6b" : "#e0563f";
   if (moonProfile) {
     role = moonProfile.name; roleStrong = true; weapon = moonProfile.element; ranged = true; armed = true;
-    speed = 88; dmg = 30 + Math.min(16, game.wave * .42); hp = 880 + game.wave * 24; hue = moonProfile.color;
+    speed = 0; dmg = 48 + Math.min(30, game.wave * .6); hp = 18000 + game.wave * 160; hue = moonProfile.color;
   }
   const hasGuard = !moonMarked && (role === "Rider" || role === "Tamer");
   const rider = role === "Rider";
   if (hasGuard) { hp *= .64; dmg *= .72; hue = rider ? "#595451" : "#64734f"; }
   if (rider) { hp *= .58; dmg *= .48; weapon = "Fist"; ranged = false; armed = false; speed *= .82; }
   const en = {
-    x,y,angle:0,r:moonMarked?52:(roleStrong?20:(rider?18:17)),speed,armed,ranged,strong:roleStrong,weapon,dmg,hp,maxHp:hp,
+    x,y,angle:0,r:moonMarked?MOONMARK_RADIUS:(roleStrong?20:(rider?18:17)),speed,armed,ranged,strong:roleStrong,weapon,dmg,hp,maxHp:hp,
     atkCd:rand(.15,.9),flash:0,dead:false,wanderA:rand(0,TAU),wanderT:rand(.6,2),hue,
     attackAnim:0,strafeDir:Math.random()<.5?-1:1,strafeT:rand(.6,1.5),hasGuard,guardPet:null,ridingPet:null,
     role, moonMarked: !!moonMarked, moonBiome: moonMarked ? chosenMoonBiome : "", forestCd: moonMarked ? rand(1.2,2.0) : 0, moonNovaCd: moonMarked ? rand(2.8,4.2) : 0,
+    _moonAnchorX:moonMarked?x:0,_moonAnchorY:moonMarked?y:0,
   };
   enemies.push(en);
   if (hasGuard) spawnOfflineEnemyGuard(en, strong, rider);
@@ -18352,7 +18368,7 @@ function updateEnemies(dt) {
 
     if (en.ridingPet && en.ridingPet.dead) en.ridingPet = null;
     // SUN KILL — daytime burns hostile cubes that didn't escape.
-    if (phase.safe) {
+    if (phase.safe && !en.moonMarked) {
       en.sunDmg = (en.sunDmg || 0) + dt;
       const cx = WORLD_W / 2, cy = WORLD_H / 2;
       const toEdge = angTo(cx, cy, en.x, en.y);
@@ -18393,7 +18409,7 @@ function updateEnemies(dt) {
     if (en.revengeTarget && !combatTargetAlive(en.revengeTarget)) en.revengeTarget = null;
     const lockedTarget = en.revengeTarget || null;
     const playerDist = dist(en.x, en.y, player.x, player.y);
-    const seesPlayer = playerDist < (en.moonMarked ? 620 : (en.ranged ? (en.weapon === "Bow" ? 430 : 390) : 280)) && !player.dead;
+    const seesPlayer = playerDist < (en.moonMarked ? 980 : (en.ranged ? (en.weapon === "Bow" ? 430 : 390) : 280)) && !player.dead;
     const target = lockedTarget || (seesPlayer ? player : null);
 
     if (target) {
@@ -18404,31 +18420,29 @@ function updateEnemies(dt) {
 
       if (en.moonMarked) {
         const moon = MOONMARK_BIOMES[en.moonBiome || "forest"] || MOONMARK_BIOMES.forest;
-        if (d > en.r + targetR + 18) {
-          en.x += Math.cos(moveA) * en.speed * (d > 330 ? 1.18 : .88) * dt;
-          en.y += Math.sin(moveA) * en.speed * (d > 330 ? 1.18 : .88) * dt;
-        } else if (en.atkCd <= 0) {
-          if (target === player) hitPlayer(en.dmg, en); else damageCreatureFromEnemy(target, en, en.dmg);
-          en.atkCd = .62; en.attackAnim = .30;
+        // Moonmarks are anchored world bosses. They rotate to watch targets but never chase them.
+        if (en.atkCd <= 0) {
+          const shockR=en.r+150;
+          if(!player.dead&&dist(en.x,en.y,player.x,player.y)<=shockR)hitPlayer(en.dmg,en);
+          for(const pet of player.pets)if(pet&&!pet.dead&&dist(en.x,en.y,pet.x,pet.y)<=shockR)damageCreatureFromEnemy(pet,en,en.dmg);
+          abilityFx.push({type:"moonShock",x:en.x,y:en.y,life:.72,maxLife:.72,r:shockR,color:moon.accent});
+          en.atkCd=1.6;en.attackAnim=.30;
         }
-        if ((en.forestCd || 0) <= 0 && d < 520) {
-          const aim = angTo(en.x,en.y,target.x,target.y);
-          for (const off of [-.36,-.18,0,.18,.36]) {
-            const a=aim+off;
-            projectiles.push({x:en.x+Math.cos(a)*(en.r+10),y:en.y+Math.sin(a)*(en.r+10),vx:Math.cos(a)*430,vy:Math.sin(a)*430,life:1.25,r:7,hostile:true,source:en,dmg:Math.max(10,en.dmg*.58),kind:"forestThorn",color:moon.color});
+        if ((en.forestCd || 0) <= 0 && d < 980) {
+          for (let i=0;i<12;i++) {
+            const a=(i/12)*TAU+game.time*.18;
+            projectiles.push({x:en.x+Math.cos(a)*(en.r+18),y:en.y+Math.sin(a)*(en.r+18),vx:Math.cos(a)*410,vy:Math.sin(a)*410,life:1.75,r:12,hostile:true,source:en,dmg:Math.max(14,en.dmg*.55),kind:"forestThorn",color:moon.color});
           }
-          abilityFx.push({type:"plant",x:en.x,y:en.y,life:.75,r:en.r+28});
-          spark(en.x,en.y,moon.accent,14,138);
-          en.forestCd=rand(1.9,2.8);
+          abilityFx.push({type:"moonShock",x:en.x,y:en.y,life:.9,maxLife:.9,r:en.r+110,color:moon.color});
+          en.forestCd=rand(1.9,2.6);
         }
-        if ((en.moonNovaCd || 0) <= 0 && d < 610) {
-          for (let i=0;i<10;i++) {
-            const a=(i/10)*TAU+rand(-.08,.08);
-            projectiles.push({x:en.x+Math.cos(a)*(en.r+8),y:en.y+Math.sin(a)*(en.r+8),vx:Math.cos(a)*320,vy:Math.sin(a)*320,life:1.38,r:7.5,hostile:true,source:en,dmg:Math.max(12,en.dmg*.48),kind:"forestThorn",color:moon.accent});
+        if ((en.moonNovaCd || 0) <= 0 && d < 1050) {
+          for (let i=0;i<20;i++) {
+            const a=(i/20)*TAU+Math.PI/20;
+            projectiles.push({x:en.x+Math.cos(a)*(en.r+24),y:en.y+Math.sin(a)*(en.r+24),vx:Math.cos(a)*330,vy:Math.sin(a)*330,life:2.0,r:13,hostile:true,source:en,dmg:Math.max(16,en.dmg*.48),kind:"forestThorn",color:moon.accent});
           }
-          abilityFx.push({type:"plant",x:en.x,y:en.y,life:.95,r:en.r+42});
-          spark(en.x,en.y,moon.accent,18,165);
-          en.moonNovaCd=rand(3.2,4.5);
+          abilityFx.push({type:"moonShock",x:en.x,y:en.y,life:1.05,maxLife:1.05,r:en.r+185,color:moon.accent});
+          en.moonNovaCd=rand(3.5,4.4);
         }
       } else if (en.ranged) {
         const desired = en.weapon === "Bow" ? 235 : 205;
@@ -18495,9 +18509,10 @@ function updateEnemies(dt) {
       en.x += Math.cos(en.wanderA) * en.speed * 0.55 * dt;
       en.y += Math.sin(en.wanderA) * en.speed * 0.55 * dt;
     }
+    if(en.moonMarked){en.x=Number(en._moonAnchorX)||en.x;en.y=Number(en._moonAnchorY)||en.y;}
     en.x = clamp(en.x, 10, WORLD_W - 10);
     en.y = clamp(en.y, 10, WORLD_H - 10);
-    resolveEnemyWorld(en);
+    if(!en.moonMarked)resolveEnemyWorld(en);
   }
   enemies = enemies.filter(en => !en.dead);
 }
@@ -19430,7 +19445,7 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
   }else if(pet.type==="caracal"){
     const t=petAbilityTargetOffline(pet,145),pct=Number(stats.pct)||.25;if(t){damagePercentTargetOffline(pet,t.obj,t.isAnimal,pct);applyOfflineAbilityStun(t.obj,1.8);abilityFx.push({type:"lightningStrike",x:t.obj.x,y:t.obj.y,fromX:px,fromY:py,life:.65,maxLife:.65,r:42});spark(t.obj.x,t.obj.y,"#ffe66d",15,100);}
   }else if(pet.type==="polarbear"){
-    const t=petAbilityTargetOffline(pet,165),dmg=stats.damage||5;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);abilityFx.push({type:"iceClaws",x:t.obj.x,y:t.obj.y,life:.65,maxLife:.65});spark(t.obj.x,t.obj.y,"#c9f2ff",14,105);}
+    const t=petAbilityTargetOffline(pet,165),dmg=stats.damage||5;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);const target=t.obj,isAnimal=t.isAnimal;setTimeout(()=>{if(game.started&&!game.over&&target&&!target.dead)damagePetAbilityTargetOffline(pet,target,isAnimal,dmg);},300);abilityFx.push({type:"iceClaws",x:t.obj.x,y:t.obj.y,life:.9,maxLife:.9,r:Math.max(42,(t.obj.r||18)*1.35)});spark(t.obj.x,t.obj.y,"#c9f2ff",18,125);}
   }else if(pet.type==="arcticfox"){
     const dmg=stats.damage||10,t=petAbilityTargetOffline(pet,600),ps=petProjectileStageSize(pet.stage);
     if(t){const base=angTo(px,py,t.obj.x,t.obj.y);for(let i=0;i<3;i++)petBlasts.push({x:px+Math.cos(base+i*.12)*(pet.r+10),y:py+Math.sin(base+i*.12)*(pet.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,kind:"iceShard",color:"#bfeeff",sourcePet:pet,targetObj:t.obj});}
@@ -19687,7 +19702,7 @@ function wildUseAbility(a) {
   } else if (a.type === "caracal") {
     const st=petAbilityStats(a),pct=Number(st.pct)||.25;if(dTarget<145){const max=target===player?Math.max(1,player.maxHealth||100):Math.max(1,target.maxHp||target.hp||1);damageTargetFromWild(a,target,max*pct);applyOfflineAbilityStun(target,1.8);abilityFx.push({type:"lightningStrike",x:tx,y:ty,fromX:px,fromY:py,life:.65,maxLife:.65,r:42});}
   } else if (a.type === "polarbear") {
-    const st=petAbilityStats(a),dmg=st.damage||5;if(dTarget<165){damageTargetFromWild(a,target,dmg);damageTargetFromWild(a,target,dmg);abilityFx.push({type:"iceClaws",x:tx,y:ty,life:.65,maxLife:.65});}
+    const st=petAbilityStats(a),dmg=st.damage||5;if(dTarget<165){damageTargetFromWild(a,target,dmg);const victim=target;setTimeout(()=>{if(game.started&&!game.over&&victim&&!victim.dead)damageTargetFromWild(a,victim,dmg);},300);abilityFx.push({type:"iceClaws",x:tx,y:ty,life:.9,maxLife:.9,r:Math.max(42,(target.r||18)*1.35)});}
   } else if (a.type === "arcticfox") {
     const st=petAbilityStats(a),dmg=st.damage||10,base=angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++)projectiles.push({x:px+Math.cos(base+i*.12)*(a.r+10),y:py+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,hostile:true,kind:"iceShard",color:"#bfeeff",source:a,targetObj:target});
   } else if (a.type === "walrus") {
@@ -20840,17 +20855,13 @@ function updateTime(dt) {
       banner("Night — Riders and Tamers have joined the Hostls.");
     }
     if (phase.name === "Midnight") {
-      banner("Midnight — Rangers and Chimest emerge, and the Forest Moonmark awakens!");
-      // One biome Moonmark boss appears every Midnight. The forest is the first biome profile.
-      if (!game.midnightMarkSpawned) {
-        // Moonmarks outrank the ordinary Hostl cap. If the wave is full, retire one normal Hostl first.
+      banner("Midnight — Rangers and Chimest emerge.");
+      const hasMoonmark=enemies.some(e=>e&&!e.dead&&e.moonMarked);
+      if (game.dayCount % 5 === 0 && !hasMoonmark) {
         if(enemies.length>=70){const idx=enemies.findIndex(e=>e&&!e.dead&&!e.moonMarked);if(idx>=0)enemies.splice(idx,1);}
         const moonBiome = randomBiomeZoneId();
         const moonBoss = spawnEnemy(true, "", true, moonBiome);
-        if (moonBoss) {
-          game.midnightMarkSpawned = true;
-          banner("MIDNIGHT HUNT — a Moonmarked Hostl has awakened in one biome. Defeat it, then survive until Morning!");
-        }
+        if (moonBoss) banner(`NIGHT ${game.dayCount} — MOONMARK AWAKENS! A giant ${BIOME_PROFILES[moonBiome]?.name||moonBiome} boss has claimed a spot on the island.`);
       }
     }
     if (phase.name === "Morning") {
@@ -22121,7 +22132,7 @@ function applyToolTierStats(){
   if(spec==="daggers")Object.assign(TOOLS.Sword,{dmg:7.2,range:44,cadence:.22,swing:.14,doubleHit:true});
   else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:74,cadence:.50,swing:.28});
   else if(spec==="spear")Object.assign(TOOLS.Sword,{dmg:16,range:96,cadence:.46,swing:.22});
-  else if(spec==="doubleAxe")Object.assign(TOOLS.Axe,{dmg:8.8,range:63,cadence:.62,swing:.46,gather:4.0,resourcePower:1.50,doubleHit:true});
+  else if(spec==="doubleAxe")Object.assign(TOOLS.Axe,{dmg:8.8,range:66,cadence:.72,swing:.58,gather:4.0,resourcePower:1.50,doubleHit:true});
   else if(spec==="throwingAxe")Object.assign(TOOLS.Axe,{dmg:16,range:50,cadence:.72,swing:.24,gather:1.7,resourcePower:.72,throwing:true});
   else if(spec==="battleAxe")Object.assign(TOOLS.Axe,{dmg:20,range:78,cadence:.68,swing:.50,gather:2.3,resourcePower:.95,woodWall:11});
   const cm=player.craftBonuses?.combat||1; if(cm!==1) for(const k of ["Axe","Pickaxe","Sword","Bow"]) TOOLS[k].dmg*=cm;
@@ -23028,6 +23039,25 @@ function drawTower(t) {
   ctx.fillStyle=tier>=2?"#b94a48":tier>=1?"#7692a0":"#c9a245";ctx.strokeStyle=ink;ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(18,-42);ctx.lineTo(34,-37);ctx.lineTo(18,-32);ctx.closePath();ctx.fill();ctx.stroke();
   ctx.restore();
 }
+function drawMoonmarkBiomeParts(en,r,front=false){
+  if(!en?.moonMarked)return;const b=en.moonBiome||"forest",ink="#191817";ctx.save();ctx.lineCap="round";ctx.lineJoin="round";
+  if(!front){
+    if(b==="forest"||b==="rainforest"){
+      ctx.strokeStyle=b==="rainforest"?"#246b38":"#6a4b2d";ctx.lineWidth=r*.10;
+      for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(-r*.55,side*r*.46);ctx.quadraticCurveTo(-r*.98,side*r*.78,-r*1.18,side*r*.52);ctx.stroke();ctx.beginPath();ctx.moveTo(-r*.90,side*r*.66);ctx.lineTo(-r*1.10,side*r*.88);ctx.stroke();}
+      ctx.fillStyle=b==="rainforest"?"#55b85e":"#78a84f";for(const [x,y,a] of [[-1.1,-.8,-.5],[-1.12,.78,.5],[-.82,-.92,-1],[-.84,.92,1]]){ctx.save();ctx.translate(x*r,y*r);ctx.rotate(a);ctx.beginPath();ctx.ellipse(0,0,r*.24,r*.09,0,0,TAU);ctx.fill();ctx.restore();}
+    }else if(b==="arctic"){
+      ctx.fillStyle="#bdefff";ctx.strokeStyle=ink;ctx.lineWidth=Math.max(3,r*.018);for(const [a,len] of [[-1.7,.72],[-1.3,.62],[-.9,.54],[1.7,.72],[1.3,.62],[.9,.54]]){ctx.save();ctx.rotate(a);ctx.beginPath();ctx.moveTo(-r*.18,0);ctx.lineTo(-r*len,-r*.10);ctx.lineTo(-r*(len+.18),0);ctx.lineTo(-r*len,r*.10);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
+    }else if(b==="desert"){
+      ctx.strokeStyle="#9d7c45";ctx.lineWidth=r*.12;for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(-r*.42,side*r*.5);ctx.lineTo(-r*1.02,side*r*.72);ctx.stroke();ctx.beginPath();ctx.moveTo(-r*.83,side*r*.65);ctx.lineTo(-r*.96,side*r*.96);ctx.stroke();}ctx.strokeStyle="#e0c986";ctx.lineWidth=r*.025;for(let k=0;k<8;k++){const a=k/8*TAU;ctx.beginPath();ctx.moveTo(-r*.98,Math.sin(a)*r*.78);ctx.lineTo(-r*1.09,Math.sin(a)*r*.82);ctx.stroke();}
+    }else if(b==="mountains"){
+      ctx.fillStyle="#717a7c";ctx.strokeStyle=ink;ctx.lineWidth=Math.max(3,r*.02);for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(-r*.35,side*r*.62);ctx.lineTo(-r*.92,side*r*.86);ctx.lineTo(-r*1.12,side*r*.54);ctx.lineTo(-r*.76,side*r*.30);ctx.closePath();ctx.fill();ctx.stroke();}ctx.fillStyle="#9ee0ef";for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(-r*.78,side*r*.70);ctx.lineTo(-r*.96,side*r*.92);ctx.lineTo(-r*.86,side*r*.48);ctx.closePath();ctx.fill();}
+    }
+  }else{
+    ctx.strokeStyle=(MOONMARK_BIOMES[b]||MOONMARK_BIOMES.forest).accent;ctx.lineWidth=Math.max(4,r*.025);ctx.beginPath();ctx.arc(0,0,r*1.18,-.65,.65);ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawEnemy(en) {
   ctx.save();
   ctx.translate(en.x, en.y);
@@ -23050,6 +23080,8 @@ function drawEnemy(en) {
   ctx.fillStyle = "#000";
   ctx.beginPath(); ctx.ellipse(0, r * 0.9, r * 0.98, r * 0.4, 0, 0, TAU); ctx.fill();
   ctx.restore();
+
+  drawMoonmarkBiomeParts(en,r,false);
 
   const armColor = shadeColor(body, -18);
   const bodyHalf = r * 0.95;
@@ -23189,6 +23221,7 @@ function drawEnemy(en) {
   }
 
   if (en.moonMarked) {
+    drawMoonmarkBiomeParts(en,r,true);
     const pulse = 1 + Math.sin(game.time * 5.5) * 0.08;
     ctx.strokeStyle = en.moonBiome === "forest" ? "#9de37a" : "#e4c7ff"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, r * 1.72 * pulse, 0, TAU); ctx.stroke();
@@ -24828,8 +24861,8 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
   if(weapon==="Bow"){restAngle=.08;swingAngle=swing*-.55;}
   else if(weapon==="Pickaxe"){restAngle=Math.PI/2;swingAngle=swing*-1.34;}
   else if(weapon==="Axe"){
-    restAngle=(spec==="doubleAxe"||spec==="battleAxe")?.10:Math.PI/2;
-    swingAngle=swing*(spec==="throwingAxe"?-1.15:-1.42);
+    restAngle=spec==="doubleAxe"?0:(spec==="battleAxe"?.10:Math.PI/2);
+    swingAngle=spec==="doubleAxe"?0:swing*(spec==="throwingAxe"?-1.15:-1.42);
   }else if(weapon==="Sword"){
     // Sword rests at an acute angle off the player's side and farther behind than the Axe,
     // then sweeps forward/up through a broad swish arc.
@@ -24837,7 +24870,16 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
     swingAngle=swing*(spec==="spear"?-.35:-2.38);
     if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(3,0,48,2.0,2.0-2.18*swing,true);ctx.stroke();ctx.restore();}
   }
-  const rot=restAngle+swingAngle,tx=10,ty=0;
+  let rot=restAngle+swingAngle;
+  if(weapon==="Axe"&&spec==="doubleAxe"){
+    // Hold straight forward. Attack winds left first, then springs right so each end can connect.
+    const remain=actor===player?Math.max(0,Number(actor.punchTimer)||0):Math.max(0,Number(actor.attackTimer)||0),maxT=.58;
+    const prog=remain>0?clamp(1-remain/maxT,0,1):0;
+    if(prog<=0)rot=0;
+    else if(prog<.28)rot=0+(-.48)*(prog/.28);
+    else{const q=clamp((prog-.28)/.72,0,1),eased=1-Math.pow(1-q,3);rot=-.48+(.78+.48)*eased;}
+  }
+  const tx=10,ty=0;
   const point=(x,y)=>({x:tx+x*Math.cos(rot)-y*Math.sin(rot),y:ty+x*Math.sin(rot)+y*Math.cos(rot)});
 
   ctx.save();ctx.translate(tx,ty);ctx.rotate(rot);
@@ -25374,10 +25416,14 @@ function drawAbilityFx() {
       const orbit=Math.max((fx.petR||18)+28,Number(fx.orbitR)||46);for(let i=0;i<3;i++){const a=(fx.phase||0)*1.7+i*TAU/3,bx=fx.x+Math.cos(a)*orbit,by=fx.y+Math.sin(a)*orbit;ctx.save();ctx.translate(bx,by);ctx.rotate(a+Math.PI/2);ctx.fillStyle="#bfeeff";ctx.strokeStyle="#effcff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(8,9);ctx.lineTo(0,5);ctx.lineTo(-8,9);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
     } else if (fx.type === "tornadoTrap") {
       const t=clamp(1-fx.life/(fx.maxLife||2.2),0,1),rr=Math.max(28,fx.r||42);ctx.save();ctx.translate(fx.x,fx.y);ctx.rotate((fx.phase||0)*2.8);ctx.globalAlpha=.82*(1-t*.35);ctx.strokeStyle="#d9f6ff";ctx.lineWidth=5;for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(0,0,rr*(.40+i*.18),i*.7,i*.7+Math.PI*1.55);ctx.stroke();}ctx.fillStyle="rgba(215,246,255,.20)";ctx.beginPath();ctx.arc(0,0,rr*.95,0,TAU);ctx.fill();ctx.restore();
+    } else if (fx.type === "moonShock") {
+      const t=clamp(1-fx.life/(fx.maxLife||.8),0,1),rr=(fx.r||160)*(.55+.45*t);ctx.globalAlpha=(1-t)*.85;ctx.strokeStyle=fx.color||"#e4c7ff";ctx.lineWidth=10-5*t;ctx.beginPath();ctx.arc(fx.x,fx.y,rr,0,TAU);ctx.stroke();ctx.globalAlpha=(1-t)*.25;ctx.fillStyle=fx.color||"#e4c7ff";ctx.beginPath();ctx.arc(fx.x,fx.y,rr*.9,0,TAU);ctx.fill();
     } else if (fx.type === "scorpionGrab") {
       const t=clamp(1-fx.life/(fx.maxLife||.8),0,1);ctx.strokeStyle="#b8d56a";ctx.lineWidth=5;ctx.globalAlpha=1-t*.7;ctx.beginPath();ctx.arc(fx.x,fx.y,22+8*t,-.7,.7);ctx.stroke();ctx.beginPath();ctx.arc(fx.x,fx.y,22+8*t,Math.PI-.7,Math.PI+.7);ctx.stroke();
     } else if (fx.type === "iceClaws") {
-      const t=clamp(1-fx.life/(fx.maxLife||.6),0,1);ctx.strokeStyle="#c9f2ff";ctx.lineWidth=6;ctx.globalAlpha=1-t;for(const off of[-10,10]){ctx.beginPath();ctx.moveTo(fx.x-28,fx.y+off-18);ctx.quadraticCurveTo(fx.x,fx.y+off,fx.x+30,fx.y+off+16);ctx.stroke();}
+      const life=fx.maxLife||.9,t=clamp(1-fx.life/life,0,1),rr=Math.max(42,fx.r||fx.range||48);
+      const claw=(phase,mirror)=>{if(phase<=0||phase>=1)return;const q=1-Math.pow(1-phase,3),alpha=Math.sin(phase*Math.PI);ctx.save();ctx.translate(fx.x,fx.y);ctx.scale(1,mirror);ctx.rotate(-.8+1.6*q);ctx.globalAlpha=.95*alpha;ctx.shadowColor="#b9efff";ctx.shadowBlur=14;ctx.fillStyle="#dff8ff";ctx.strokeStyle="#6fcbe8";ctx.lineWidth=Math.max(3,rr*.07);ctx.beginPath();ctx.ellipse(-rr*.22,0,rr*.30,rr*.20,0,0,TAU);ctx.fill();ctx.stroke();for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(-rr*.02,k*rr*.12);ctx.quadraticCurveTo(rr*.30,k*rr*.17,rr*.56,k*rr*.24);ctx.lineTo(rr*.43,k*rr*.06);ctx.quadraticCurveTo(rr*.24,k*rr*.04,-rr*.02,k*rr*.04);ctx.closePath();ctx.fill();ctx.stroke();}ctx.shadowBlur=0;ctx.strokeStyle="#effcff";ctx.lineWidth=Math.max(5,rr*.10);ctx.globalAlpha=.75*alpha;for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(-rr*.45,k*rr*.18);ctx.quadraticCurveTo(0,k*rr*.08,rr*.78,k*rr*.32);ctx.stroke();}ctx.restore();};
+      claw(clamp(t/.5,0,1),1);claw(clamp((t-.5)/.5,0,1),-1);
     } else if (fx.followPet) {
       if (fx.type === "fire") drawOrbitRing(fx, ["#ff6a2a", "#ffcc40", "#ff4020"], "flame");
       else if (fx.type === "sound") drawOrbitRing(fx, ["#a0e0ff", "#70c0ff", "#dff6ff"], "dot");
