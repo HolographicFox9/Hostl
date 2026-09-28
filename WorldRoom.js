@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "645";
+const CUBE_SHARED_RULES_VERSION = "646";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -1913,8 +1913,9 @@ export class WorldRoom extends Room {
       const footprint=animalSpawnFootprint(type,stage);
       for(let t=0;t<(anchor?110:80);t++){let x,y;if(anchor){const aa=rand(0,TAU),anchorR=animalSpawnFootprint(anchor.type,anchor.stage),minD=Math.max(78,footprint+anchorR+18),maxD=Math.max(minD+28,Math.min(310,minD+170)),dd=rand(minD,maxD);x=anchor.x+Math.cos(aa)*dd;y=anchor.y+Math.sin(aa)*dd;const cp=islandConstrainedPoint(x,y,footprint+45);x=cp.x;y=cp.y;}else{const pos=randomPointInBiome(biomeHint,footprint+60);x=pos.x;y=pos.y;}if(!this.canPlace(x,y,footprint,0))continue;let crowded=false;for(const[,a]of this.state.animals){if(!a||a.hp<=0)continue;const gap=anchor?8:36;if(dist(x,y,a.x,a.y)<footprint+animalSpawnFootprint(a.type,a.stage)+gap){crowded=true;break;}}if(crowded)continue;const id=this.addAnimal(type,stage,x,y);return this.state.animals.get(id)||null;}return null;
     };
-    const STARTING_WILD_PER_SPECIES=7;
+    const STARTING_WILD_PER_SPECIES_BY_BIOME={forest:7,rainforest:9,arctic:12,desert:10,mountains:12};
     const STARTING_STAGE_PLAN=["baby","baby","adult","adult","adult","boss","superboss"];
+    const EXTRA_STAGE_PLAN=["baby","adult","adult","baby","adult"];
     const BIG_MOMMA_SPECIES_INDEXES=new Set([0,7,14,21,28]);
     const bigMommaTargets=[];
     let speciesOrdinal=0;
@@ -1923,9 +1924,10 @@ export class WorldRoom extends Room {
         const wantsBigMomma=BIG_MOMMA_SPECIES_INDEXES.has(speciesOrdinal);
         if(wantsBigMomma)bigMommaTargets.push({type,biome});
         const stages=[...STARTING_STAGE_PLAN];if(wantsBigMomma)stages[stages.length-1]="bigmomma";
+        const targetPerSpecies=STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7;
         let made=0;
-        for(const stage of stages){let spawned=false;for(let attempt=0;attempt<4&&!spawned;attempt++)spawned=!!spawnWild(stage,type,null,biome);if(spawned)made++;}
-        for(let retry=0;made<STARTING_WILD_PER_SPECIES&&retry<STARTING_WILD_PER_SPECIES*4;retry++){const stage=STARTING_STAGE_PLAN[(made+retry)%STARTING_STAGE_PLAN.length];if(spawnWild(stage,type,null,biome))made++;}
+        for(const stage of stages){let spawned=false;for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWild(stage,type,null,biome);if(spawned)made++;}
+        for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length),stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];if(spawnWild(stage,type,null,biome))made++;}
         speciesOrdinal++;
       }
     }

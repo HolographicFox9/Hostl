@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 28000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "645";
+const CUBE_SHARED_RULES_VERSION = "646";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -16637,10 +16637,12 @@ function initWorld() {
   placeChests();
   walls = []; towers = []; projectiles = []; petBlasts = []; particles = []; floaters = []; enemies = []; animals = [];
   abilityFx = [];
-  // Build an even starting population before Play: every animal species gets the
-  // same number of starting wildlife, spread through its proper biome.
-  const STARTING_WILD_PER_SPECIES = 7;
+  // Balance wildlife by biome population rather than giving every species the
+  // same count. Forest already has many species, so smaller species-pool biomes
+  // receive more individuals per species and feel just as alive.
+  const STARTING_WILD_PER_SPECIES_BY_BIOME = {forest:7,rainforest:9,arctic:12,desert:10,mountains:12};
   const STARTING_STAGE_PLAN = ["baby","baby","adult","adult","adult","boss","superboss"];
+  const EXTRA_STAGE_PLAN = ["baby","adult","adult","baby","adult"];
   const BIG_MOMMA_SPECIES_INDEXES = new Set([0,7,14,21,28]);
   const bigMommaTargets=[];
   let speciesOrdinal = 0;
@@ -16650,14 +16652,16 @@ function initWorld() {
       if(wantsBigMomma)bigMommaTargets.push({type,biome});
       const stages=[...STARTING_STAGE_PLAN];
       if(wantsBigMomma)stages[stages.length-1]="bigmomma";
+      const targetPerSpecies=STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7;
       let made=0;
       for(const stage of stages){
         let spawned=false;
-        for(let attempt=0;attempt<4&&!spawned;attempt++)spawned=!!spawnWildAnimal(false,stage,type,null,biome);
+        for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWildAnimal(false,stage,type,null,biome);
         if(spawned)made++;
       }
-      for(let retry=0;made<STARTING_WILD_PER_SPECIES&&retry<STARTING_WILD_PER_SPECIES*4;retry++){
-        const stage=STARTING_STAGE_PLAN[(made+retry)%STARTING_STAGE_PLAN.length];
+      for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){
+        const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length);
+        const stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];
         if(spawnWildAnimal(false,stage,type,null,biome))made++;
       }
       speciesOrdinal++;
