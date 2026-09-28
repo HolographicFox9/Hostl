@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 24000, WORLD_H = 24000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "636";
+const CUBE_SHARED_RULES_VERSION = "638";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6239,12 +6239,13 @@ const BASE_CRAFTABLES = [
 ];
 function skillXpNeededForLevel(level){
   level=Math.max(0,Math.floor(Number(level)||0));
-  return Math.round(25 + level*8 + Math.floor(level/10)*6);
+  // Every next skill takes a little more work than the one before it.
+  return Math.round(25 + level*9 + Math.floor(level*level*.05));
 }
 const STONE_SKILL_CHOICES = [
-  {id:"stoneWall",icon:"🧱",name:"Stone Wall",desc:"Good: Defense • Bad: Offense"},
-  {id:"stoneSword",icon:"⚔️",name:"Stone Sword",desc:"Good: Combat • Bad: Gathering"},
-  {id:"stoneAxe",icon:"🪓",name:"Stone Axe",desc:"Good: Gathering • Bad: Speed"}
+  {id:"stoneWall",icon:"🧱",name:"Get a Better Wall",desc:"Upgrade your Wall to Stone. If you do not have a Wall yet, the upgrade waits for it."},
+  {id:"stoneSword",icon:"⚔️",name:"Get a Better Sword",desc:"Upgrade your Sword to Stone. If you do not have a Sword yet, the upgrade waits for it."},
+  {id:"stoneAxe",icon:"🪓",name:"Get a Better Axe",desc:"Upgrade your Axe to Stone. If you do not have an Axe yet, the upgrade waits for it."}
 ];
 const SWORD_SPECIALIZATIONS = [
   {id:"daggers",icon:"🗡️",name:"Daggers",desc:"Good: Attack speed • Bad: Reach"},
@@ -6261,31 +6262,73 @@ const SKILL_MILESTONE_CHOICES = [
   {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"Good: Damage • Bad: None"},
   {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Good: Defense • Bad: None"}
 ];
+function isSkillStatMilestone(level){ level=Math.floor(Number(level)||0); return level>0 && level%10===0; }
+function toolSkillChoiceInfo(id){
+  const owned=player.owned||{};
+  player.toolTiers=player.toolTiers||{Axe:0,Pickaxe:0,Sword:0,Bow:0};
+  if(id==="toolSword"){
+    const tier=Math.max(0,Math.floor(Number(player.toolTiers.Sword)||0));
+    return tier<=0?{id,icon:"⚔️",name:"Get a Better Sword",desc:"Upgrade the Sword to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"⚔️",name:"Get an Iron Sword",desc:"Upgrade your Stone Sword to Iron."}:{id,icon:"⚔️",name:"Sword Training",desc:"Keep improving your Sword path."};
+  }
+  if(id==="toolAxe"){
+    const tier=Math.max(0,Math.floor(Number(player.toolTiers.Axe)||0));
+    return tier<=0?{id,icon:"🪓",name:"Get a Better Axe",desc:"Upgrade the Axe to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"🪓",name:"Get an Iron Axe",desc:"Upgrade your Stone Axe to Iron."}:{id,icon:"🪓",name:"Axe Training",desc:"Keep improving your Axe path."};
+  }
+  if(id==="toolWall"){
+    const tier=Math.max(0,Math.floor(Number(player.wallTier)||0));
+    return tier<=0?{id,icon:"🧱",name:"Get a Better Wall",desc:"Upgrade the Wall to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"🧱",name:"Get an Iron Wall",desc:"Upgrade your Stone Wall to Iron."}:{id,icon:"🧱",name:"Wall Training",desc:"Keep improving your building path."};
+  }
+  if(id==="toolPickaxe")return {id,icon:"⛏️",name:owned.Pickaxe?"Upgrade Pickaxe":"Get Pickaxe",desc:owned.Pickaxe?"Replace your Pickaxe with a better version.":"Gain a Pickaxe as a new tool."};
+  if(id==="toolBow")return {id,icon:"🏹",name:owned.Bow?"Upgrade Bow":"Get Bow",desc:owned.Bow?"Replace your Bow with a reinforced version.":"Gain a Bow as a new tool."};
+  if(id==="toolTower")return {id,icon:"🗼",name:owned.Tower?"Upgrade Watch Tower":"Get Watch Tower",desc:owned.Tower?"Replace your Watch Tower with a stronger version.":"Gain the Watch Tower as a new build tool."};
+  return {id,icon:"🔧",name:"Tool Upgrade",desc:"Improve a tool."};
+}
+function toolSkillChoicesForLevel(level){
+  level=Math.max(1,Math.floor(Number(level)||1));
+  const path=player.skillStoneChoice==="stoneSword"?"toolSword":player.skillStoneChoice==="stoneAxe"?"toolAxe":"toolWall";
+  // Skill 2 revisits the same three Skill 1 paths: your chosen path is now the
+  // Iron option, while the other two are still available as Stone upgrades.
+  if(level===2)return ["toolSword","toolAxe","toolWall"].map(toolSkillChoiceInfo);
+  const rotation=level%3;
+  const extra=rotation===0?["toolBow","toolTower"]:rotation===1?["toolTower","toolPickaxe"]:["toolPickaxe","toolBow"];
+  return [path,...extra].map(toolSkillChoiceInfo);
+}
+function applyToolSkillMilestones(){
+  const owned=player.owned||(player.owned={});
+  player.toolTiers=player.toolTiers||{Axe:0,Pickaxe:0,Sword:0,Bow:0};
+  let sword=player.skillStoneChoice==="stoneSword"?1:0;
+  let axe=player.skillStoneChoice==="stoneAxe"?1:0;
+  let wall=player.skillStoneChoice==="stoneWall"?1:0;
+  let pick=0,bow=0,tower=0;
+  const entries=Object.entries(player.skillMilestones||{}).sort((a,b)=>(Number(a[0])||0)-(Number(b[0])||0));
+  for(const [,id] of entries){
+    if(id==="toolSword")sword=Math.min(2,sword+1);
+    else if(id==="toolAxe")axe=Math.min(2,axe+1);
+    else if(id==="toolWall")wall=Math.min(2,wall+1);
+    else if(id==="toolPickaxe")pick++;
+    else if(id==="toolBow")bow++;
+    else if(id==="toolTower")tower++;
+  }
+  player.toolTiers.Sword=Math.max(player.toolTiers.Sword||0,sword);
+  player.toolTiers.Axe=Math.max(player.toolTiers.Axe||0,axe);
+  player.wallTier=Math.max(player.wallTier||0,wall);
+  if(pick){owned.Pickaxe=true;player.toolTiers.Pickaxe=Math.max(player.toolTiers.Pickaxe||0,Math.min(2,Math.max(0,pick-1)));registerHotbarItem("Pickaxe");}
+  if(bow){owned.Bow=true;player.toolTiers.Bow=Math.max(player.toolTiers.Bow||0,Math.min(1,Math.max(0,bow-1)));registerHotbarItem("Bow");}
+  if(tower){owned.Tower=true;player.towerTier=Math.max(player.towerTier||0,Math.min(2,Math.max(0,tower-1)));registerHotbarItem("Tower");}
+  applyToolTierStats();buildHotbar();buildCraftList();syncHud();
+}
 
 function currentCraftables(){
   const a=BASE_CRAFTABLES.map(x=>({...x,cost:{...x.cost}}));
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
   const add=(x)=>a.push(x);
 
-  // Skill 2 is a real branch choice shown at the top of gameplay. It grants
-  // exactly ONE of Stone Wall / Stone Sword / Stone Axe, so those three are not
-  // dumped into Crafting together anymore.
+  // Skill 1 starts the upgrade path: better Wall, Sword, or Axe. The choice
+  // replaces the normal tool-choice popup for that skill number.
   if(lv>=4){
-    // An upgrade only replaces something the player already owns. It must never
-    // manufacture the base tool/buildable or create a new hotbar slot.
-    if(player.owned.Pickaxe)add({id:"UpgradeStonePickaxe",name:"Upgrade → Stone Pickaxe",cost:{wood:5,stone:14},desc:"Skill 4: replace your current Pickaxe with a stronger Stone Pickaxe in the same hotbar slot."});
-    if(player.owned.Tower)add({id:"UpgradeStoneTower",name:"Upgrade → Stone Tower",cost:{wood:8,stone:18},desc:"Skill 4: replace your current Watch Tower with a stronger Stone Tower."});
+    // Tool upgrades now come from the skill-choice popup. Crafting keeps utility
+    // recipes here instead of creating a second competing upgrade system.
     add({id:"FieldKit",name:"Field Kit",cost:{wood:5,berries:4,gold:2},desc:"Skill 4: restore 70 HP."});
-  }
-  if(lv>=6){
-    // Sword/Axe players make a specialization choice at Skill 6 instead of
-    // buying a generic Iron version. Wall players keep their defense upgrade.
-    if(player.skillStoneChoice==="stoneWall"&&player.owned.Wall)add({id:"UpgradeIronWall",name:"Upgrade → Iron Wall",cost:{stone:16,gold:8},desc:"Skill 6: replace your Stone Wall with an Iron Wall."});
-  }
-  if(lv>=8){
-    if(player.owned.Pickaxe)add({id:"UpgradeIronPickaxe",name:"Upgrade → Iron Pickaxe",cost:{wood:5,stone:10,gold:9},desc:"Skill 8: replace your Stone Pickaxe with an Iron Pickaxe in the same hotbar slot."});
-    if(player.owned.Tower)add({id:"UpgradeHeavyTower",name:"Upgrade → Heavy Tower",cost:{stone:18,gold:10},desc:"Skill 8: replace your current tower with a long-range Heavy Tower."});
-    if(player.owned.Bow)add({id:"UpgradeBow",name:"Upgrade → Reinforced Bow",cost:{wood:12,stone:6,gold:8},desc:"Skill 8: replace your basic Bow with a stronger one in the same hotbar slot."});
   }
   if(lv>=10){
     add({id:"MasterGathererKit",name:"Master Gatherer Kit",cost:{wood:18,stone:18,gold:12},desc:"Skill 10: craft once for +18% gathering this run."});
@@ -17100,7 +17143,7 @@ function throwSpecialAxe(){
   player.attackCd=Math.max(player.attackCd,t.cadence||.72);player.punchTimer=t.swing||.24;player.swingWeapon="Axe";
   if(net.room){try{net.room.send("throwAxe",{angle:a,tier:player.toolTiers?.Axe||0});}catch(_){}return;}
   if(player.riding)mountedPetAttack();
-  projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*590,vy:Math.sin(a)*590,life:1.8,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false});
+  projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*590,vy:Math.sin(a)*590,life:3.0,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false});
   consumeHydration(.9);
 }
 function meleeAttack() {
@@ -18501,7 +18544,7 @@ function updateProjectiles(dt) {
   for (const p of projectiles) {
     if(p.kind==="throwAxe"){
       p.life-=dt;
-      if(!p.returning&&p.life<1.12)p.returning=true;
+      if(!p.returning&&p.life<1.28)p.returning=true;
       if(p.returning){
         const owner=player,dx=owner.x-p.x,dy=owner.y-p.y,d=Math.hypot(dx,dy);
         if(d<28||p.life<=0){p.dead=true;continue;}
@@ -20540,6 +20583,11 @@ function resolveSolidCollisions() {
         player.x += Math.cos(a) * hit.overlap;
         player.y += Math.sin(a) * hit.overlap;
       }
+    } else if (BIOME_RESOURCE_INFO[r.type]) {
+      // Cactus, Frost Berries, vines, herbs, crystals, fruit, resin and other
+      // biome resources are real world objects too — do not let the player clip through them.
+      const hit=deepestResourceOverlap(r,player.x,player.y,PLAYER_R*.82);
+      if(hit&&hit.d>0.1){const a=angTo(hit.h.x,hit.h.y,player.x,player.y);player.x+=Math.cos(a)*hit.overlap;player.y+=Math.sin(a)*hit.overlap;}
     }
   }
   // gold chunks solid — only nearby chunks can possibly collide.
@@ -21705,7 +21753,7 @@ function updatePetCardCooldowns() {
 
 function skillNextThreshold(){ return skillXpNeededForLevel(player.skillLevel); }
 function pendingStoneSkillChoice(){
-  return Math.max(0,Math.floor(Number(player.skillLevel)||0))>=2 && !player.skillStoneChoice;
+  return Math.max(0,Math.floor(Number(player.skillLevel)||0))>=1 && !player.skillStoneChoice;
 }
 function pendingWeaponSkillChoice(){
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
@@ -21720,7 +21768,7 @@ function pendingSkillMilestone(){
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
   player.skillMilestones=player.skillMilestones||{};
   for(let m=1;m<=lv;m++){
-    if(m===2){ if(!player.skillStoneChoice)return 2; continue; }
+    if(m===1){ if(!player.skillStoneChoice)return 1; continue; }
     if(m===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
       if(!player.skillWeaponChoice)return 6;
       continue;
@@ -21799,23 +21847,29 @@ function showSkillChoice(milestone){
   const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");
   if(!ov||!grid)return;
   let choices=[];
-  if(milestone===2){
+  if(milestone===1){
     if(player.skillStoneChoice)return;
-    el("skillChoiceTitle").textContent="Skill 2 — Pick ONE Stone Upgrade";
-    el("skillChoiceLead").textContent="Pick one.";
+    el("skillChoiceTitle").textContent="Skill 1 — Get a Better Sword, Axe, or Wall";
+    el("skillChoiceLead").textContent="Pick one upgrade path.";
     choices=STONE_SKILL_CHOICES;
   }else if(milestone===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
     if(player.skillWeaponChoice)return;
     const sword=player.skillStoneChoice==="stoneSword";
     el("skillChoiceTitle").textContent=sword?"Skill 6 — Choose Your Sword Type":"Skill 6 — Choose Your Axe Type";
-    el("skillChoiceLead").textContent="Pick one.";
+    el("skillChoiceLead").textContent="Pick one specialization.";
     choices=sword?SWORD_SPECIALIZATIONS:AXE_SPECIALIZATIONS;
   }else{
     milestone=Math.max(1,milestone);
     if(player.skillMilestones?.[milestone])return;
-    el("skillChoiceTitle").textContent=`Skill ${milestone} — Choose a Boost`;
-    el("skillChoiceLead").textContent="Pick one.";
-    choices=SKILL_MILESTONE_CHOICES;
+    if(isSkillStatMilestone(milestone)){
+      el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Your Stats`;
+      el("skillChoiceLead").textContent="Every 10 skill levels: choose Speed, Attack Power, or Defense.";
+      choices=SKILL_MILESTONE_CHOICES;
+    }else{
+      el("skillChoiceTitle").textContent=`Skill ${milestone} — Tool Upgrade`;
+      el("skillChoiceLead").textContent=milestone===2?"Your Skill 1 choice can become Iron, or choose one of the other paths.":"Upgrade a tool or gain a new one.";
+      choices=toolSkillChoicesForLevel(milestone);
+    }
   }
   grid.innerHTML="";
   choices.forEach(c=>{
@@ -21828,9 +21882,9 @@ function showSkillChoice(milestone){
 }
 function chooseSkillUpgrade(milestone,id,name){
   milestone=Math.floor(Number(milestone)||0);
-  if(milestone===2){
+  if(milestone===1){
     if(!["stoneWall","stoneSword","stoneAxe"].includes(id)||player.skillStoneChoice)return;
-    if(net.room){try{net.room.send("skillChoice",{milestone:2,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
+    if(net.room){try{net.room.send("skillChoice",{milestone:1,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
     applyStoneSkillChoice(id,true);
     el("skillChoiceOverlay").style.display="none";
     syncSkillMilestonePrompt();
@@ -21843,15 +21897,19 @@ function chooseSkillUpgrade(milestone,id,name){
     applyWeaponSkillChoice(id,true);el("skillChoiceOverlay").style.display="none";syncSkillMilestonePrompt();return;
   }
   milestone=Math.max(1,milestone);
-  if(!["speed","strength","defense"].includes(id)||player.skillMilestones?.[milestone]||milestone>Math.max(0,Math.floor(Number(player.skillLevel)||0)))return;
+  if(player.skillMilestones?.[milestone]||milestone>Math.max(0,Math.floor(Number(player.skillLevel)||0)))return;
+  const statLevel=isSkillStatMilestone(milestone);
+  const validToolIds=new Set(["toolSword","toolAxe","toolWall","toolPickaxe","toolBow","toolTower"]);
+  if(statLevel?!["speed","strength","defense"].includes(id):!validToolIds.has(id))return;
   if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
   player.skillMilestones=player.skillMilestones||{};
   player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};
   player.skillMilestones[milestone]=id;
-  player.skillRanks[id]=(player.skillRanks[id]||0)+1;
+  if(statLevel)player.skillRanks[id]=(player.skillRanks[id]||0)+1;
+  else applyToolSkillMilestones();
   player.pendingSkillMilestone=pendingSkillMilestone();
   el("skillChoiceOverlay").style.display="none";
-  banner(`${name} upgraded!`);
+  banner(statLevel?`${name} upgraded!`:`${name} applied!`);
   if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);
 }
 function applySkillNetworkState(data={}){
@@ -21863,8 +21921,8 @@ function applySkillNetworkState(data={}){
     strength:Math.max(0,Math.floor(Number(data.strength)||0)),
     defense:Math.max(0,Math.floor(Number(data.defense)||0))
   };
-  if(data.milestones&&typeof data.milestones==="object")player.skillMilestones={...data.milestones};
   if(typeof data.stoneChoice==="string"&&data.stoneChoice)applyStoneSkillChoice(data.stoneChoice,false);
+  if(data.milestones&&typeof data.milestones==="object"){player.skillMilestones={...data.milestones};applyToolSkillMilestones();}
   if(typeof data.weaponChoice==="string"&&data.weaponChoice)applyWeaponSkillChoice(data.weaponChoice,false);
   player.pendingSkillMilestone=Math.max(0,Math.floor(Number(data.pendingMilestone)||0));
   updateSkillHud();
@@ -22447,14 +22505,21 @@ function drawResource(r) {
     ctx.fillStyle = "rgba(0,0,0,0.11)";
     ctx.beginPath(); ctx.ellipse(0, 22, 28, 11, 0, 0, TAU); ctx.fill();
     if(resourceBiomeStyle(r).biome==="desert"){
-      // Desert trees are dry top-down branch trees, not leafy forest trees.
-      ctx.strokeStyle="#181b16";ctx.lineWidth=2.6;ctx.fillStyle=style.mid;roundRect(-4,-4,8,26,3);ctx.fill();ctx.stroke();
-      ctx.strokeStyle=style.light;ctx.lineWidth=4.2;ctx.lineCap="round";
-      for(const [x1,y1,x2,y2,x3,y3] of [[0,-2,-6,-12,-16,-17],[0,-1,7,-10,16,-13],[-1,5,-11,1,-18,5],[1,8,10,13,18,17],[0,0,0,-13,2,-21]]){
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(x2,y2,x3,y3);ctx.stroke();
+      // True overhead dead desert tree: center stump with limbs radiating across the sand.
+      ctx.fillStyle="rgba(0,0,0,.09)";ctx.beginPath();ctx.ellipse(3,4,29,18,.18,0,TAU);ctx.fill();
+      ctx.lineCap="round";ctx.strokeStyle="#181b16";ctx.lineWidth=6.2;
+      for(const [a,len,bend] of [[-.16,35,-.12],[.78,29,.16],[1.62,33,-.10],[2.42,31,.15],[3.12,36,-.13],[4.05,28,.12],[5.15,34,-.14]]){
+        const ex=Math.cos(a)*len,ey=Math.sin(a)*len, mx=Math.cos(a+bend)*len*.55,my=Math.sin(a+bend)*len*.55;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
       }
-      ctx.strokeStyle=style.dark;ctx.lineWidth=1.8;
-      for(const [x1,y1,x2,y2] of [[-10,-10,-15,-6],[10,-11,16,-9],[-12,2,-18,0],[11,14,16,18],[1,-15,7,-19]]){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+      ctx.strokeStyle=style.light;ctx.lineWidth=3.8;
+      for(const [a,len,bend] of [[-.16,35,-.12],[.78,29,.16],[1.62,33,-.10],[2.42,31,.15],[3.12,36,-.13],[4.05,28,.12],[5.15,34,-.14]]){
+        const ex=Math.cos(a)*len,ey=Math.sin(a)*len,mx=Math.cos(a+bend)*len*.55,my=Math.sin(a+bend)*len*.55;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
+        const ta=a+(bend>0?.62:-.62),tx=ex*.68,ty=ey*.68;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+Math.cos(ta)*10,ty+Math.sin(ta)*10);ctx.stroke();
+      }
+      ctx.fillStyle=style.mid;ctx.strokeStyle="#181b16";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,8.5,7.2,.2,0,TAU);ctx.fill();ctx.stroke();
+      ctx.fillStyle=style.dark;ctx.beginPath();ctx.ellipse(0,0,4.2,3.4,.2,0,TAU);ctx.fill();
     }else{
       const spikeR1 = [38,32,37,31,36,32,37,31,36,33,37,31,38,32];
       ctx.fillStyle = style.dark; ctx.strokeStyle = "#181b16"; ctx.lineWidth = 2.6;
@@ -22573,8 +22638,8 @@ function drawTreeCanopy(r) {
   const sc = (r.scale || 1) * pulse;
   ctx.save();ctx.translate(r.x,r.y);ctx.scale(sc,sc);ctx.globalAlpha=.72;
   if(biome==="desert"){
-    ctx.strokeStyle="rgba(214,193,115,.72)";ctx.lineWidth=2.4;ctx.lineCap="round";
-    for(const [x1,y1,x2,y2,x3,y3] of [[0,-2,-5,-10,-13,-14],[0,-2,6,-9,14,-11],[-1,4,-8,2,-15,5],[1,7,8,11,15,14],[0,-1,0,-10,2,-17]]){ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(x2,y2,x3,y3);ctx.stroke();}
+    ctx.strokeStyle="rgba(230,207,137,.48)";ctx.lineWidth=1.4;ctx.lineCap="round";
+    for(let i=0;i<7;i++){const a=-.16+i*.86,len=18+(i%3)*3;ctx.beginPath();ctx.moveTo(Math.cos(a)*7,Math.sin(a)*7);ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len);ctx.stroke();}
   }else{
     const spikeR=[34,29,35,28,34,29,35,28,34,29,35,28];ctx.fillStyle=style.tree.mid;ctx.beginPath();
     spikeR.forEach((rad,i)=>{const a=i/spikeR.length*TAU-Math.PI/2+.03,x=Math.cos(a)*rad,y=Math.sin(a)*rad;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();ctx.fill();
@@ -24544,7 +24609,13 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
   else if(weapon==="Axe"){
     restAngle=(spec==="doubleAxe"||spec==="battleAxe")?.10:Math.PI/2;
     swingAngle=swing*(spec==="throwingAxe"?-1.15:-1.42);
-  }else if(weapon==="Sword"){restAngle=spec==="spear"?.02:.18;swingAngle=swing*(spec==="spear"?-.35:-1.05);}
+  }else if(weapon==="Sword"){
+    // Sword rests at an acute angle off the player's side and farther behind than the Axe,
+    // then sweeps forward/up through a broad swish arc.
+    restAngle=spec==="spear"?.02:2.08;
+    swingAngle=swing*(spec==="spear"?-.35:-2.38);
+    if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(3,0,48,2.0,2.0-2.18*swing,true);ctx.stroke();ctx.restore();}
+  }
   const rot=restAngle+swingAngle,tx=10,ty=0;
   const point=(x,y)=>({x:tx+x*Math.cos(rot)-y*Math.sin(rot),y:ty+x*Math.sin(rot)+y*Math.cos(rot)});
 
@@ -24552,16 +24623,22 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
   if(weapon==="Axe"){
     // Material is the tier: Wood is entirely wood, Stone is stone, Iron is iron.
     const p=toolMaterialPalette(tier),mat={shaft:p.base,shaftHi:p.light,head:p.mid,headHi:p.light,edge:p.dark};
-    const long=spec==="doubleAxe"||spec==="battleAxe";
-    const len=spec==="battleAxe"?70:spec==="doubleAxe"?64:spec==="throwingAxe"?43:48;
-    ctx.fillStyle=mat.shaft;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;roundRect(1,-3.7,len,7.4,3.2);ctx.fill();ctx.stroke();
-    ctx.fillStyle=mat.shaftHi;roundRect(8,-1.35,Math.max(12,len-15),2.7,1.2);ctx.fill();
-    const hx=len-2;
-    const blade=(side=1,wide=1)=>{ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-7,side*2);ctx.lineTo(hx-2,side*(8*wide));ctx.lineTo(hx+10,side*(13*wide));ctx.lineTo(hx+14,side*(4.5*wide));ctx.lineTo(hx+7,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=mat.headHi;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(hx+7,side*(2.7*wide));ctx.lineTo(hx+11,side*(4.7*wide));ctx.stroke();};
-    if(spec==="doubleAxe"){blade(1,1.05);blade(-1,1.05);}
-    else if(spec==="battleAxe"){blade(1,1.35);blade(-1,.42);}
-    else if(spec==="throwingAxe"){blade(1,.88);ctx.strokeStyle="#7b5636";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(4,0,5,-1.2,1.2);ctx.stroke();}
-    else blade(1,1);
+    if(spec==="doubleAxe"){
+      // One axe head at EACH end. The player grips the center of the shaft.
+      const half=34;ctx.fillStyle=mat.shaft;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;roundRect(-half,-3.8,half*2,7.6,3.2);ctx.fill();ctx.stroke();
+      ctx.fillStyle=mat.shaftHi;roundRect(-23,-1.4,46,2.8,1.2);ctx.fill();
+      const endBlade=(hx,dir)=>{ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-dir*7,-3);ctx.lineTo(hx-dir*2,-10);ctx.lineTo(hx+dir*10,-14);ctx.lineTo(hx+dir*15,-5);ctx.lineTo(hx+dir*7,0);ctx.lineTo(hx+dir*15,5);ctx.lineTo(hx+dir*10,14);ctx.lineTo(hx-dir*2,10);ctx.closePath();ctx.fill();ctx.stroke();};
+      endBlade(half-2,1);endBlade(-half+2,-1);
+    }else{
+      const len=spec==="battleAxe"?70:spec==="throwingAxe"?43:48;
+      ctx.fillStyle=mat.shaft;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;roundRect(1,-3.7,len,7.4,3.2);ctx.fill();ctx.stroke();
+      ctx.fillStyle=mat.shaftHi;roundRect(8,-1.35,Math.max(12,len-15),2.7,1.2);ctx.fill();
+      const hx=len-2;
+      const blade=(side=1,wide=1)=>{ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-7,side*2);ctx.lineTo(hx-2,side*(8*wide));ctx.lineTo(hx+10,side*(13*wide));ctx.lineTo(hx+14,side*(4.5*wide));ctx.lineTo(hx+7,0);ctx.closePath();ctx.fill();ctx.stroke();};
+      if(spec==="battleAxe"){blade(1,1.35);blade(-1,.42);}
+      else if(spec==="throwingAxe"){blade(1,.88);ctx.strokeStyle="#7b5636";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(4,0,5,-1.2,1.2);ctx.stroke();}
+      else blade(1,1);
+    }
   }else if(weapon==="Sword"){
     const mat=toolMaterialPalette(tier);
     if(spec==="spear"){
@@ -24582,7 +24659,7 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
   // Both hands grip the same physical weapon. The transformed grip points keep
   // upgrades in the same slot/pose instead of making a second tool appear.
   let h1={x:8,y:-4},h2={x:20,y:4};
-  if(weapon==="Axe"){h1={x:7,y:-4};h2={x:(spec==="doubleAxe"||spec==="battleAxe")?30:19,y:3.4};}
+  if(weapon==="Axe"){if(spec==="doubleAxe"){h1={x:-8,y:-4};h2={x:9,y:4};}else{h1={x:7,y:-4};h2={x:spec==="battleAxe"?30:19,y:3.4};}}
   else if(weapon==="Pickaxe"){h1={x:8,y:-4};h2={x:22,y:3.5};}
   else if(weapon==="Sword"){h1={x:6,y:-4};h2={x:spec==="spear"?31:17,y:3.4};}
   const a=point(h1.x,h1.y),b=point(h2.x,h2.y);

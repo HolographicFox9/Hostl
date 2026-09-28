@@ -12,7 +12,7 @@ const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "636";
+const CUBE_SHARED_RULES_VERSION = "638";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -569,7 +569,9 @@ const WILD_PREY = {
 function wildCanPreyOn(predatorType,preyType){return !!predatorType&&!!preyType&&predatorType!==preyType&&!!WILD_PREY[predatorType]?.has(preyType);}
 function randomAnimalGender(){return Math.random()<.5?"Male":"Female";}
 
-function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*8+Math.floor(level/10)*6);}
+function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*9+Math.floor(level*level*.05));}
+function isSkillStatMilestone(level){level=Math.floor(Number(level)||0);return level>0&&level%10===0;}
+function toolSkillAllowedChoices(s,level){level=Math.max(1,Math.floor(Number(level)||1));if(level===2)return new Set(["toolSword","toolAxe","toolWall"]);const path=s?.stoneChoice==="stoneSword"?"toolSword":s?.stoneChoice==="stoneAxe"?"toolAxe":"toolWall";const rot=level%3,extra=rot===0?["toolBow","toolTower"]:rot===1?["toolTower","toolPickaxe"]:["toolPickaxe","toolBow"];return new Set([path,...extra]);}
 
 const TOOL = {
   Fist:    { dmg: 1.0, range: 42, cadence: 0.50, gather: 0.06, resourcePower: 0.08, woodWall:1.0, stoneWall:0.45 },
@@ -2292,7 +2294,7 @@ export class WorldRoom extends Room {
   hitChest(client,id,c){if(!c||c.opened)return;this.addSkillXp(client.sessionId,1);c.hp=Math.max(0,c.hp-1);c.pulse=1;this.broadcastEntityHealth("chest",id,c);if(c.hp<=0){c.opened=true;this.addSkillXp(client.sessionId,12);const reward=this.chestRewards.get(id)||this.makeChestReward();this.chestRewards.delete(id);const accountId=this.playerAccountIds.get(client.sessionId);if(accountId&&(reward?.kind==="cards"||reward?.kind==="goldCubits")){Promise.resolve(HOSTL_ACCOUNT_HOOKS.grantWorldReward(String(accountId),reward,{chest:true,id})).then(result=>{if(result?.granted)client.send("chestReward",{id,reward,account:result.account||null,serverVerified:true});}).catch(()=>{});}else client.send("chestReward",{id,reward});this.broadcastFx({kind:"chest",x:c.x,y:c.y});}else{const first=c.chipSide||"wood",second=first==="wood"?"stone":"wood",bonus=Math.random()<.45;c.chipSide=second;client.send("worldReward",{kind:"resource",resource:first,amount:1,x:c.x,y:c.y});if(bonus)client.send("worldReward",{kind:"resource",resource:second,amount:1,x:c.x,y:c.y});}}
   makeChestReward(){const roll=Math.random();if(roll<.34)return{kind:"goldCubits",amount:Math.random()<.1?randi(12,18):randi(5,10)};if(roll<.52)return{kind:"cards",species:weighted(WILD_SPECIES.map(v=>({v,w:RARITY_CARD_WEIGHT[animalRarity(v)]||1}))),amount:Math.random()<.14?25:10};const res=weighted([{v:"wood",w:2.8},{v:"stone",w:2.3},{v:"berries",w:1.8},{v:"gold",w:1.1}]);const amount=res==="wood"?randi(16,28):res==="stone"?randi(12,22):res==="berries"?randi(6,12):randi(3,6);return{kind:"resource",resource:res,amount};}
 
-  handleThrowAxe(client,data={}){const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;const s=this.skillState(client.sessionId);if(s.weaponChoice!=="throwingAxe")return;const now=this.state.worldTime,next=this.playerAttackCd.get(client.sessionId)||0;if(now<next)return;const st=this.specializedToolStats(client.sessionId,"Axe",data.tier);this.playerAttackCd.set(client.sessionId,now+(st.cadence||.72));this.consumeHydration(client.sessionId,.9);const a=Number.isFinite(+data.angle)?+data.angle:p.angle;p.angle=a;this.broadcast("playerAction",{playerId:client.sessionId,action:"attack",tool:"Axe",angle:a,heldSpecial:""});this.mountedPetAttack(client.sessionId,p);this.addProjectile({x:p.x+Math.cos(a)*28,y:p.y+Math.sin(a)*28,vx:Math.cos(a)*590,vy:Math.sin(a)*590,life:1.8,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:st.dmg*this.runPerks(client.sessionId).damageMul,ownerId:client.sessionId,petBlast:false,knock:0,returning:false});}
+  handleThrowAxe(client,data={}){const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;const s=this.skillState(client.sessionId);if(s.weaponChoice!=="throwingAxe")return;const now=this.state.worldTime,next=this.playerAttackCd.get(client.sessionId)||0;if(now<next)return;const st=this.specializedToolStats(client.sessionId,"Axe",data.tier);this.playerAttackCd.set(client.sessionId,now+(st.cadence||.72));this.consumeHydration(client.sessionId,.9);const a=Number.isFinite(+data.angle)?+data.angle:p.angle;p.angle=a;this.broadcast("playerAction",{playerId:client.sessionId,action:"attack",tool:"Axe",angle:a,heldSpecial:""});this.mountedPetAttack(client.sessionId,p);this.addProjectile({x:p.x+Math.cos(a)*28,y:p.y+Math.sin(a)*28,vx:Math.cos(a)*590,vy:Math.sin(a)*590,life:3.0,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:st.dmg*this.runPerks(client.sessionId).damageMul,ownerId:client.sessionId,petBlast:false,knock:0,returning:false});}
   handleBiomeFood(client,data={}){const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;const food=String(data.food||"");const inv=this.playerBiomeMaterials?.get(client.sessionId)||{};if(food==="jungleBerry"){if((inv.jungleBerry||0)<1)return;inv.jungleBerry--;p._jungleHotUntil=this.state.worldTime+8;p._jungleHotRate=4;client.send("biomeFoodResult",{food,count:inv.jungleBerry,health:p.health,hydration:p.hydration,message:"Jungle Fruit — healing over time"});}else if(food==="frostBerry"){if((inv.frostBerry||0)<1)return;inv.frostBerry--;p.health=Math.min(p.maxHealth,p.health+14);p.hydration=clamp((Number(p.hydration)||0)+18,0,100);client.send("biomeFoodResult",{food,count:inv.frostBerry,health:p.health,hydration:p.hydration,message:"Frost Berry — +14 HP, +18 hydration"});}else if(food==="goodCactus"){if((inv.goodCactus||0)<1)return;inv.goodCactus--;p._cactusGoodUntil=this.state.worldTime+10;p._cactusHealRate=2.6;p._cactusHydrateRate=3.8;client.send("biomeFoodResult",{food,count:inv.goodCactus,health:p.health,hydration:p.hydration,message:"This cactus was good — healing and hydrating over time"});}else if(food==="badCactus"){if((inv.badCactus||0)<1)return;inv.badCactus--;p.health=Math.max(0,p.health-8);p.hydration=clamp((Number(p.hydration)||0)-14,0,100);if(p.health<=0)this.damageTarget({kind:"player",id:client.sessionId},999,"world","");p._badCactusUntil=this.state.worldTime+7;p._badCactusDamageRate=2.5;p._badCactusHydrateRate=4.5;client.send("biomeFoodResult",{food,count:inv.badCactus,health:p.health,hydration:p.hydration,message:"This cactus was bad — it hurts and dehydrates you"});}this.playerBiomeMaterials.set(client.sessionId,inv);}
   handleShoot(client,data){const p=this.state.players.get(client.sessionId);if(!p||p.dead||(Number(p._abilityStunUntil)||0)>this.state.worldTime)return;const now=this.state.worldTime,next=this.playerShootCd.get(client.sessionId)||0;if(now<next)return;this.playerShootCd.set(client.sessionId,now+.45);const a=Number.isFinite(+data.angle)?+data.angle:p.angle;p.angle=a;this.broadcast("playerAction",{playerId:client.sessionId,action:"shoot",tool:"Bow",angle:a,heldSpecial:""});this.mountedPetAttack(client.sessionId,p);this.addProjectile({x:p.x+Math.cos(a)*26,y:p.y+Math.sin(a)*26,vx:Math.cos(a)*640,vy:Math.sin(a)*640,life:1.15,r:5,hostile:false,kind:"arrow",color:"#7ec0ee",dmg:this.toolStats("Bow",data.tier).dmg*this.runPerks(client.sessionId).damageMul*((Number(p._abilityWeakUntil)||0)>this.state.worldTime?(Number(p._abilityWeakMul)||.68):1),ownerId:client.sessionId,petBlast:false,knock:0});}
 
@@ -2306,7 +2308,7 @@ export class WorldRoom extends Room {
     const level=Math.max(0,Math.floor(Number(s?.level)||0));
     if(!s.milestones||typeof s.milestones!=="object")s.milestones={};
     for(let m=1;m<=level;m++){
-      if(m===2){if(!s.stoneChoice)return 2;continue;}
+      if(m===1){if(!s.stoneChoice)return 1;continue;}
       if(m===6&&(s.stoneChoice==="stoneSword"||s.stoneChoice==="stoneAxe")){if(!s.weaponChoice)return 6;continue;}
       if(!s.milestones[m])return m;
     }
@@ -2315,7 +2317,7 @@ export class WorldRoom extends Room {
   skillSnapshot(ownerId){
     const s=this.skillState(ownerId),pending=this.pendingSkillMilestone(s),p=this.state.players.get(ownerId);
     if(p){p.skillLevel=s.level;p.skillXp=s.xp;p.skillSpeed=s.speed;p.skillStrength=s.strength;p.skillDefense=s.defense;p.skillPendingMilestone=pending;}
-    return {level:s.level,xp:s.xp,next:skillXpNeededForLevel(s.level),speed:s.speed,strength:s.strength,defense:s.defense,stoneChoice:String(s.stoneChoice||""),weaponChoice:String(s.weaponChoice||""),pendingStoneChoice:s.level>=2&&!s.stoneChoice,pendingWeaponChoice:s.level>=6&&(s.stoneChoice==="stoneSword"||s.stoneChoice==="stoneAxe")&&!s.weaponChoice,pendingMilestone:pending,milestones:{...s.milestones}};
+    return {level:s.level,xp:s.xp,next:skillXpNeededForLevel(s.level),speed:s.speed,strength:s.strength,defense:s.defense,stoneChoice:String(s.stoneChoice||""),weaponChoice:String(s.weaponChoice||""),pendingStoneChoice:s.level>=1&&!s.stoneChoice,pendingWeaponChoice:s.level>=6&&(s.stoneChoice==="stoneSword"||s.stoneChoice==="stoneAxe")&&!s.weaponChoice,pendingMilestone:pending,milestones:{...s.milestones}};
   }
   sendSkillState(ownerId){
     const c=this.clientById(ownerId);if(c)c.send("skillState",this.skillSnapshot(ownerId));else this.skillSnapshot(ownerId);
@@ -2333,7 +2335,7 @@ export class WorldRoom extends Room {
     // Choices are consumed in skill-number order. If XP jumps multiple levels,
     // the player receives each missed choice one after another instead of losing it.
     if(!pending||milestone!==pending){this.sendSkillState(client.sessionId);return;}
-    if(milestone===2){
+    if(milestone===1){
       if(s.stoneChoice||!["stoneWall","stoneSword","stoneAxe"].includes(choice)){this.sendSkillState(client.sessionId);return;}
       s.stoneChoice=choice;this.sendSkillState(client.sessionId);return;
     }
@@ -2342,8 +2344,12 @@ export class WorldRoom extends Room {
       if(s.weaponChoice||!valid.includes(choice)){this.sendSkillState(client.sessionId);return;}
       s.weaponChoice=choice;this.sendSkillState(client.sessionId);return;
     }
-    if(!["speed","strength","defense"].includes(choice)){this.sendSkillState(client.sessionId);return;}
-    s.milestones[milestone]=choice;s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;this.sendSkillState(client.sessionId);
+    if(isSkillStatMilestone(milestone)){
+      if(!["speed","strength","defense"].includes(choice)){this.sendSkillState(client.sessionId);return;}
+      s.milestones[milestone]=choice;s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;this.sendSkillState(client.sessionId);return;
+    }
+    if(!toolSkillAllowedChoices(s,milestone).has(choice)){this.sendSkillState(client.sessionId);return;}
+    s.milestones[milestone]=choice;this.sendSkillState(client.sessionId);
   }
 
   runShopState(ownerId){
@@ -3856,7 +3862,7 @@ export class WorldRoom extends Room {
     for(const[id,p]of this.state.projectiles){
       p.life-=dt;
       if(p.kind==="throwAxe"){
-        if(!p.returning&&p.life<1.12)p.returning=true;
+        if(!p.returning&&p.life<1.28)p.returning=true;
         if(p.returning){const owner=this.state.players.get(p.ownerId);if(!owner||owner.dead){this.state.projectiles.delete(id);continue;}const dx=owner.x-p.x,dy=owner.y-p.y,d=Math.hypot(dx,dy);if(d<28||p.life<=0){this.state.projectiles.delete(id);continue;}p.vx=dx/Math.max(1,d)*680;p.vy=dy/Math.max(1,d)*680;}
       }
       const x0=p.x,y0=p.y,x1=p.x+p.vx*dt,y1=p.y+p.vy*dt;
