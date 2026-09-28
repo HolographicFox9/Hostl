@@ -6217,7 +6217,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 28000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "643";
+const CUBE_SHARED_RULES_VERSION = "644";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -10743,7 +10743,7 @@ function syncNetworkFullWorld(force = false) {
     const serverMoved=!Number.isFinite(v._serverX)||!Number.isFinite(v._serverY)||Math.abs(sx-v._serverX)>.001||Math.abs(sy-v._serverY)>.001;
     if(serverMoved){v.x=sx;v.y=sy;v._serverX=sx;v._serverY=sy;}
     v.vx=Number(s.vx)||0;v.vy=Number(s.vy)||0;v.life=Number(s.life)||0;v.r=Number(s.r)||5;
-    v.hostile=!!s.hostile;v.kind=s.kind||"arrow";v.color=s.color||"#7ec0ee";v.dmg=Number(s.dmg)||0;v.ownerId=s.ownerId||"";v.petBlast=!!s.petBlast;v.knock=Number(s.knock)||0;v.returning=!!s.returning;
+    v.hostile=!!s.hostile;v.kind=s.kind||"arrow";v.color=s.color||"#7ec0ee";v.dmg=Number(s.dmg)||0;v.ownerId=s.ownerId||"";v.petBlast=!!s.petBlast;v.knock=Number(s.knock)||0;v.returning=!!s.returning;v.toolTier=clamp(Math.floor(Number(s.toolTier)||0),0,2);
     net.projectileVisuals.set(id,v); (v.petBlast?blasts:normal).push(v);
   });
   for(const id of Array.from(net.projectileVisuals.keys()))if(!projSeen.has(id))net.projectileVisuals.delete(id);
@@ -10875,6 +10875,7 @@ function applyPlayerActionEvent(data={}) {
   const tool=String(data.tool||v.tool||"Fist");
   v.swingWeapon=tool;
   v.attackTimer=action==="shoot"?0.20:0.26;
+  if(data.throwing){v._throwAxePendingUntil=game.time+.35;v.skillWeaponChoice="throwingAxe";v.toolTiers=v.toolTiers||{};v.toolTiers.Axe=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
   v.punchSide=(v.punchSide||1)*-1;
   if(Number.isFinite(Number(data.angle))){
     v._netAngle=Number(data.angle);
@@ -11539,6 +11540,8 @@ function drawRemotePlayer(v) {
   } else if (holding === "Fist") {
     drawArm(1, v.punchSide === 1 ? remoteSwing : 0, arm, null, false, -armWalk);
     drawArm(-1, v.punchSide === -1 ? remoteSwing : 0, arm, null, false, armWalk);
+  } else if (holding === "Axe" && throwingAxeOutForActor(v)) {
+    drawArm(1,remoteSwing,arm,null,false,-armWalk);drawArm(-1,0,arm,null,false,armWalk);
   } else {
     drawTwoHandWeapon(v.swingWeapon || holding, arm, remoteSwing, armWalk, v);
   }
@@ -17155,6 +17158,8 @@ function isFacing(tx, ty, maxAngle = 0.85) {
 }
 
 // ---------- attacking ----------
+const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
+const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 function throwingAxeHasGatherTarget(t){
   const range=(t?.range||50)+18;
   for(const r of resources){
@@ -17166,11 +17171,13 @@ function throwingAxeHasGatherTarget(t){
   return false;
 }
 function throwSpecialAxe(){
-  const t=TOOLS.Axe,a=player.angle;
+  const t=TOOLS.Axe,a=player.angle,tier=clamp(Math.floor(Number(player.toolTiers?.Axe)||0),0,2);
   player.attackCd=Math.max(player.attackCd,t.cadence||.72);player.punchTimer=t.swing||.24;player.swingWeapon="Axe";
-  if(net.room){try{net.room.send("throwAxe",{angle:a,tier:player.toolTiers?.Axe||0});}catch(_){}return;}
+  // The axe physically leaves the player's hands until the same weapon returns.
+  player._throwAxePendingUntil=game.time+.35;
+  if(net.room){try{net.room.send("throwAxe",{angle:a,tier});}catch(_){}return;}
   if(player.riding)mountedPetAttack();
-  projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*590,vy:Math.sin(a)*590,life:3.0,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false});
+  projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*THROW_AXE_SPEED,vy:Math.sin(a)*THROW_AXE_SPEED,life:THROW_AXE_LIFE,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false,toolTier:tier});
   consumeHydration(.9);
 }
 function meleeAttack() {
@@ -17196,7 +17203,10 @@ function meleeAttack() {
   if (player.heldSpecial === "Saddle") return;
   const t = TOOLS[player.tool];
   if (player.attackCd > 0) return;
-  if(player.tool==="Axe"&&t.throwing&&!throwingAxeHasGatherTarget(t)){throwSpecialAxe();return;}
+  if(player.tool==="Axe"&&t.throwing){
+    if(throwingAxeOutForActor(player))return;
+    if(!throwingAxeHasGatherTarget(t)){throwSpecialAxe();return;}
+  }
   // Fists animate quickly, but the opposite hand waits longer before it can punch.
   player.attackCd = t.cadence || t.swing;
   if(!net.room) consumeHydration(0.9);
@@ -17411,9 +17421,9 @@ function meleeAttack() {
   }
 }
 
-function gatherResource(r, t) {
+function gatherResource(r, t, toolOverride=null) {
   if (!r || !r.alive || r.type === "pond" || r.type === "river") return;
-  const toolName = player.tool || "Fist";
+  const toolName = toolOverride || player.tool || "Fist";
   if(!net.room){gainSkillXp(1,"resource-hit"); consumeHydration(r.type === "bush" ? 0.65 : 1.2);}
   const isWood = r.type === "tree" || r.type === "log";
 
@@ -18573,11 +18583,11 @@ function updateProjectiles(dt) {
   for (const p of projectiles) {
     if(p.kind==="throwAxe"){
       p.life-=dt;
-      if(!p.returning&&p.life<1.28)p.returning=true;
+      if(!p.returning&&p.life<=THROW_AXE_RETURN_AT)p.returning=true;
       if(p.returning){
         const owner=player,dx=owner.x-p.x,dy=owner.y-p.y,d=Math.hypot(dx,dy);
         if(d<28||p.life<=0){p.dead=true;continue;}
-        p.vx=dx/Math.max(1,d)*680;p.vy=dy/Math.max(1,d)*680;
+        p.vx=dx/Math.max(1,d)*THROW_AXE_RETURN_SPEED;p.vy=dy/Math.max(1,d)*THROW_AXE_RETURN_SPEED;
       }
     }
     const x0=p.x, y0=p.y, x1=p.x+p.vx*dt, y1=p.y+p.vy*dt;
@@ -18613,6 +18623,11 @@ function updateProjectiles(dt) {
         const wa=best.obj;
         if(p.hostile) damageCreatureFromEnemy(wa,p.source,p.dmg||8);
         else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;wa.enraged=true;wa.hostileTarget=player;if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
+      }
+      // A thrown axe is still an axe: it harvests the resource it physically strikes,
+      // then starts its automatic return. Do this only offline; multiplayer is server-authoritative.
+      if(!net.room&&p.kind==="throwAxe"&&best.type==="solid"&&best.obj?.type&&best.obj.alive&&best.obj.type!=="pond"&&best.obj.type!=="river"){
+        gatherResource(best.obj,TOOLS.Axe,"Axe");
       }
       spark(p.x,p.y,p.kind==="arcaneBolt"?"#c77dff":p.kind==="throwAxe"?"#e6d7a6":"#9fdfff",5,65);
       if(p.kind==="throwAxe"){p.returning=true;p.life=Math.max(p.life,.72);}else p.dead=true;
@@ -23118,7 +23133,8 @@ function drawEnemy(en) {
 function drawProjectile(p) {
   if(p.kind==="throwAxe"){
     const owner=(p.ownerId==="local"||p.ownerId===net.sessionId)?player:net.remoteVisuals.get(String(p.ownerId||""));
-    if(owner){ctx.save();ctx.strokeStyle="rgba(116,83,48,.78)";ctx.lineWidth=2.2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(owner.x,owner.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore();}
+    // Rope is one continuous solid line and can never extend beyond the axe's maximum cast range.
+    if(owner){ctx.save();ctx.strokeStyle="rgba(116,83,48,.88)";ctx.lineWidth=2.4;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(owner.x,owner.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore();}
   }
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -23126,10 +23142,8 @@ function drawProjectile(p) {
 
   if (p.kind === "throwAxe") {
     ctx.rotate((game.time*16)*(p.returning?-1:1));
-    const mat=toolMaterialPalette(2);
-    ctx.strokeStyle=mat.base;ctx.lineWidth=5.5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(14,0);ctx.stroke();
-    ctx.fillStyle=mat.light;ctx.strokeStyle=mat.dark;ctx.lineWidth=1.4;
-    ctx.beginPath();ctx.moveTo(7,-11);ctx.lineTo(17,-6);ctx.lineTo(17,6);ctx.lineTo(7,11);ctx.closePath();ctx.fill();ctx.stroke();
+    // Draw the exact same Throwing Axe model that leaves the player's hands.
+    ctx.save();ctx.translate(-25,0);drawThrowingAxeModel(p.toolTier??2);ctx.restore();
   } else if (p.kind === "forestThorn") {
     ctx.shadowColor = p.color || "#79c95d"; ctx.shadowBlur = 9;
     ctx.fillStyle = p.color || "#79c95d";
@@ -24657,6 +24671,9 @@ function drawPlayer() {
   } else if (holding === "Fist") {
     drawArm(1, p.punchSide === 1 ? swingEase : 0, armFill, null, false, -armWalk);
     drawArm(-1, p.punchSide === -1 ? swingEase : 0, armFill, null, false, armWalk);
+  } else if (holding === "Axe" && throwingAxeOutForActor(player)) {
+    // Empty hands while the Throwing Axe is in flight or returning.
+    drawArm(1,swingEase,armFill,null,false,-armWalk);drawArm(-1,0,armFill,null,false,armWalk);
   } else {
     drawTwoHandWeapon(holding, armFill, swingEase, armWalk);
   }
@@ -24685,6 +24702,24 @@ function shadeColor(hex, percent) {
   const g = clamp(((num >> 8) & 0x00FF) + percent, 0, 255);
   const b = clamp((num & 0x0000FF) + percent, 0, 255);
   return `rgb(${r},${g},${b})`;
+}
+
+function drawThrowingAxeModel(tier=2){
+  tier=clamp(Math.floor(Number(tier)||0),0,2);
+  const p=toolMaterialPalette(tier),mat={shaft:p.base,shaftHi:p.light,head:p.mid,headHi:p.light,edge:p.dark};
+  const len=47+tier*2,hx=len-2;
+  ctx.fillStyle=mat.shaft;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;roundRect(1,-3.7,len,7.4,3.2);ctx.fill();ctx.stroke();
+  ctx.fillStyle=mat.shaftHi;roundRect(8,-1.35,Math.max(12,len-15),2.7,1.2);ctx.fill();
+  ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-7,2);ctx.lineTo(hx-2,7);ctx.lineTo(hx+10,11.5);ctx.lineTo(hx+14,4);ctx.lineTo(hx+7,0);ctx.closePath();ctx.fill();ctx.stroke();
+  // Solid rope attachment loop on the handle; the long rope to the player is drawn separately while airborne.
+  ctx.strokeStyle="#7b5636";ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(4,0,5,-1.2,1.2);ctx.stroke();
+}
+function throwingAxeOutForActor(actor){
+  const local=actor===player;
+  if(Number((local?player:actor)?._throwAxePendingUntil||0)>game.time)return true;
+  const ownerId=local?(net.room?String(net.sessionId||""):"local"):String(actor?.id||actor?.netId||"");
+  if(!ownerId)return false;
+  return projectiles.some(p=>p&&!p.dead&&p.kind==="throwAxe"&&String(p.ownerId||"")===ownerId);
 }
 
 function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
@@ -24723,22 +24758,24 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
       ctx.fillStyle=mat.shaftHi;roundRect(-23,-1.4,46,2.8,1.2);ctx.fill();
       const endBlade=(hx,dir)=>{ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-dir*7,-3);ctx.lineTo(hx-dir*2,-10);ctx.lineTo(hx+dir*10,-14);ctx.lineTo(hx+dir*15,-5);ctx.lineTo(hx+dir*7,0);ctx.lineTo(hx+dir*15,5);ctx.lineTo(hx+dir*10,14);ctx.lineTo(hx-dir*2,10);ctx.closePath();ctx.fill();ctx.stroke();};
       endBlade(half-2,1);endBlade(-half+2,-1);
+    }else if(spec==="throwingAxe"){
+      drawThrowingAxeModel(tier);
     }else{
-      const len=spec==="battleAxe"?70:spec==="throwingAxe"?43:48;
+      // Wood, Stone and Iron axes visibly grow/change as the tool is upgraded.
+      const len=spec==="battleAxe"?70:(45+tier*5);
       ctx.fillStyle=mat.shaft;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;roundRect(1,-3.7,len,7.4,3.2);ctx.fill();ctx.stroke();
       ctx.fillStyle=mat.shaftHi;roundRect(8,-1.35,Math.max(12,len-15),2.7,1.2);ctx.fill();
       const hx=len-2;
       const blade=(side=1,wide=1)=>{ctx.fillStyle=mat.head;ctx.strokeStyle=mat.edge;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(hx-7,side*2);ctx.lineTo(hx-2,side*(8*wide));ctx.lineTo(hx+10,side*(13*wide));ctx.lineTo(hx+14,side*(4.5*wide));ctx.lineTo(hx+7,0);ctx.closePath();ctx.fill();ctx.stroke();};
       if(spec==="battleAxe"){blade(1,1.35);blade(-1,.42);}
-      else if(spec==="throwingAxe"){blade(1,.88);ctx.strokeStyle="#7b5636";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(4,0,5,-1.2,1.2);ctx.stroke();}
-      else blade(1,1);
+      else blade(1,1+tier*.13);
     }
   }else if(weapon==="Sword"){
     const mat=toolMaterialPalette(tier);
     if(spec==="spear"){
       ctx.strokeStyle=mat.base;ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(82,0);ctx.stroke();ctx.fillStyle=mat.light;ctx.strokeStyle=mat.dark;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(96,0);ctx.lineTo(80,-8);ctx.lineTo(80,8);ctx.closePath();ctx.fill();ctx.stroke();
     }else{
-      const extra=spec==="longSword"?18:0;
+      const extra=spec==="longSword"?18:(!spec?tier*7:0);
       ctx.fillStyle=mat.base;ctx.strokeStyle=mat.dark;ctx.lineWidth=1.1;roundRect(3,-3.8,15,7.6,2.4);ctx.fill();ctx.stroke();
       ctx.fillStyle=mat.mid;roundRect(17,-6.2,9.5,12.4,3);ctx.fill();ctx.stroke();
       ctx.fillStyle=mat.light;ctx.beginPath();ctx.moveTo(26,-4.2);ctx.lineTo(57+extra,-1.9);ctx.lineTo(63+extra,0);ctx.lineTo(57+extra,1.9);ctx.lineTo(26,4.2);ctx.closePath();ctx.fill();ctx.stroke();
