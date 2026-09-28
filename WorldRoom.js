@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "651";
+const CUBE_SHARED_RULES_VERSION = "655";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -1226,7 +1226,7 @@ const BIOME_RESOURCE_INFO=Object.freeze({
   mountainStoneFruit:{biome:"mountains",material:"stoneFruit",name:"Stone Fruit",color:"#9a8cad",category:"soft",hp:4},
   rainforestVine:{biome:"rainforest",material:"jungleVine",name:"Jungle Vine",color:"#4f9f56",category:"wood",hp:4},
   rainforestFruit:{biome:"rainforest",material:"jungleBerry",name:"Jungle Fruit",color:"#f06d55",category:"soft",hp:3},
-  rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#d0ad4c",category:"soft",hp:7}
+  rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#d0ad4c",category:"soft",hp:14}
 });
 function islandDistance(x,y){return Math.hypot(x-ISLAND_CX,y-ISLAND_CY);}
 function islandAngleDelta(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;else if(d<-Math.PI)d+=TAU;return d;}
@@ -1370,6 +1370,9 @@ export class WorldRoom extends Room {
     const originalRandom = Math.random;
     Math.random = makeSeededRandom(hashWorldSeed(`HOSTL:${this.worldId}:resources:v1`));
     try { this.generateWorld(); } finally { Math.random = originalRandom; }
+    // Organize rainforest bees around their giant hives before clients see the
+    // initial wildlife snapshot.
+    this.organizeRainforestHives();
     // Explicitly publish when the complete starting wildlife set exists. The
     // browser keeps the Play button loading until it has received this many
     // animals, so wildlife never visibly pops in after gameplay begins.
@@ -1690,6 +1693,15 @@ export class WorldRoom extends Room {
   addResource(type,x,y,hp,solidR,canopyR,scale,rot){const r=new ResourceState();Object.assign(r,{type,x,y,hp,maxHp:hp,alive:true,solidR,canopyR,scale,rot});const id=`r${this.nextResourceId++}`;this.state.resources.set(id,r);if(type==="pond"||type==="river")this.addSolid(x,y,solidR+(type==="pond"?58:30),"water",id);else this.addSolid(x,y,type==="log"?solidR*1.35:solidR,"resource",id);}
   addGold(x,y,size,r,goldLeft,infinite=false,pure=false){const g=new GoldState();Object.assign(g,{x,y,size,r,goldLeft:infinite?999999999:goldLeft,infinite,pure});const id=`g${this.nextGoldId++}`;this.state.gold.set(id,g);this.addSolid(x,y+(pure?r*.06:r*.03),r*(pure?.78:size==="huge"?.75:.72),"gold",id);}
   addChest(x,y){const c=new ChestState();Object.assign(c,{x,y,r:18,hp:4,maxHp:4,opened:false,pulse:0,shine:rand(0,TAU),chipSide:Math.random()<.5?"wood":"stone"});const id=`c${this.nextChestId++}`;this.state.chests.set(id,c);this.chestRewards.set(id,this.makeChestReward());this.addSolid(x,y+8,18,"chest",id);}
+
+  isWildBeeType(type){ return type==="queenbee"||type==="workerbee"||type==="dronebee"; }
+  hiveResourceCenter(r){ return r&&r.type==="tree"?{x:r.x,y:r.y+4*(r.scale||1)}:{x:r?.x||0,y:r?.y||0}; }
+  nearestHiveResourceId(x,y){ let best="",bestD=Infinity; for(const[id,r] of this.state.resources){ if(!r||!r.alive||r.type!=="rainforestHive")continue; const c=this.hiveResourceCenter(r),d=dist(x,y,c.x,c.y); if(d<bestD){bestD=d;best=id;} } return best; }
+  beeHomeResourceForAnimal(a){ if(!a||!this.isWildBeeType(a.type))return null; const cur=a._hiveHomeId&&this.state.resources.get(a._hiveHomeId); if(cur&&cur.alive&&cur.type==="rainforestHive")return cur; const id=this.nearestHiveResourceId(a.x,a.y); a._hiveHomeId=id||""; return id?this.state.resources.get(id):null; }
+  settleBeeNearHome(a,slot=0){ const hive=this.beeHomeResourceForAnimal(a); if(!hive)return false; const ringStep=a.type==="queenbee"?0:a.type==="workerbee"?1:2; const ring=Math.floor(slot/6)+ringStep; const perRing=6+ring*2; const angle=((slot%perRing)/perRing)*TAU + (ring*0.37); const base=(hive.solidR||48)+22+ring*18+(a.type==="queenbee"?0:(a.type==="workerbee"?8:14)); const tx=clamp(hive.x+Math.cos(angle)*base,24,WORLD_W-24),ty=clamp(hive.y+Math.sin(angle)*(base*.78),24,WORLD_H-24); if(!this.collidesSolid(tx,ty,Math.max(8,(a.r||18)*.52),"")){ a.x=tx; a.y=ty; } a.wanderA=angle+Math.PI*.5; a.wanderT=rand(.35,1.1); a.sleeping=false; a._hiveOrbitA=angle; a._hiveOrbitDir=a._hiveOrbitDir||((Math.random()<.5)?-1:1); return true; }
+  organizeRainforestHives(){ const counts=new Map(); for(const[,a] of this.state.animals){ if(!a||a.dead||a.hp<=0||!this.isWildBeeType(a.type))continue; const hive=this.beeHomeResourceForAnimal(a); if(!hive)continue; const key=a._hiveHomeId||""; const slot=counts.get(key)||0; this.settleBeeNearHome(a,slot); counts.set(key,slot+1); } }
+  updateBeeHomeBehavior(id,a,dt){ const hive=this.beeHomeResourceForAnimal(a); if(!hive)return false; const c=this.hiveResourceCenter(hive); a._hiveOrbitDir=Number.isFinite(a._hiveOrbitDir)?a._hiveOrbitDir:(Math.random()<.5?-1:1); a._hiveOrbitA=(Number.isFinite(a._hiveOrbitA)?a._hiveOrbitA:rand(0,TAU)) + dt*(a.type==="dronebee"?0.95:a.type==="workerbee"?0.72:0.52)*a._hiveOrbitDir; const orbitBase=(hive.solidR||52)+(a.type==="queenbee"?22:(a.type==="workerbee"?34:44)); const tx=c.x+Math.cos(a._hiveOrbitA)*(orbitBase+Math.sin(this.state.worldTime*0.8+(a.x+a.y)*0.002)*8); const ty=c.y+Math.sin(a._hiveOrbitA)*(orbitBase*.76+Math.cos(this.state.worldTime*0.7+(a.x-a.y)*0.002)*6); const d=dist(a.x,a.y,c.x,c.y); if(d<Math.max(24,(hive.solidR||52)*0.72)){ const pushA=angTo(c.x,c.y,a.x,a.y); a.wanderA=pushA; smoothTurn(a,pushA,dt,4.8); this.moveCreatureSwept(a,(a.speed||60)*0.60,dt); return true; } a.wanderT=(a.wanderT||0)-dt; if(d>orbitBase+90||a.wanderT<=0){ a.wanderA=angTo(a.x,a.y,tx,ty); a.wanderT=d>orbitBase+90?rand(.22,.55):rand(.45,1.05); } smoothTurn(a,a.wanderA||0,dt,4.2); this.moveCreatureSwept(a,(a.speed||60)*(d>orbitBase+90?.76:.52),dt); return true; }
+
   addAnimal(type,stage,x,y,opts={}) {
     if(stage==="bigmomma"&&Array.from(this.state.animals.values()).filter(q=>q&&q.hp>0&&q.stage==="bigmomma").length>=5)stage="superboss";
     const a=new AnimalState(); const info=PET_TYPES[type]; const r=animalRadius(type,stage),hp=typeHp(type,stage); const coat=pick(info.coats||[info.color]);
@@ -1698,7 +1710,7 @@ export class WorldRoom extends Room {
     const sleeping=opts.sleeping??(stage==="bigmomma"?Math.random()<.96:stage==="superboss"?Math.random()<.88:stage==="boss"?Math.random()<.75:stage==="baby"?Math.random()<.65:false);
     Object.assign(a,{type,stage,x,y,angle:rand(0,TAU),r,hp,maxHp:hp,coat,spotCol:shadeHex(coat,Math.random()<.5?-35:30),spotsJson:JSON.stringify(spots),speed:animalSpeed(type,stage,false),biome:biomeBaseId(opts.biome||worldBiomeAt(x,y)),sleeping,tailPhase:rand(0,TAU),abilityCd:rand(3,info.abilityCd),wanderT:rand(1,3),wanderA:rand(0,TAU),releasedWild:!!opts.releasedWild,level:opts.level||1,exp:opts.exp||0,petName:opts.petName||"",gender:opts.gender||randomAnimalGender(),motherId:String(opts.motherId||""),fatherId:String(opts.fatherId||""),bredChild:!!opts.bredChild});
     if(opts.hp!=null)a.hp=clamp(opts.hp,1,a.maxHp); if(opts.enraged)a.enraged=true; if(opts.tameFailedAggro)a.tameFailedAggro=true; if(opts.desperateAggro)a.desperateAggro=true;
-    const id=`a${this.nextAnimalId++}`;this.state.animals.set(id,a);return id;
+    const id=`a${this.nextAnimalId++}`;this.state.animals.set(id,a); if(this.isWildBeeType(type))this.beeHomeResourceForAnimal(a); return id;
   }
   petUpgradeSet(ownerId,type){
     const all=this.playerPetStatUpgrades.get(ownerId)||{};
@@ -1909,8 +1921,8 @@ export class WorldRoom extends Room {
   scatter(type,count,hp,minCenter){for(let i=0;i<count;i++){for(let tries=0;tries<85;tries++){let scale=1,solid=12,canopy=0;if(type==="tree"){scale=rand(1.2,2.3);solid=8.8*scale;canopy=46*scale;}else if(type==="rock"){scale=rand(1,2.05);solid=26.5*scale;}else if(type==="log"){scale=rand(1,1.6);solid=17.5*scale;}else if(type==="bush"){scale=rand(1.08,1.7);solid=10.8*scale;canopy=24*scale;}const pos=randomLandPoint(Math.max(120,solid+80)),x=pos.x,y=pos.y,biome=worldBiomeAt(x,y);const chance=biome==="arctic"?(type==="tree"?.34:type==="bush"?.44:type==="log"?.40:.86):biome==="desert"?(type==="tree"?.18:type==="bush"?.22:type==="log"?.08:.92):biome==="mountains"?(type==="tree"?.26:type==="bush"?.34:type==="log"?.20:.98):type==="tree"?(biome==="rainforest"?1:.88):type==="bush"?(biome==="rainforest"?1:.82):type==="log"?(biome==="rainforest"?.90:.78):(biome==="rainforest"?.56:.68);if(Math.random()>chance)continue;if(!this.canPlace(x,y,solid,minCenter))continue;this.addResource(type,x,y,hp,solid,canopy,scale,type==="log"?rand(0,TAU):0);break;}}}
   placeBiomeFeatures(){
     for(let i=0;i<72;i++)for(let t=0;t<20;t++){const pos=randomPointInBiome("rainforest",80),scale=rand(1.05,1.65),solid=10.8*scale;if(!this.canPlace(pos.x,pos.y,solid+10,0))continue;this.addResource("bush",pos.x,pos.y,8,solid,24*scale,scale,0);break;}
-    const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++)for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",scale=isCactus?rand(1.55,2.15):rand(.9,1.35),solid=(info.category==="stone"?17:(isCactus?14:12))*scale;if(!this.canPlace(pos.x,pos.y,solid+12,0))continue;this.addResource(type,pos.x,pos.y,info.hp,solid,0,scale,rand(-.35,.35));break;}};
-    placeUnique("forestHerb",24,"forest");placeUnique("forestResin",22,"forest");placeUnique("rainforestVine",26,"rainforest");placeUnique("rainforestFruit",24,"rainforest");placeUnique("rainforestHive",12,"rainforest");placeUnique("arcticIceCrystal",30,"arctic");placeUnique("arcticFrostBerry",26,"arctic");placeUnique("desertCactusGood",22,"desert");placeUnique("desertCactusBad",18,"desert");placeUnique("desertSandstone",24,"desert");placeUnique("mountainIron",30,"mountains");placeUnique("mountainQuartz",26,"mountains");placeUnique("mountainGem",22,"mountains");placeUnique("mountainStoneFruit",24,"mountains");
+    const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++)for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",scale=isHive?rand(2.25,3.05):(isCactus?rand(1.55,2.15):rand(.9,1.35)),solid=isHive?(30*scale):((info.category==="stone"?17:(isCactus?14:12))*scale),hp=isHive?Math.round(info.hp*1.8):info.hp;if(!this.canPlace(pos.x,pos.y,solid+12,0))continue;this.addResource(type,pos.x,pos.y,hp,solid,0,scale,rand(-.35,.35));break;}};
+    placeUnique("forestHerb",24,"forest");placeUnique("forestResin",22,"forest");placeUnique("rainforestVine",26,"rainforest");placeUnique("rainforestFruit",24,"rainforest");placeUnique("rainforestHive",8,"rainforest");placeUnique("arcticIceCrystal",30,"arctic");placeUnique("arcticFrostBerry",26,"arctic");placeUnique("desertCactusGood",22,"desert");placeUnique("desertCactusBad",18,"desert");placeUnique("desertSandstone",24,"desert");placeUnique("mountainIron",30,"mountains");placeUnique("mountainQuartz",26,"mountains");placeUnique("mountainGem",22,"mountains");placeUnique("mountainStoneFruit",24,"mountains");
   }
   generateWorld(){
     this.addGold(WORLD_W/2,WORLD_H/2,"pure",176,999999999,true,true);
@@ -3214,6 +3226,8 @@ export class WorldRoom extends Room {
               }else if(isHostile&&(a.tameFailedAggro||a.desperateAggro)&&playerObj&&dPlayer<forgetRange){
                 const moveA=angTo(a.x,a.y,playerObj.x,playerObj.y);smoothTurn(a,moveA,dt,4.1);
                 this.moveCreatureSwept(a,(a.speed||60)*(a.tameFailedAggro?.92:.82),dt);
+              }else if(this.isWildBeeType(a.type)&&this.updateBeeHomeBehavior(id,a,dt)){
+                // Giant hive wildlife gathers around its hive while calm.
               }else{
                 a.wanderT=(a.wanderT||0)-dt;
                 if(a.wanderT<=0){
