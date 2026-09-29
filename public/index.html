@@ -647,6 +647,10 @@
   #mAttack{bottom:max(96px,calc(env(safe-area-inset-bottom) + 84px));right:max(28px,calc(env(safe-area-inset-right) + 22px));}
   #mShoot{bottom:max(96px,calc(env(safe-area-inset-bottom) + 84px));right:max(112px,calc(env(safe-area-inset-right) + 106px));}
   #mCraft{bottom:max(178px,calc(env(safe-area-inset-bottom) + 166px));right:max(31px,calc(env(safe-area-inset-right) + 25px));width:54px;height:54px;font-size:11px;}
+  #waterFillBtn{display:none;position:fixed;left:50%;bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px));transform:translateX(-50%);z-index:18;min-width:92px;height:42px;padding:0 20px;border-radius:22px;border:2px solid rgba(255,223,112,.92);background:rgba(78,55,20,.88);color:#fff3b5;font:900 13px inherit;letter-spacing:.06em;box-shadow:0 8px 20px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.14);cursor:pointer;pointer-events:auto;touch-action:manipulation;}
+  #waterFillBtn.show{display:block;}
+  #waterFillBtn:active{transform:translateX(-50%) scale(.94);background:rgba(122,88,27,.94);}
+  body.mobile-performance #waterFillBtn{bottom:max(76px,calc(env(safe-area-inset-bottom) + 66px));min-width:78px;height:38px;font-size:11px;}
 
   body.mobile-performance .hud-panel{backdrop-filter:none;-webkit-backdrop-filter:none;}
   body.mobile-performance #game{cursor:default;}
@@ -6053,6 +6057,7 @@ button:focus-visible{
   <div class="m-btn" id="mShoot">BOW</div>
   <div class="m-btn" id="mCraft">C</div>
 </div>
+<button type="button" id="waterFillBtn" aria-label="Fill bucket with water">FILL</button>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://unpkg.com/colyseus.js@0.16.22/dist/colyseus.js"></script>
@@ -11891,12 +11896,17 @@ const joyKnob = document.getElementById("joyKnob");
 const mobileAttackBtn = document.getElementById("mAttack");
 const mobileShootBtn = document.getElementById("mShoot");
 const mobileCraftBtn = document.getElementById("mCraft");
+const waterFillBtn = document.getElementById("waterFillBtn");
+function updateWaterFillButton(){
+  if(!waterFillBtn)return;const show=!!(game.started&&!player.dead&&player.heldSpecial==="Bucket"&&(player.bucketSips||0)<BUCKET_MAX_SIPS&&nearestPond(82));waterFillBtn.classList.toggle("show",show);waterFillBtn.setAttribute("aria-hidden",show?"false":"true");
+}
+if(waterFillBtn)waterFillBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();fillBucketFromWater();},{passive:false});
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
   const special = player?.heldSpecial || "";
-  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?`DRINK ${player.bucketSips}`:"FILL") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
+  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?"DRINK":"EMPTY") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
   mobileAttackBtn.textContent = label;
-  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Fill bucket at water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
+  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Bucket empty — use the Fill button near water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
   mobileAttackBtn.setAttribute("aria-label", actionText);
   mobileAttackBtn.title = actionText;
 }
@@ -15835,7 +15845,9 @@ const BIOME_RESOURCE_INFO = Object.freeze({
   mountainStoneFruit:{biome:"mountains",material:"stoneFruit",name:"Stone Fruit",color:"#9a8cad",category:"soft",hp:4},
   rainforestVine:{biome:"rainforest",material:"jungleVine",name:"Jungle Vine",color:"#4f9f56",category:"wood",hp:4},
   rainforestFruit:{biome:"rainforest",material:"jungleBerry",name:"Jungle Fruit",color:"#f06d55",category:"soft",hp:3},
-  rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#d0ad4c",category:"soft",hp:14}
+  forestGiantFlower:{biome:"forest",material:"pollen",name:"Giant Flower",color:"#ef8ac4",category:"flower",hp:9999},
+  rainforestGiantFlower:{biome:"rainforest",material:"pollen",name:"Giant Flower",color:"#8edbff",category:"flower",hp:9999},
+  rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#f2bf35",category:"soft",hp:14}
 });
 const BIOME_MATERIAL_META = Object.fromEntries(Object.values(BIOME_RESOURCE_INFO).map(v=>[v.material,{name:v.name,color:v.color,biome:v.biome}]));
 BIOME_MATERIAL_META.honey={name:"Honey",color:"#f4bd42",biome:"rainforest"};
@@ -16623,9 +16635,9 @@ function placeBiomeFeatures() {
     const scale=rand(1.05,1.65),solid=10.8*scale;
     if (!solidOverlaps(pos.x, pos.y, solid+10)) addGeneratedResource({type:"bush",x:pos.x,y:pos.y,hp:8,maxHp:8,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:24*scale,scale,rot:0});
   }
-  const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",scale=isHive?rand(4.0,4.8):(isCactus?rand(1.55,2.15):rand(.9,1.35)),solid=isHive?(27*scale):((info.category==="stone"?17:(isCactus?14:12))*scale),hp=isHive?Math.round(info.hp*2.15):info.hp;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
-  placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest");
-  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestHive",6,"rainforest");
+  const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
+  placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest"); placeUnique("forestGiantFlower",20,"forest");
+  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestGiantFlower",24,"rainforest"); placeUnique("rainforestHive",6,"rainforest");
   placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
   placeUnique("desertCactusGood",22,"desert"); placeUnique("desertCactusBad",18,"desert"); placeUnique("desertSandstone",24,"desert");
   placeUnique("mountainIron",30,"mountains"); placeUnique("mountainQuartz",26,"mountains"); placeUnique("mountainGem",22,"mountains"); placeUnique("mountainStoneFruit",24,"mountains");
@@ -16689,7 +16701,7 @@ function wildCanPreyOn(predatorType, preyType) {
 }
 function randomAnimalGender() { return Math.random() < 0.5 ? "Male" : "Female"; }
 function canonicalAnimalGender(type, requested="") {
-  if (type === "queenbee") return "Female";
+  if (type === "queenbee" || type === "workerbee") return "Female";
   if (type === "dronebee") return "Male";
   return requested === "Female" ? "Female" : requested === "Male" ? "Male" : randomAnimalGender();
 }
@@ -16739,6 +16751,7 @@ function randomWildStageForGroup() {
 function isWildBeeType(type){ return type==="queenbee"||type==="workerbee"||type==="dronebee"; }
 function isNeutralBeeType(type){return type==="queenbee"||type==="workerbee";}
 function droneBeeShouldFlee(a){return !!(a&&a.type==="dronebee"&&a.hp>0&&a.maxHp>0&&a.hp/a.maxHp<=.26);}
+function isBeeFlowerResource(r){return !!r&&r.alive&&(r.type==="forestGiantFlower"||r.type==="rainforestGiantFlower");}
 function offlineResourceCenter(r){ return r&&r.type==="tree"?{x:r.x,y:r.y+4*(r.scale||1)}:{x:r?.x||0,y:r?.y||0}; }
 function offlineNearestHiveIndex(x,y){
   let best=-1,bestD=Infinity;
@@ -16759,21 +16772,30 @@ function offlineBeeHomeResource(a){
   a._hiveHomeIdx=nextIdx;
   return nextIdx>=0?resources[nextIdx]:null;
 }
+function offlineNearestBeeFlowerIndex(a,maxRange=3400,preferredBiome=""){
+  let best=-1,bestD=Math.max(120,Number(maxRange)||3400);
+  for(let i=0;i<resources.length;i++){
+    const r=resources[i];if(!isBeeFlowerResource(r))continue;
+    if(preferredBiome==="forest"&&r.type!=="forestGiantFlower")continue;if(preferredBiome==="rainforest"&&r.type!=="rainforestGiantFlower")continue;
+    const d=dist(a.x,a.y,r.x,r.y);if(d<bestD){best=i;bestD=d;}
+  }
+  return best;
+}
 function settleBeeNearHomeOffline(a,slot=0){
   const hive=offlineBeeHomeResource(a); if(!hive) return false;
-  const ringStep=a.type==="queenbee"?0:a.type==="workerbee"?1:2;
+  const ringStep=a.type==="queenbee"?2:a.type==="workerbee"?1:0;
   const ring=Math.floor(slot/6)+ringStep;
   const perRing=6+ring*2;
   const angle=((slot%perRing)/perRing)*TAU + (ring*0.37);
-  const base=(hive.solidR||48)+Math.max(20,(a.r||18)*.70)+22+ring*18+(a.type==="queenbee"?0:(a.type==="workerbee"?8:14));
+  const base=(hive.solidR||48)+Math.max(20,(a.r||18)*.70)+22+ring*18+(a.type==="queenbee"?72:(a.type==="workerbee"?22:10));
   const tx=clamp(hive.x+Math.cos(angle)*base,24,WORLD_W-24);
   const ty=clamp(hive.y+Math.sin(angle)*(base*.78),24,WORLD_H-24);
   if(!solidOverlaps(tx,ty,Math.max(8,(a.r||18)*.52))){a.x=tx;a.y=ty;}
   a.wanderA=angle+Math.PI*.5;
   a.wanderT=rand(.35,1.1);
-  a.sleeping=false;
   a._hiveOrbitA=angle;
   a._hiveOrbitDir=a._hiveOrbitDir||((Math.random()<.5)?-1:1);
+  if(a.stage==="baby")a.sleeping=Math.random()<.93;else a.sleeping=false;
   return true;
 }
 function organizeRainforestHivesOffline(){
@@ -16781,58 +16803,73 @@ function organizeRainforestHivesOffline(){
   for(const a of animals){
     if(!a||a.dead||a.owned||!isWildBeeType(a.type))continue;
     const hive=offlineBeeHomeResource(a); if(!hive)continue;
-    const idx=a._hiveHomeIdx;
-    const slot=counts.get(idx)||0;
-    settleBeeNearHomeOffline(a,slot);
-    counts.set(idx,slot+1);
+    const idx=a._hiveHomeIdx,slot=counts.get(idx)||0;
+    settleBeeNearHomeOffline(a,slot);counts.set(idx,slot+1);
   }
 }
 function hiveBeeStageOffline(type,hiveOrdinal=0,first=false){
-  if(type==="queenbee"){if(first&&hiveOrdinal===0)return "bigmomma";const q=Math.random();return q<.58?"adult":q<.88?"boss":"superboss";}
-  const q=Math.random();return q<.38?"baby":q<.88?"adult":"boss";
+  if(type==="queenbee"){if(first&&hiveOrdinal===0)return "bigmomma";const q=Math.random();return q<.66?"adult":q<.91?"boss":"superboss";}
+  return Math.random()<.55?"baby":"adult";
 }
+function weightedHiveBeeTypeOffline(){const q=Math.random();return q<.62?"dronebee":q<.92?"workerbee":"queenbee";}
 function spawnHiveBeeOffline(hiveIdx,type,stage){
   const hive=resources[hiveIdx];if(!hive||!hive.alive||hive.type!=="rainforestHive")return null;
   const bee=spawnWildAnimal(false,stage,type,null,"rainforest");if(!bee)return null;
-  bee._hiveHomeIdx=hiveIdx;bee.sleeping=Math.random()<beeSleepSpawnChance(type,stage);bee._hiveOrbitA=rand(0,TAU);bee._hiveOrbitDir=Math.random()<.5?-1:1;return bee;
+  const footprint=animalSpawnFootprint(type,stage);
+  for(let t=0;t<45;t++){const aa=rand(0,TAU),dd=(hive.solidR||90)+footprint+rand(28,90),x=clamp(hive.x+Math.cos(aa)*dd,24,WORLD_W-24),y=clamp(hive.y+Math.sin(aa)*dd*.78,24,WORLD_H-24);if(solidOverlaps(x,y,footprint)||animalSpawnCrowded(x,y,footprint,8))continue;bee.x=x;bee.y=y;bee._hiveOrbitA=aa;break;}
+  bee._hiveHomeIdx=hiveIdx;bee.sleeping=stage==="baby"?(Math.random()<.93):(Math.random()<beeSleepSpawnChance(type,stage));bee._hiveOrbitA=Number.isFinite(bee._hiveOrbitA)?bee._hiveOrbitA:rand(0,TAU);bee._hiveOrbitDir=Math.random()<.5?-1:1;return bee;
 }
 function populateRainforestHivesOffline(first=false){
   let ordinal=0;for(let i=0;i<resources.length;i++){const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;
     const counts={dronebee:0,workerbee:0,queenbee:0};for(const a of animals)if(a&&!a.dead&&!a.owned&&isWildBeeType(a.type)&&a._hiveHomeIdx===i)counts[a.type]=(counts[a.type]||0)+1;
     const desired={dronebee:4,workerbee:2,queenbee:1};for(const type of ["dronebee","workerbee","queenbee"]){while((counts[type]||0)<desired[type]){if(!spawnHiveBeeOffline(i,type,hiveBeeStageOffline(type,ordinal,first)))break;counts[type]++;}}
-    hive._beeSpawnT=Number.isFinite(hive._beeSpawnT)?hive._beeSpawnT:rand(28,48);ordinal++;
+    hive._beeSpawnT=300;hive._beeBroodNight=0;ordinal++;
   }
 }
 function updateHiveBeeSpawnersOffline(dt){
-  for(let i=0;i<resources.length;i++){const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;hive._beeSpawnT=(Number(hive._beeSpawnT)||rand(28,48))-dt;if(hive._beeSpawnT>0)continue;
-    const counts={dronebee:0,workerbee:0,queenbee:0};for(const a of animals)if(a&&!a.dead&&!a.owned&&isWildBeeType(a.type)&&a._hiveHomeIdx===i)counts[a.type]=(counts[a.type]||0)+1;
-    let type="";if(counts.dronebee<4)type="dronebee";else if(counts.workerbee<2)type="workerbee";else if(counts.queenbee<1)type="queenbee";if(type)spawnHiveBeeOffline(i,type,hiveBeeStageOffline(type,99,false));hive._beeSpawnT=rand(32,55);
+  game._beeSpawnerTickAccum=(Number(game._beeSpawnerTickAccum)||0)+dt;if(game._beeSpawnerTickAccum<1)return;const step=game._beeSpawnerTickAccum;game._beeSpawnerTickAccum=0;
+  for(let i=0;i<resources.length;i++){
+    const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;
+    hive._beeSpawnT=(Number.isFinite(Number(hive._beeSpawnT))?Number(hive._beeSpawnT):300)-step;if(hive._beeSpawnT>0)continue;
+    let hiveCount=0;for(const a of animals)if(a&&!a.dead&&!a.owned&&isWildBeeType(a.type)&&a._hiveHomeIdx===i)hiveCount++;
+    if(hiveCount<14){const type=weightedHiveBeeTypeOffline(),stage=Math.random()<.56?"baby":"adult";spawnHiveBeeOffline(i,type,stage);}
+    hive._beeSpawnT=300;
   }
 }
+function breedHiveBeesEveryTenNightsOffline(){
+  if(game.dayCount%10!==0)return;
+  for(let i=0;i<resources.length;i++){
+    const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive"||hive._beeBroodNight===game.dayCount)continue;
+    let queen=null,drone=null,count=0;
+    for(const a of animals){if(!a||a.dead||a.owned||a._hiveHomeIdx!==i||!isWildBeeType(a.type))continue;count++;if(a.stage!=="baby"&&a.type==="queenbee")queen=a;if(a.stage!=="baby"&&a.type==="dronebee")drone=a;}
+    hive._beeBroodNight=game.dayCount;if(!queen||!drone||count>=14)continue;
+    const baby=spawnHiveBeeOffline(i,weightedHiveBeeTypeOffline(),"baby");if(!baby)continue;
+    baby.bredChild=true;baby.sleeping=Math.random()<.94;familyBirthCelebration(hive.x,hive.y);spark(hive.x,hive.y,"#ffd84f",14,80);floatText(hive.x,hive.y-(hive.solidR||70)-14,"Hive baby bee!","#ffe582");
+  }
+}
+function growHiveFromPollenOffline(hive){if(!hive)return;const old=Number(hive.scale)||4.2;hive.scale=Math.min(5.75,old+.035);hive.pulse=Math.max(Number(hive.pulse)||0,.35);}
+function updateWorkerBeeJobOffline(a,dt,hive){
+  if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);let state=a._beeWorkState||"seek";
+  if(state==="seek"){if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";let fi=offlineNearestBeeFlowerIndex(a,3400,a._beePreferBiome);if(fi<0)fi=offlineNearestBeeFlowerIndex(a,3400,"");if(fi<0){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}a._beeFlowerIdx=fi;a._beeWorkState="flower";state="flower";}
+  if(state==="flower"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}const d=dist(a.x,a.y,f.x,f.y);const aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);if(d>Math.max(22,(f.solidR||18)+12))moveFacing(a,(a.speed||60)*.82,dt);else{a._beeWorkState="collect";a._beeWorkTimer=rand(1.8,3.0);a._beePollen=true;f.pulse=Math.max(Number(f.pulse)||0,.3);}return true;}
+  if(state==="collect"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);if(a._beeWorkTimer<=0)a._beeWorkState="home";return true;}
+  if(state==="home"){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;if(d>stop)moveFacing(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;}
+  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen)growHiveFromPollenOffline(hive);a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
+  a._beeWorkState="seek";return false;
+}
+function updateDroneBeeHiveLifeOffline(a,dt,hive){
+  if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);a._beeHoneyT=(Number.isFinite(Number(a._beeHoneyT))?Number(a._beeHoneyT):rand(16,36))-dt;
+  if(a._beeEatingHoney){a._beeHoneyPause=(Number(a._beeHoneyPause)||0)-dt;if(a._beeHoneyPause<=0){a._beeEatingHoney=false;a._beeHoneyT=rand(18,42);}return true;}
+  if(a._beeHoneyT<=0){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5);if(d>(hive.solidR||70)+18)moveFacing(a,(a.speed||60)*.72,dt);else{a._beeEatingHoney=true;a._beeHoneyPause=rand(1.2,2.8);}return true;}
+  a._hiveOrbitDir=Number.isFinite(a._hiveOrbitDir)?a._hiveOrbitDir:(Math.random()<.5?-1:1);a._hiveOrbitA=(Number.isFinite(a._hiveOrbitA)?a._hiveOrbitA:rand(0,TAU))+dt*.90*a._hiveOrbitDir;const orbitBase=(hive.solidR||70)+48,tx=c.x+Math.cos(a._hiveOrbitA)*(orbitBase+8*Math.sin(game.time*.8+a.x*.002)),ty=c.y+Math.sin(a._hiveOrbitA)*(orbitBase*.76+6*Math.cos(game.time*.7+a.y*.002));smoothTurn(a,angTo(a.x,a.y,tx,ty),dt,4.4);moveFacing(a,(a.speed||60)*.54,dt);return true;
+}
+function updateQueenBeeHiveLifeOffline(a,dt,hive){
+  if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);a._queenRoamT=(Number(a._queenRoamT)||0)-dt;if(a._queenRoamT<=0||!Number.isFinite(a._queenRoamX)||dist(a._queenRoamX,a._queenRoamY,c.x,c.y)>(hive.solidR||70)+430){const ang=rand(0,TAU),rr=rand((hive.solidR||70)+150,(hive.solidR||70)+330);a._queenRoamX=clamp(c.x+Math.cos(ang)*rr,30,WORLD_W-30);a._queenRoamY=clamp(c.y+Math.sin(ang)*rr*.78,30,WORLD_H-30);a._queenRoamT=rand(3.5,7.5);}const d=dist(a.x,a.y,a._queenRoamX,a._queenRoamY);smoothTurn(a,angTo(a.x,a.y,a._queenRoamX,a._queenRoamY),dt,3.8);if(d>28)moveFacing(a,(a.speed||60)*.47,dt);return true;
+}
 function updateBeeHomeBehaviorOffline(a,dt){
-  const hive=offlineBeeHomeResource(a); if(!hive) return false;
-  const c=offlineResourceCenter(hive);
-  a._hiveOrbitDir=Number.isFinite(a._hiveOrbitDir)?a._hiveOrbitDir:(Math.random()<.5?-1:1);
-  a._hiveOrbitA=(Number.isFinite(a._hiveOrbitA)?a._hiveOrbitA:rand(0,TAU)) + dt*(a.type==="dronebee"?0.95:a.type==="workerbee"?0.72:0.52)*a._hiveOrbitDir;
-  const orbitBase=(hive.solidR||52)+(a.type==="queenbee"?22:(a.type==="workerbee"?34:44));
-  const tx=c.x+Math.cos(a._hiveOrbitA)*(orbitBase + Math.sin(game.time*0.8 + (a.x+a.y)*0.002)*8);
-  const ty=c.y+Math.sin(a._hiveOrbitA)*(orbitBase*.76 + Math.cos(game.time*0.7 + (a.x-a.y)*0.002)*6);
-  const d=dist(a.x,a.y,c.x,c.y);
-  if(d < Math.max(24,(hive.solidR||52)*0.72)){
-    const pushA=angTo(c.x,c.y,a.x,a.y);
-    a.wanderA=pushA;
-    smoothTurn(a,pushA,dt,4.8);
-    moveFacing(a,a.speed*0.60,dt);
-    return true;
-  }
-  a.wanderT=(a.wanderT||0)-dt;
-  if(d>orbitBase+90||a.wanderT<=0){
-    a.wanderA=angTo(a.x,a.y,tx,ty);
-    a.wanderT=d>orbitBase+90?rand(.22,.55):rand(.45,1.05);
-  }
-  smoothTurn(a,a.wanderA||0,dt,4.2);
-  moveFacing(a,a.speed*(d>orbitBase+90?.76:.52),dt);
-  return true;
+  const hive=offlineBeeHomeResource(a);if(!hive)return false;
+  if(a.stage==="baby"){if(!a.sleeping&&Math.random()<dt*.055){a.sleeping=true;return true;}const c=offlineResourceCenter(hive),d=dist(a.x,a.y,c.x,c.y),near=(hive.solidR||70)+80;if(d>near){const aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,4.2);moveFacing(a,(a.speed||60)*.50,dt);}else{a.wanderT=(a.wanderT||0)-dt;if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.8,4.0);}smoothTurn(a,a.wanderA||0,dt,3.4);moveFacing(a,(a.speed||60)*.22,dt);}return true;}
+  if(a.type==="workerbee"&&updateWorkerBeeJobOffline(a,dt,hive))return true;if(a.type==="dronebee"&&updateDroneBeeHiveLifeOffline(a,dt,hive))return true;if(a.type==="queenbee"&&updateQueenBeeHiveLifeOffline(a,dt,hive))return true;return false;
 }
 
 function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, groupAnchor = null, forcedBiome = null) {
@@ -17981,6 +18018,7 @@ function gatherResource(r, t, toolOverride=null) {
   }
   const biomeInfo=BIOME_RESOURCE_INFO[r.type];
   if(biomeInfo){
+    if(r.type==="forestGiantFlower"||r.type==="rainforestGiantFlower"){r.pulse=1;spark(r.x,r.y,biomeInfo.color,5,48);return;}
     if(r.type==="rainforestHive"){
       const yieldAmt=toolName==="Axe"?2:1,honeyAmt=1;r.pulse=1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials.honeycomb=(player.biomeMaterials.honeycomb||0)+yieldAmt;player.biomeMaterials.honey=(player.biomeMaterials.honey||0)+honeyAmt;registerHotbarItem("Honey Comb");registerHotbarItem("Honey");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);floatText(r.x,r.y-20,`+${yieldAmt} Honey Comb  +${honeyAmt} Honey`,biomeInfo.color);spark(r.x,r.y,biomeInfo.color,toolName==="Axe"?8:5,toolName==="Axe"?95:60);syncHud();syncHotbar();sfx.logHit();return;
     }
@@ -20494,6 +20532,7 @@ function keepWildInHomeBiomeOffline(a, dt) {
   if (!a || a.dead || a.owned || a.enemyOwner) return false;
   const home = biomeBaseId(a.biome || speciesHomeBiome(a.type));
   const here = biomeBaseId(worldBiomeAt(a.x, a.y));
+  if (isWildBeeType(a.type) && (here === "rainforest" || here === "forest")) { a._wrongBiomeTime=0; return false; }
   if (here === home || here === "ocean") { a._wrongBiomeTime=0; return false; }
 
   a.sleeping=false;
@@ -20581,13 +20620,7 @@ function updateAnimals(dt) {
       a.x = clamp(a.x, 20, WORLD_W - 20); a.y = clamp(a.y, 20, WORLD_H - 20); resolveAnimalWorld(a);
       continue;
     }
-    if (a.type === "queenbee" && a.stage === "bigmomma" && !a.dead) {
-      a._broodCd = (Number(a._broodCd) || rand(145, 215)) - dt;
-      if (a._broodCd <= 0) {
-        if ((a.sleeping || !a.enraged) && (a.combat || 0) <= 0) spawnQueenBeeBroodOffline(a);
-        a._broodCd = rand(160, 245);
-      }
-    }
+    // Hive reproduction is handled on every 10th night so bee population growth stays predictable and cheap.
 
     if (a.enemyOwner) {
       const en = a.enemyOwner;
@@ -21429,6 +21462,7 @@ function updateTime(dt) {
     if (phase.name === "Night") {
       sfx.night();
       banner("Night — Riders and Tamers have joined the Hostls.");
+      breedHiveBeesEveryTenNightsOffline();
     }
     if (phase.name === "Midnight") {
       banner("Midnight — Rangers and Chimest emerge.");
@@ -21676,29 +21710,28 @@ function updateHydrationHud(){
 }
 function nearestPond(maxExtra=78){
   let best=null,bestD=Infinity;
-  for(const r of resources){if(!r||!r.alive||(r.type!=="pond"&&r.type!=="river"))continue;const d=dist(player.x,player.y,r.x,r.y);if(waterNearPoint(r,player.x,player.y,maxExtra)&&d<bestD){best=r;bestD=d;}}
+  const waters=cachedWaterResources.length?cachedWaterResources:resources;
+  for(const r of waters){if(!r||!r.alive||(r.type!=="pond"&&r.type!=="river"))continue;const d=dist(player.x,player.y,r.x,r.y);if(waterNearPoint(r,player.x,player.y,maxExtra)&&d<bestD){best=r;bestD=d;}}
   return best;
 }
 function selectBucket(){
   if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;player.heldSpecial="Bucket";
   const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS);
-  banner(sips>0?`Bucket — ${sips} sip${sips===1?"":"s"} left`:"Empty bucket — stand by water and click to fill");syncHotbar();syncMobilePrimaryButton();
+  banner(sips>0?`Bucket — ${sips} sip${sips===1?"":"s"} left`:"Empty bucket — stand by water and press FILL");syncHotbar();syncMobilePrimaryButton();
+}
+function fillBucketFromWater(){
+  if(player.dead||player.heldSpecial!=="Bucket")return;
+  const pond=nearestPond();if(!pond){banner("Move closer to a pond or river to fill the bucket",true);return;}
+  if(net.room){try{net.room.send("waterAction",{action:"fill"});}catch(_){}return;}
+  player.bucketSips=BUCKET_MAX_SIPS;player.bucketWater=true;banner("Bucket filled — 5 sips");updateHydrationHud();syncHotbar();syncMobilePrimaryButton();updateWaterFillButton();
 }
 function useBucket(){
   if(player.attackCd>0)return;player.attackCd=.28;
-  const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS);
-  player.bucketWater=sips>0;
-  const action=sips>0?"drink":"fill";
-  if(net.room){try{net.room.send("waterAction",{action});}catch(_){}return;}
-  if(action==="drink"){
-    player.bucketSips=Math.max(0,sips-1);player.bucketWater=player.bucketSips>0;
-    player.hydration=Math.min(100,(Number(player.hydration)||0)+BUCKET_SIP_HYDRATION);
-    banner(player.bucketSips>0?`Sip taken — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Last sip — bucket empty");
-  }else{
-    const pond=nearestPond();if(!pond){banner("Move closer to a pond or river to fill the bucket",true);return;}
-    player.bucketSips=BUCKET_MAX_SIPS;player.bucketWater=true;banner("Bucket filled — 5 sips");
-  }
-  updateHydrationHud();syncHotbar();syncMobilePrimaryButton();
+  const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS);player.bucketWater=sips>0;
+  if(sips<=0){banner(nearestPond()?"Bucket empty — press FILL to collect water":"Bucket empty — move near water to fill it",true);return;}
+  if(net.room){try{net.room.send("waterAction",{action:"drink"});}catch(_){}return;}
+  player.bucketSips=Math.max(0,sips-1);player.bucketWater=player.bucketSips>0;player.hydration=Math.min(100,(Number(player.hydration)||0)+BUCKET_SIP_HYDRATION);
+  banner(player.bucketSips>0?`Sip taken — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Last sip — bucket empty");updateHydrationHud();syncHotbar();syncMobilePrimaryButton();updateWaterFillButton();
 }
 
 // ---------- player update ----------
@@ -23326,13 +23359,20 @@ function drawResource(r) {
       ctx.fillStyle="#f07a42";ctx.strokeStyle=ink;ctx.lineWidth=2.3;ctx.beginPath();ctx.ellipse(0,1,16,12,.08,0,TAU);ctx.fill();ctx.stroke();
       ctx.fillStyle="#ffc16c";ctx.globalAlpha=.72;ctx.beginPath();ctx.ellipse(-5,-3,5,2.8,-.25,0,TAU);ctx.fill();ctx.globalAlpha=1;
       ctx.fillStyle="#2f7138";ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-2,-10);ctx.quadraticCurveTo(3,-20,13,-15);ctx.quadraticCurveTo(8,-7,-1,-7);ctx.closePath();ctx.fill();ctx.stroke();
+    }else if(r.type==="forestGiantFlower"||r.type==="rainforestGiantFlower"){
+      const rain=r.type==="rainforestGiantFlower",seed=Math.abs(Math.sin((r.rot||0)*9.73+r.x*.0007+r.y*.0011));
+      const palettes=rain?[["#79d8ff","#d9f6ff"],["#b78cff","#eadcff"],["#ff78b7","#ffd7ea"],["#ffb84f","#ffe2a0"]]:[["#ff77aa","#ffd4e3"],["#8ea7ff","#dae1ff"],["#ffd34d","#fff0a0"],["#f08dff","#f9d9ff"]];
+      const pal=palettes[Math.floor(seed*palettes.length)%palettes.length];ctx.fillStyle="rgba(0,0,0,.12)";ctx.beginPath();ctx.ellipse(2,5,22,13,.05,0,TAU);ctx.fill();
+      for(let i=0;i<10;i++){const a=i/10*TAU+(r.rot||0),rad=i%2?17:20;leaf(Math.cos(a)*rad,Math.sin(a)*rad,13,6.5,a,pal[i%2]);}
+      for(let i=0;i<6;i++){const a=i/6*TAU-(r.rot||0)*.5;leaf(Math.cos(a)*10,Math.sin(a)*10,10,5.2,a+Math.PI*.5,rain?"#56a85e":"#6bb85a");}
+      ctx.fillStyle="#f1a82e";ctx.strokeStyle=ink;ctx.lineWidth=2.2;circ(0,0,8.5);ctx.stroke();ctx.fillStyle="#ffe77a";for(let i=0;i<7;i++){const a=i/7*TAU;circ(Math.cos(a)*4.7,Math.sin(a)*4.7,1.35);}
     }else if(r.type==="rainforestHive"){
-      const hex=(x,y,s,col)=>{ctx.fillStyle=col;ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<6;i++){const aa=-Math.PI/6+i*TAU/6,px=x+Math.cos(aa)*s,py=y+Math.sin(aa)*s;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();ctx.stroke();};
-      ctx.fillStyle="#8f6b2d";ctx.beginPath();ctx.ellipse(0,0,23,19,.05,0,TAU);ctx.fill();
-      for(const [hx,hy,hs,col] of [[-9,-8,7,"#d9b04a"],[4,-10,8,"#e4bf57"],[-12,6,7,"#c89a3f"],[4,7,8,"#ddb651"],[17,-1,6,"#c9963e"],[-1,-1,8,"#efc85f"]])hex(hx,hy,hs,col);
-      ctx.fillStyle="#3d2b12";ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(6,1,8,6.5,.1,0,TAU);ctx.fill();ctx.stroke();
-      ctx.fillStyle="rgba(255,242,184,.35)";ctx.beginPath();ctx.ellipse(-6,-8,9,4.2,-.35,0,TAU);ctx.fill();
-      for(const [bx,by] of [[-18,-14],[20,10],[-24,6]]){ctx.fillStyle="#2a2116";ctx.beginPath();ctx.arc(bx,by,1.8,0,TAU);ctx.fill();ctx.fillStyle="rgba(118,210,255,.55)";ctx.beginPath();ctx.ellipse(bx-2.4,by-1.5,3.8,1.6,-.6,0,TAU);ctx.fill();ctx.beginPath();ctx.ellipse(bx+2.4,by+1.5,3.8,1.6,.6,0,TAU);ctx.fill();}
+      const hex=(x,y,s,col)=>{ctx.fillStyle=col;ctx.strokeStyle=ink;ctx.lineWidth=1.35;ctx.beginPath();for(let i=0;i<6;i++){const aa=-Math.PI/6+i*TAU/6,px=x+Math.cos(aa)*s,py=y+Math.sin(aa)*s;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();ctx.stroke();};
+      ctx.fillStyle="#8b5818";ctx.beginPath();ctx.ellipse(0,1,25,21,.05,0,TAU);ctx.fill();
+      for(const [hx,hy,hs,col] of [[-10,-9,7,"#ffc928"],[4,-11,8,"#ffd83d"],[-13,6,7,"#e9a91b"],[4,8,8,"#f6bd22"],[18,-1,6,"#e8a015"],[-1,-1,8,"#ffe052"],[12,12,6,"#f5b51c"]])hex(hx,hy,hs,col);
+      ctx.fillStyle="#3b250e";ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(7,1,8.5,6.8,.1,0,TAU);ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#ffcf31";ctx.lineWidth=4.4;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-15,13);ctx.quadraticCurveTo(-14,21,-12,27);ctx.moveTo(1,14);ctx.quadraticCurveTo(2,23,4,30);ctx.moveTo(15,11);ctx.quadraticCurveTo(17,18,16,24);ctx.stroke();ctx.fillStyle="#ffd841";circ(-12,28,3.2);circ(4,31,3.6);circ(16,25,2.8);
+      ctx.fillStyle="rgba(255,250,191,.58)";ctx.beginPath();ctx.ellipse(-7,-9,10,4.6,-.35,0,TAU);ctx.fill();
     }else if(r.type==="forestHerb"){
       for(let i=0;i<7;i++){const a=i/7*TAU,d=i%2?10:13;leaf(Math.cos(a)*d,Math.sin(a)*d,11,5,a,"#79b85d");}
       ctx.fillStyle="#a9d47c";circ(0,0,5.5);
@@ -27134,6 +27174,7 @@ function frame(now) {
         hudSyncAccum %= hudStep;
         syncHud();
         updateTameBtn();
+        updateWaterFillButton();
       }
     } else {
       draw(true);
@@ -27659,11 +27700,11 @@ function syncStarterPetSetup(resetForType = false) {
   }
   if (nameInput && document.activeElement !== nameInput) nameInput.value = starterPetNameValue();
   if (genderSelect) {
-    const forcedBeeGender = game.startPet === "queenbee" || game.startPet === "dronebee";
+    const forcedBeeGender = game.startPet === "queenbee" || game.startPet === "workerbee" || game.startPet === "dronebee";
     game.startPetGender = starterPetGenderValue();
     genderSelect.value = game.startPetGender;
     genderSelect.disabled = forcedBeeGender;
-    genderSelect.title = game.startPet === "queenbee" ? "Queen Bees are always Female" : game.startPet === "dronebee" ? "Drone Bees are always Male" : "Starter pet gender";
+    genderSelect.title = game.startPet === "queenbee" ? "Queen Bees are always Female" : game.startPet === "workerbee" ? "Worker Bees are always Female" : game.startPet === "dronebee" ? "Drone Bees are always Male" : "Starter pet gender";
   }
 }
 function updateSelectedStarterPetLabel() {
