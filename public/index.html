@@ -6434,127 +6434,93 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 38000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "664";
+const CUBE_SHARED_RULES_VERSION = "667";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
   Pickaxe: { dmg: 5.0, gather: 2.5, resourcePower: 1.15, range: 50, swing: 0.28, cadence: 0.50, cost: { wood: 6, stone: 4 }, gatherFor: "rock", woodWall: 4.0, stoneWall: 14.0 },
   Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 54, swing: 0.18, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
-  Bow:     { dmg: 9.0, gather: 0.12, resourcePower: 0.18, range: 46, swing: 0.22, cadence: 0.55, cost: { wood: 10, gold: 3 }, woodWall: 2.0, stoneWall: 1.5 },
+  Bow:     { dmg: 9.0, gather: 0.12, resourcePower: 0.18, range: 46, swing: 0.22, cadence: 0.55, cost: null, woodWall: 2.0, stoneWall: 1.5 },
+  TigerClaws:{ dmg: 7.0, gather: 0.16, resourcePower: 0.20, range: 44, swing: 0.18, cadence: 0.30, cost: null, woodWall: 2.8, stoneWall: 1.6 },
+  BoxingGloves:{ dmg: 6.2, gather: 0.10, resourcePower: 0.12, range: 48, swing: 0.20, cadence: 0.34, cost: null, woodWall: 2.2, stoneWall: 1.4 },
 };
 const TOOLS = JSON.parse(JSON.stringify(TOOL_BASE));
 const WALL_COST = { wood: 6 };
-const BASE_CRAFTABLES = [
-  { id: "Axe", name: "Wood Axe", cost: { wood: 7 }, desc: "Basic chopping axe. Skill upgrades can replace it with stronger versions." },
-  { id: "Pickaxe", name: "Wood Pickaxe", cost: { wood: 6, stone: 4 }, desc: "Best on rock & stone walls." },
-  { id: "Sword", name: "Wood Sword", cost: { wood: 9 }, desc: "Basic melee weapon. Skill upgrades can replace it with stronger versions." },
-  { id: "Bow", name: "Wood Bow", cost: { wood: 10, gold: 3 }, desc: "Safer ranged creature damage (uses wood)." },
-  { id: "Wall", name: "Wood Wall", cost: { wood: 6 }, desc: "Permanent breakable barrier." },
-  { id: "Tower", name: "Rock Watch Tower", cost: { wood: 18, stone: 12 }, desc: "Automatically throws rocks at Hostls, wild animals and rival players." },
-  { id: "Saddle", name: "Saddle", cost: { wood: 10, stone: 4 }, desc: "Ride adult/boss pets." },
-  { id: "HealPack", name: "Heal Pack", cost: { wood: 3, gold: 2 }, desc: "Restore 40 HP." },
+const BUILDABLE_IDS = ["Wall","Tower","Saddle","Windmill"];
+const STARTER_WEAPON_IDS = ["Axe","Sword","Pickaxe","Bow","TigerClaws","BoxingGloves"];
+const STARTER_WEAPON_CHOICES = [
+  {id:"weaponAxe",weapon:"Axe",icon:"🪓",name:"Axe",desc:"Strong chopping and solid close-range damage."},
+  {id:"weaponSword",weapon:"Sword",icon:"⚔️",name:"Sword",desc:"Balanced melee damage and reach."},
+  {id:"weaponPickaxe",weapon:"Pickaxe",icon:"⛏️",name:"Pickaxe",desc:"Strong mining with dependable melee damage."},
+  {id:"weaponBow",weapon:"Bow",icon:"🏹",name:"Bow & Arrows",desc:"Ranged attacks. Arrows use wood."},
+  {id:"weaponTigerClaws",weapon:"TigerClaws",icon:"🐯",name:"Tiger's Claws",desc:"Fast slashing attacks at close range."},
+  {id:"weaponBoxingGloves",weapon:"BoxingGloves",icon:"🥊",name:"Boxing Gloves",desc:"Fast heavy punches with good knock pressure."}
 ];
-function skillXpNeededForLevel(level){
-  level=Math.max(0,Math.floor(Number(level)||0));
-  // Every next skill takes a little more work than the one before it.
-  return Math.round(25 + level*9 + Math.floor(level*level*.05));
-}
-const STONE_SKILL_CHOICES = [
-  {id:"stoneWall",icon:"🧱",name:"Get a Better Wall",desc:"Upgrade your Wall to Stone. If you do not have a Wall yet, the upgrade waits for it."},
-  {id:"stoneSword",icon:"⚔️",name:"Get a Better Sword",desc:"Upgrade your Sword to Stone. If you do not have a Sword yet, the upgrade waits for it."},
-  {id:"stoneAxe",icon:"🪓",name:"Get a Better Axe",desc:"Upgrade your Axe to Stone. If you do not have an Axe yet, the upgrade waits for it."}
-];
-const SWORD_SPECIALIZATIONS = [
-  {id:"daggers",icon:"🗡️",name:"Daggers",desc:"Good: Attack speed • Bad: Reach"},
-  {id:"longSword",icon:"⚔️",name:"Long Sword",desc:"Good: Damage • Bad: Speed"},
-  {id:"spear",icon:"🔱",name:"Spear",desc:"Good: Reach • Bad: Speed"}
-];
-const AXE_SPECIALIZATIONS = [
-  {id:"doubleAxe",icon:"🪓",name:"Double Axe",desc:"Good: Double hits • Bad: Speed"},
-  {id:"throwingAxe",icon:"➰",name:"Throwing Axe",desc:"Good: Range • Bad: Gathering"},
-  {id:"battleAxe",icon:"⚔️",name:"Battle Axe",desc:"Good: Damage • Bad: Gathering"}
-];
+const BUILD_TIER_META={
+  Wall:[
+    {name:"Wood Wall",cost:{wood:6},desc:"Crafts exactly 1 wall."},
+    {name:"Stone Wall",cost:{wood:2,stone:9},desc:"Crafts 1 upgraded wall."},
+    {name:"Iron Wall",cost:{stone:10,gold:4},desc:"Crafts 1 heavy upgraded wall."}],
+  Tower:[
+    {name:"Wood Watch Tower",cost:{wood:18},desc:"Crafts exactly 1 attacking tower."},
+    {name:"Stone Watch Tower",cost:{wood:5,stone:12},desc:"Crafts 1 stronger attacking tower."},
+    {name:"Iron Watch Tower",cost:{stone:14,gold:5},desc:"Crafts 1 heavy attacking tower."}],
+  Saddle:[
+    {name:"Wood Saddle",cost:{wood:10},desc:"Ride Adult, Boss, or Superboss pets."},
+    {name:"Reinforced Saddle",cost:{wood:4,stone:8},desc:"Mounted pet moves 10% faster and takes 10% less damage."},
+    {name:"Guardian Saddle",cost:{stone:8,gold:5},desc:"Mounted pet moves 18% faster, attacks 15% harder, and takes 18% less damage."}],
+  Windmill:[
+    {name:"Wood Windmill",cost:{wood:16},desc:"Crafts exactly 1 placeable windmill."},
+    {name:"Stone Windmill",cost:{wood:5,stone:11},desc:"Crafts 1 stronger windmill."},
+    {name:"Iron Windmill",cost:{stone:12,gold:4},desc:"Crafts 1 heavy windmill."}]
+};
 const SKILL_MILESTONE_CHOICES = [
-  {id:"speed",icon:"💨",name:"Move Faster",desc:"Good: Speed • Bad: None"},
-  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"Good: Damage • Bad: None"},
-  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Good: Defense • Bad: None"}
+  {id:"speed",icon:"💨",name:"Move Faster",desc:"Increase movement speed."},
+  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"Increase attack power."},
+  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Reduce damage taken."}
 ];
-function isSkillStatMilestone(level){ level=Math.floor(Number(level)||0); return level>0 && level%10===0; }
-function toolSkillChoiceInfo(id){
-  const owned=player.owned||{};
-  player.toolTiers=player.toolTiers||{Axe:0,Pickaxe:0,Sword:0,Bow:0};
-  if(id==="toolSword"){
-    const tier=Math.max(0,Math.floor(Number(player.toolTiers.Sword)||0));
-    return tier<=0?{id,icon:"⚔️",name:"Get a Better Sword",desc:"Upgrade the Sword to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"⚔️",name:"Get an Iron Sword",desc:"Upgrade your Stone Sword to Iron."}:{id,icon:"⚔️",name:"Sword Training",desc:"Keep improving your Sword path."};
+function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*9+Math.floor(level*level*.05));}
+function isSkillStatMilestone(level){level=Math.floor(Number(level)||0);return level>0&&level%10===0;}
+function starterWeaponFromChoice(choice){const c=STARTER_WEAPON_CHOICES.find(x=>x.id===choice);return c?c.weapon:"";}
+function primaryWeaponLabel(){return player.skillStarterWeapon||"Fist";}
+function craftedItemCount(id){return Math.max(0,Math.floor(Number(player.craftedCounts?.[id])||0));}
+function buildUnlockTier(id){return clamp(Math.floor(Number(player.buildUnlockTiers?.[id])||0),0,2);}
+function craftedBuildTier(id){return clamp(Math.floor(Number(player.craftedTiers?.[id])||0),0,2);}
+function buildSkillChoiceInfo(id){
+  if(id==="weaponTier"){
+    const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice)||"Weapon",t=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
+    return {id,icon:w==="Bow"?"🏹":w==="Axe"?"🪓":w==="Pickaxe"?"⛏️":w==="TigerClaws"?"🐯":w==="BoxingGloves"?"🥊":"⚔️",name:t>=1?`Master ${w}`:`Upgrade ${w}`,desc:t>=2?`${w} is already fully upgraded.`:`Only your chosen ${w} path can receive weapon upgrades.`};
   }
-  if(id==="toolAxe"){
-    const tier=Math.max(0,Math.floor(Number(player.toolTiers.Axe)||0));
-    return tier<=0?{id,icon:"🪓",name:"Get a Better Axe",desc:"Upgrade the Axe to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"🪓",name:"Get an Iron Axe",desc:"Upgrade your Stone Axe to Iron."}:{id,icon:"🪓",name:"Axe Training",desc:"Keep improving your Axe path."};
-  }
-  if(id==="toolWall"){
-    const tier=Math.max(0,Math.floor(Number(player.wallTier)||0));
-    return tier<=0?{id,icon:"🧱",name:"Get a Better Wall",desc:"Upgrade the Wall to Stone. If you do not have it yet, the upgrade waits."}:tier===1?{id,icon:"🧱",name:"Get an Iron Wall",desc:"Upgrade your Stone Wall to Iron."}:{id,icon:"🧱",name:"Wall Training",desc:"Keep improving your building path."};
-  }
-  if(id==="toolPickaxe")return {id,icon:"⛏️",name:owned.Pickaxe?"Upgrade Pickaxe":"Get Pickaxe",desc:owned.Pickaxe?"Replace your Pickaxe with a better version.":"Gain a Pickaxe as a new tool."};
-  if(id==="toolBow")return {id,icon:"🏹",name:owned.Bow?"Upgrade Bow":"Get Bow",desc:owned.Bow?"Replace your Bow with a reinforced version.":"Gain a Bow as a new tool."};
-  if(id==="toolTower")return {id,icon:"🗼",name:owned.Tower?"Upgrade Watch Tower":"Get Watch Tower",desc:owned.Tower?"Replace your Watch Tower with a stronger version.":"Gain the Watch Tower as a new build tool."};
-  return {id,icon:"🔧",name:"Tool Upgrade",desc:"Improve a tool."};
+  const build=id.replace(/^build/,""),t=buildUnlockTier(build),next=Math.min(2,t+1),names=BUILD_TIER_META[build]||[];
+  return {id,icon:build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":"🌬️",name:`Unlock ${names[next]?.name||build}`,desc:`Changes the ${build} crafting recipe. Existing crafted ${build.toLowerCase()}s do not upgrade for free.`};
 }
 function toolSkillChoicesForLevel(level){
-  level=Math.max(1,Math.floor(Number(level)||1));
-  const path=player.skillStoneChoice==="stoneSword"?"toolSword":player.skillStoneChoice==="stoneAxe"?"toolAxe":"toolWall";
-  // Skill 2 revisits the same three Skill 1 paths: your chosen path is now the
-  // Iron option, while the other two are still available as Stone upgrades.
-  if(level===2)return ["toolSword","toolAxe","toolWall"].map(toolSkillChoiceInfo);
-  const rotation=level%3;
-  const extra=rotation===0?["toolBow","toolTower"]:rotation===1?["toolTower","toolPickaxe"]:["toolPickaxe","toolBow"];
-  return [path,...extra].map(toolSkillChoiceInfo);
+  level=Math.max(2,Math.floor(Number(level)||2));
+  const builds=["buildWall","buildTower","buildSaddle","buildWindmill"],off=(level-2)%builds.length;
+  const out=[];const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice),wt=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
+  if(w&&wt<2)out.push(buildSkillChoiceInfo("weaponTier"));
+  for(let i=0;i<builds.length&&out.length<3;i++){const id=builds[(off+i)%builds.length];if(buildUnlockTier(id.replace("build",""))<2)out.push(buildSkillChoiceInfo(id));}
+  while(out.length<3)out.push(...SKILL_MILESTONE_CHOICES.filter(x=>!out.some(y=>y.id===x.id)).slice(0,3-out.length));
+  return out.slice(0,3);
 }
 function applyToolSkillMilestones(){
-  const owned=player.owned||(player.owned={});
-  player.toolTiers=player.toolTiers||{Axe:0,Pickaxe:0,Sword:0,Bow:0};
-  let sword=player.skillStoneChoice==="stoneSword"?1:0;
-  let axe=player.skillStoneChoice==="stoneAxe"?1:0;
-  let wall=player.skillStoneChoice==="stoneWall"?1:0;
-  let pick=0,bow=0,tower=0;
-  const entries=Object.entries(player.skillMilestones||{}).sort((a,b)=>(Number(a[0])||0)-(Number(b[0])||0));
-  for(const [,id] of entries){
-    if(id==="toolSword")sword=Math.min(2,sword+1);
-    else if(id==="toolAxe")axe=Math.min(2,axe+1);
-    else if(id==="toolWall")wall=Math.min(2,wall+1);
-    else if(id==="toolPickaxe")pick++;
-    else if(id==="toolBow")bow++;
-    else if(id==="toolTower")tower++;
+  player.buildUnlockTiers=player.buildUnlockTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
+  const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice);
+  let weaponTier=0;const unlock={Wall:0,Tower:0,Saddle:0,Windmill:0};
+  for(const [,id] of Object.entries(player.skillMilestones||{})){
+    if(id==="weaponTier")weaponTier=Math.min(2,weaponTier+1);
+    else if(/^build(Wall|Tower|Saddle|Windmill)$/.test(id)){const b=id.slice(5);unlock[b]=Math.min(2,(unlock[b]||0)+1);}
   }
-  player.toolTiers.Sword=Math.max(player.toolTiers.Sword||0,sword);
-  player.toolTiers.Axe=Math.max(player.toolTiers.Axe||0,axe);
-  player.wallTier=Math.max(player.wallTier||0,wall);
-  if(pick){owned.Pickaxe=true;player.toolTiers.Pickaxe=Math.max(player.toolTiers.Pickaxe||0,Math.min(2,Math.max(0,pick-1)));registerHotbarItem("Pickaxe");}
-  if(bow){owned.Bow=true;player.toolTiers.Bow=Math.max(player.toolTiers.Bow||0,Math.min(1,Math.max(0,bow-1)));registerHotbarItem("Bow");}
-  if(tower){owned.Tower=true;player.towerTier=Math.max(player.towerTier||0,Math.min(2,Math.max(0,tower-1)));registerHotbarItem("Tower");}
+  if(w){player.toolTiers=player.toolTiers||{};player.toolTiers[w]=Math.max(player.toolTiers[w]||0,weaponTier);}
+  for(const b of BUILDABLE_IDS)player.buildUnlockTiers[b]=Math.max(player.buildUnlockTiers[b]||0,unlock[b]||0);
   applyToolTierStats();buildHotbar();buildCraftList();syncHud();
 }
-
 function currentCraftables(){
-  const a=BASE_CRAFTABLES.map(x=>({...x,cost:{...x.cost}}));
-  const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
-  const add=(x)=>a.push(x);
-
-  // Skill 1 starts the upgrade path: better Wall, Sword, or Axe. The choice
-  // replaces the normal tool-choice popup for that skill number.
-  if(lv>=4){
-    // Tool upgrades now come from the skill-choice popup. Crafting keeps utility
-    // recipes here instead of creating a second competing upgrade system.
-    add({id:"FieldKit",name:"Field Kit",cost:{wood:5,berries:4,gold:2},desc:"Skill 4: restore 70 HP."});
-  }
-  if(lv>=10){
-    add({id:"MasterGathererKit",name:"Master Gatherer Kit",cost:{wood:18,stone:18,gold:12},desc:"Skill 10: craft once for +18% gathering this run."});
-    add({id:"FortressBuilderKit",name:"Fortress Builder Kit",cost:{wood:20,stone:22,gold:10},desc:"Skill 10: craft once so walls and towers cost about 22% less this run."});
-    add({id:"CombatCrafterKit",name:"Combat Crafter Kit",cost:{wood:14,stone:16,gold:14},desc:"Skill 10: craft once so crafted weapons deal +12% damage this run."});
-  }
-  return a;
+  player.craftedCounts=player.craftedCounts||{Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedTiers=player.craftedTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
+  return BUILDABLE_IDS.map(id=>{const tier=buildUnlockTier(id),m=BUILD_TIER_META[id][tier],old=craftedBuildTier(id),up=tier>old&&craftedItemCount(id)>0;return{id,name:up?`Upgrade Craft: ${m.name}`:m.name,cost:{...m.cost},tier,desc:(up?`Your current hotbar ${id.toLowerCase()} stays tier ${old+1} until you craft this upgrade. `:"")+m.desc};});
 }
-const CRAFTABLES = BASE_CRAFTABLES;
+const BASE_CRAFTABLES=[];
+const CRAFTABLES=BASE_CRAFTABLES;
 
 
 const COLORS = [
@@ -10921,9 +10887,9 @@ function syncNetworkFullWorld(force = false) {
       player.skillLevel=schemaSkillLevel;player.skillXp=schemaSkillXp;
       player.skillRanks={speed:schemaSkillSpeed,strength:schemaSkillStrength,defense:schemaSkillDefense};
       player.pendingSkillMilestone=schemaPending;updateSkillHud();
-      if(schemaPending&&game.started&&!game.over)showSkillChoice(schemaPending);
+      if(schemaPending&&game.started&&!game.over&&!player.dead&&!own.dead)showSkillChoice(schemaPending);
     }
-    if (!!own.dead && !player.dead) { player.dead = true; player.splitT = 0; unlockAchievement("first_death"); if (!game.deathCamTarget && game.deathCamTargetId) game.deathCamTarget = resolveNetworkDeathCamTarget(game.deathCamTargetKind, game.deathCamTargetId); sfx.die(); }
+    if (!!own.dead && !player.dead) { player.dead = true; player.splitT = 0; clearSkillChoiceUi(); unlockAchievement("first_death"); if (!game.deathCamTarget && game.deathCamTargetId) game.deathCamTarget = resolveNetworkDeathCamTarget(game.deathCamTargetKind, game.deathCamTargetId); sfx.die(); }
     if (!own.dead && player.dead && !game.over) { player.dead = false; player.splitT = 0; }
   }
 
@@ -11400,6 +11366,7 @@ async function connectMultiplayer(options={}) {
         player.health = 0;
         player.dead = true;
         player.splitT = 0;
+        clearSkillChoiceUi();
         unlockAchievement("first_death");
         const attackerKind = String(data.attackerKind || "");
         const attackerId = String(data.attackerId || "");
@@ -11661,6 +11628,7 @@ function sendNetworkInput(dt) {
       tool: player.tool || "Fist",
       heldSpecial: player.heldSpecial || "",
       ridingPetId: player.riding && player.riding.netId ? player.riding.netId : "",
+      saddleTier: Math.max(0,Math.min(2,Math.floor(Number(player.saddleTier)||0))),
       // Keep authoritative mount collision geometry aligned with the locally
       // predicted mount during fast turns. The server validates/clamps this angle.
       ridingAngle: player.riding && Number.isFinite(player.riding.angle) ? player.riding.angle : null,
@@ -11777,11 +11745,11 @@ function drawRemotePlayer(v) {
     drawHeldBerry(arm, remoteSwing, holding);
   } else if (holding === "HoneyComb" || holding === "Honey") {
     drawHeldHoney(arm, holding, remoteSwing);
-  } else if (holding === "Wall" || holding === "Tower") {
+  } else if (holding === "Wall" || holding === "Tower" || holding === "Windmill") {
     drawHeldWall(arm);
   } else if (holding === "Saddle") {
     drawHeldSaddle(arm);
-  } else if (holding === "Fist") {
+  } else if (holding === "Fist" || holding === "TigerClaws" || holding === "BoxingGloves") {
     drawArm(1, v.punchSide === 1 ? remoteSwing : 0, arm, null, false, -armWalk);
     drawArm(-1, v.punchSide === -1 ? remoteSwing : 0, arm, null, false, armWalk);
   } else if (holding === "Axe" && throwingAxeOutForActor(v)) {
@@ -11928,7 +11896,7 @@ canvas.addEventListener("mousedown", e => {
       e.preventDefault();
       return;
     }
-    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
+    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill") {
       mouse.down = false;
       meleeAttack();
     } else {
@@ -11976,9 +11944,9 @@ if(waterFillBtn)waterFillBtn.addEventListener("pointerdown",e=>{e.preventDefault
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
   const special = player?.heldSpecial || "";
-  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?"DRINK":"EMPTY") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
+  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?"DRINK":"EMPTY") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
   mobileAttackBtn.textContent = label;
-  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Bucket empty — use the Fill button near water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
+  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Bucket empty — use the Fill button near water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
   mobileAttackBtn.setAttribute("aria-label", actionText);
   mobileAttackBtn.title = actionText;
 }
@@ -12045,7 +12013,7 @@ mobileAttackBtn.addEventListener("pointerdown", e => {
   if (!mobileMode || attackPointerId != null) return;
   e.preventDefault();
   attackPointerId = e.pointerId;
-  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower") {
+  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill") {
     mouse.down = false;
     meleeAttack();
   } else if (player.heldSpecial === "Saddle") {
@@ -15870,7 +15838,7 @@ function runPetXpMul(){return runShop.cape==="mentorCape"?1.50:1;}
 function runDefenseMul(){return (runShop.armor==="guardianArmor"?.66:runShop.armor==="ironArmor"?.78:runShop.armor==="leatherArmor"?.88:1) * skillDefenseMul();}
 
 const TAME_BASE_CHANCE = Object.assign(Object.fromEntries(Object.keys(PET_TYPES).map(type => [type, PET_RARITY_TAME_CHANCE[petRarity(type)] ?? .38])),{workerbee:.28,queenbee:.12,dronebee:.62});
-function tameChanceFor(type){const combReady=isWildBeeType(type)&&player?.heldSpecial==="HoneyComb"&&Math.max(0,Number(player?.biomeMaterials?.honeycomb)||0)>0;const combBonus=combReady ? .22 : 0;return clamp((TAME_BASE_CHANCE[type] ?? .38)+runTameBonus()+combBonus,.08,.95);}
+function tameChanceFor(type){const combReady=isWildBeeType(type)&&player?.heldSpecial==="HoneyComb"&&Math.max(0,Number(player?.biomeMaterials?.honeycomb)||0)>0;const combBonus=combReady ? (type==="queenbee"?.10:.22) : 0;return clamp((TAME_BASE_CHANCE[type] ?? .38)+runTameBonus()+combBonus,.08,.95);}
 function beeSleepSpawnChance(type,stage){ if(type!=="queenbee"&&type!=="workerbee"&&type!=="dronebee") return stage==="bigmomma"?0.96:stage==="superboss"?0.88:stage==="boss"?0.75:stage==="baby"?0.65:0; if(type==="queenbee"&&stage==="bigmomma") return 0.985; if(stage==="baby") return 0.84; if(stage==="boss") return 0.28; if(stage==="superboss") return 0.12; if(stage==="bigmomma") return 0.58; return 0.18; }
 function beeNapChance(type,stage,enraged=false){ if(type!=="queenbee"&&type!=="workerbee"&&type!=="dronebee") return stage==="baby"?0.10:(["boss","superboss","bigmomma"].includes(stage)&&!enraged?(stage==="bigmomma"?0.22:0.08):0); if(stage==="baby") return 0.20; if(stage==="boss") return enraged?0:0.035; if(stage==="superboss") return enraged?0:0.02; if(stage==="bigmomma") return enraged?0:0.34; return enraged?0:0.014; }
 
@@ -16165,7 +16133,7 @@ const player = {
   wood: 0, stone: 0, gold: 0, berries: 0,
   biomeMaterials: {},
   hydration: 100, bucketWater: true, bucketSips: BUCKET_MAX_SIPS,
-  tool: "Fist", lastWeaponTool: "Fist", heldSpecial: null, owned: { Fist: true, Axe: false, Pickaxe: false, Sword: false, Bow: false },
+  tool: "Fist", lastWeaponTool: "Fist", heldSpecial: null, owned: { Fist: true, Axe: false, Pickaxe: false, Sword: false, Bow: false, TigerClaws:false, BoxingGloves:false },
   attackCd: 0, shootCd: 0, punchTimer: 0, punchSide: 1, swingWeapon: "Fist",
   hurtFlash: 0, dead: false, splitT: 0,
   color: COLORS[0], username: "Cube",
@@ -16173,9 +16141,10 @@ const player = {
   hotbarOrder: ["Fist"],
   inventoryOrder: [],
   hasSaddle: false,
-  skillLevel: 0, skillXp: 0, skillMilestones: {}, pendingSkillMilestone: 0, skillStoneChoice:"", skillWeaponChoice:"",
+  skillLevel: 0, skillXp: 0, skillMilestones: {}, pendingSkillMilestone: 0, skillStoneChoice:"", skillWeaponChoice:"", skillStarterWeapon:"",
   skillRanks: {speed:0,strength:0,defense:0},
-  toolTiers: {Axe:0,Pickaxe:0,Sword:0,Bow:0}, wallTier:0, towerTier:0, craftBonuses:{gather:1,buildCost:1,combat:1},
+  toolTiers: {Axe:0,Pickaxe:0,Sword:0,Bow:0,TigerClaws:0,BoxingGloves:0}, wallTier:0, towerTier:0, saddleTier:0, windmillTier:0,
+  buildUnlockTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftedTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftedCounts:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftBonuses:{gather:1,buildCost:1,combat:1},
   pets: [], // max 4
   riding: null,
 };
@@ -16923,13 +16892,14 @@ function breedHiveBeesEveryTenNightsOffline(){
   }
 }
 function growHiveFromPollenOffline(hive){if(!hive)return;const old=Number(hive.scale)||4.2;hive.scale=Math.min(5.75,old+.035);hive.pulse=Math.max(Number(hive.pulse)||0,.35);}
+function spreadBeeFlowerOffline(a){const src=resources[a?._beeFlowerIdx];if(!isBeeFlowerResource(src))return;a._flowerSeedPollen=(Math.floor(Number(a._flowerSeedPollen)||0)+1);if(a._flowerSeedPollen<3)return;a._flowerSeedPollen=0;const total=resources.reduce((n,r)=>n+(isBeeFlowerResource(r)?1:0),0);if(total>=78)return;for(let tries=0;tries<12;tries++){const q=rand(0,TAU),d=rand(85,240),x=clamp(src.x+Math.cos(q)*d,30,WORLD_W-30),y=clamp(src.y+Math.sin(q)*d,30,WORLD_H-30);if(worldBiomeAt(x,y)!==worldBiomeAt(src.x,src.y)||solidOverlaps(x,y,18))continue;const type=src.type,info=BIOME_RESOURCE_INFO[type],flower={type,x,y,hp:9999,maxHp:9999,alive:true,scale:rand(1.0,1.32),solidR:18,canopyR:0,rot:rand(-.35,.35),pulse:0,respawnAt:0};resources.push(flower);addStaticCollider("resources",flower);spark(x,y,info?.color||"#ef8ac4",7,45);break;}}
 function updateWorkerBeeJobOffline(a,dt,hive){
   if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);let state=a._beeWorkState||"seek";
   if(state==="seek"){if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";let fi=offlineNearestBeeFlowerIndex(a,3400,a._beePreferBiome);if(fi<0)fi=offlineNearestBeeFlowerIndex(a,3400,"");if(fi<0){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}a._beeFlowerIdx=fi;a._beeWorkState="flower";state="flower";}
   if(state==="flower"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}const d=dist(a.x,a.y,f.x,f.y);const aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);if(d>Math.max(22,(f.solidR||18)+12))moveFacing(a,(a.speed||60)*.82,dt);else{a._beeWorkState="collect";a._beeWorkTimer=rand(1.8,3.0);a._beePollen=true;f.pulse=Math.max(Number(f.pulse)||0,.3);}return true;}
   if(state==="collect"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);if(a._beeWorkTimer<=0)a._beeWorkState="home";return true;}
   if(state==="home"){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;if(d>stop)moveFacing(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;}
-  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen){growHiveFromPollenOffline(hive);giveWildExpOffline(a,6,"pollen");}a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
+  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen){growHiveFromPollenOffline(hive);spreadBeeFlowerOffline(a);giveWildExpOffline(a,6,"pollen");}a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
   a._beeWorkState="seek";return false;
 }
 function updateDroneBeeHiveLifeOffline(a,dt,hive){
@@ -17622,8 +17592,8 @@ function handleHotkey(key) {
     banner("Saddle in hand — click an Adult, Boss, or Superboss pet to ride");
   } else if (item.label === "Wall") {
     selectWall();
-  } else if (item.label === "Tower" || item.special === "Tower") {
-    selectTower();
+  } else if (item.label === "Tower" || item.special === "Tower") {selectTower();
+  } else if (item.label === "Windmill" || item.special === "Windmill") {selectWindmill();
   }
   syncHotbar();
   syncMobilePrimaryButton();
@@ -17644,31 +17614,22 @@ function selectTower() {
   syncMobilePrimaryButton();
 }
 
+function consumeCraftedItem(id){player.craftedCounts=player.craftedCounts||{};const n=craftedItemCount(id);if(n<=0)return false;player.craftedCounts[id]=n-1;if(id==="Saddle")player.hasSaddle=player.craftedCounts[id]>0;if(player.craftedCounts[id]<=0){player.hotbarOrder=(player.hotbarOrder||[]).filter(x=>x!==id);player.inventoryOrder=(player.inventoryOrder||[]).filter(x=>x!==id);if(specialHotbarLabel(player.heldSpecial)===id){player.heldSpecial=null;player.tool=primaryWeaponLabel();player.lastWeaponTool=primaryWeaponLabel();}}buildHotbar();syncHotbar();return true;}
+function selectWindmill(){if(craftedItemCount("Windmill")<1)return;player.heldSpecial="Windmill";if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;banner("Windmill in hand — click to place it");syncHotbar();syncMobilePrimaryButton();}
 function placeWall() {
-  const tier=player.wallTier||0, baseCost=tier>=2?{stone:10,gold:3}:tier>=1?{stone:9}:{wood:6};
-  const mul=player.craftBonuses?.buildCost||1, cost=Object.fromEntries(Object.entries(baseCost).map(([k,v])=>[k,Math.max(1,Math.ceil(v*mul))]));
-  if (!canAfford(cost)) { banner(`Need ${costText(cost)} for wall`, true); return false; }
-  pay(cost);
-  const a = player.angle;
-  if (net.room) { try { net.room.send("build", { kind:"wall", angle:a, wallTier:tier }); } catch (_) {} }
-  else {const hp=tier>=2?190:tier>=1?125:72,kind=tier>=2?"iron":tier>=1?"stone":"wood";walls.push({ x: player.x + Math.cos(a) * 48, y: player.y + Math.sin(a) * 48, ttl: -1, r: 20, hp, maxHp:hp, kind, spiked:false, ownerId:"local" });}
-  sfx.craft();
-  syncHud();
-  syncHotbar();
-  return true;
+  if(craftedItemCount("Wall")<1){banner("Craft a Wall first",true);return false;}const tier=craftedBuildTier("Wall"),a=player.angle;
+  if(net.room){try{net.room.send("build",{kind:"wall",angle:a,wallTier:tier});}catch(_){}}else{const hp=tier>=2?190:tier>=1?125:72,kind=tier>=2?"iron":tier>=1?"stone":"wood";walls.push({x:player.x+Math.cos(a)*48,y:player.y+Math.sin(a)*48,ttl:-1,r:20,hp,maxHp:hp,kind,spiked:false,ownerId:"local"});}
+  consumeCraftedItem("Wall");sfx.craft();syncHud();return true;
 }
-
 function placeTower() {
-  const tier=player.towerTier||0, baseCost=tier>=2?{wood:10,stone:12,gold:3}:tier>=1?{wood:12,stone:10}:{wood:12,stone:6};
-  const mul=player.craftBonuses?.buildCost||1, cost=Object.fromEntries(Object.entries(baseCost).map(([k,v])=>[k,Math.max(1,Math.ceil(v*mul))]));
-  if (!canAfford(cost)) { banner(`Need ${costText(cost)} for tower`, true); return false; }
-  pay(cost);
-  const a = player.angle;
-  if (net.room) { try { net.room.send("build", { kind:"tower", angle:a, towerTier:tier }); } catch (_) {} }
-  else towers.push({ x: player.x + Math.cos(a) * 55, y: player.y + Math.sin(a) * 55, cd: 0.5, tier, ownerId:"local" });
-  sfx.craft();
-  syncHud();syncHotbar();
-  return true;
+  if(craftedItemCount("Tower")<1){banner("Craft a Tower first",true);return false;}const tier=craftedBuildTier("Tower"),a=player.angle;
+  if(net.room){try{net.room.send("build",{kind:"tower",angle:a,towerTier:tier});}catch(_){}}else towers.push({x:player.x+Math.cos(a)*55,y:player.y+Math.sin(a)*55,cd:.5,tier,ownerId:"local"});
+  consumeCraftedItem("Tower");sfx.craft();syncHud();return true;
+}
+function placeWindmill(){
+  if(craftedItemCount("Windmill")<1){banner("Craft a Windmill first",true);return false;}const tier=craftedBuildTier("Windmill"),a=player.angle,hp=tier>=2?240:tier>=1?160:95;
+  if(net.room){try{net.room.send("build",{kind:"windmill",angle:a,windmillTier:tier});}catch(_){}}else walls.push({x:player.x+Math.cos(a)*58,y:player.y+Math.sin(a)*58,ttl:-1,r:25,hp,maxHp:hp,kind:`windmill${tier}`,spiked:false,ownerId:"local",spin:rand(0,TAU)});
+  consumeCraftedItem("Windmill");sfx.craft();syncHud();return true;
 }
 
 let bannerTimer = 0;
@@ -17844,6 +17805,12 @@ function meleeAttack() {
     if (player.attackCd > 0) return;
     player.attackCd = 0.24;
     placeTower();
+    return;
+  }
+  if (player.heldSpecial === "Windmill") {
+    if (player.attackCd > 0) return;
+    player.attackCd = 0.24;
+    placeWindmill();
     return;
   }
   if (player.heldSpecial === "Saddle") return;
@@ -18078,6 +18045,7 @@ function meleeAttack() {
 function gatherResource(r, t, toolOverride=null) {
   if (!r || !r.alive || r.type === "pond" || r.type === "river") return;
   const toolName = toolOverride || player.tool || "Fist";
+  if(!net.room&&isBeeFlowerResource(r)){r.pulse=1;spark(r.x,r.y,BIOME_RESOURCE_INFO[r.type]?.color||"#ef8ac4",5,48);return;}
   if(!net.room){gainSkillXp(1,"resource-hit"); consumeHydration(r.type === "bush" ? 0.65 : 1.2);}
   const isWood = r.type === "tree" || r.type === "log";
 
@@ -18192,7 +18160,7 @@ function eatBush(r) {
 }
 function restoreLastWeaponAfterSpecial() {
   const wanted = player.lastWeaponTool;
-  player.tool = (wanted && TOOLS[wanted] && player.owned[wanted]) ? wanted : "Fist";
+  player.tool = (wanted && TOOLS[wanted] && player.owned[wanted]) ? wanted : primaryWeaponLabel();
   player.lastWeaponTool = player.tool;
   player.heldSpecial = null;
   player.swingWeapon = player.tool;
@@ -18459,7 +18427,7 @@ function clearMoonmarkSpawnAreaOffline(x, y, radius=36) {
 
   // Break scenery/resources in the spawn footprint. Resources can respawn later.
   for (const r of resources) {
-    if (!r || !r.alive || r.type==="rainforestHive") continue;
+    if (!r || !r.alive || r.type==="rainforestHive" || isBeeFlowerResource(r)) continue;
     if (!resourceTouchingCircle(r, x, y, clearR)) continue;
     r.hp = 0; r.alive = false; r.gatherCredit = 0;
     r.respawnAt = game.time + rand(12, 22);
@@ -19203,6 +19171,7 @@ function hitPlayer(dmg, attacker = null) {
     player.health = 0;
     player.dead = true;
     player.splitT = 0;
+    clearSkillChoiceUi();
     unlockAchievement("first_death");
     game.firstLightReady = false;
     setKilledBy(player, attacker);
@@ -19732,7 +19701,7 @@ function petResourceDamageAmount(pet, resource=null, ability=false) {
 }
 function petHitResourceOffline(pet, r, ability=false) {
   if (!pet || !r || !r.alive || net.room) return false;
-  if(r.type==="rainforestHive"){r.pulse=1;spark(r.x,r.y,"#d0ad4c",4,55);return true;}
+  if(r.type==="rainforestHive"||isBeeFlowerResource(r)){r.pulse=1;spark(r.x,r.y,r.type==="rainforestHive"?"#d0ad4c":"#ef8ac4",4,55);return true;}
   const damage = petResourceDamageAmount(pet, r, ability);
   r.hp = Math.max(0, (Number(r.hp) || 1) - damage);
   r.pulse = 1;
@@ -19758,7 +19727,7 @@ function petDamageResourcesAround(pet, x, y, radius, ability=true) {
   }
 }
 function animalResourceBlocksPath(a, r, targetX = null, targetY = null) {
-  if (!a || !r || !r.alive) return false;
+  if (!a || !r || !r.alive || isBeeFlowerResource(r)) return false;
   const c = resourceSolidCenter(r);
   const d = dist(a.x, a.y, c.x, c.y);
   const reach = Math.max(82, (Number(a.r)||18)*2.2 + (Number(r.solidR)||16) + 18);
@@ -19884,7 +19853,7 @@ function wildAttackBlockingResource(a) {
     a.atkCd=animalAttackCooldown(a.type,a.stage,false);
     a.attackAnim=.22;
     const blockers=blockingResourcesForAnimal(a,null,null,6);if(!blockers.length)blockers.push(r);
-    for(const br of blockers){const bc=resourceSolidCenter(br);if(br.type==="rainforestHive"){br.pulse=1;spark(bc.x,bc.y,"#d0ad4c",4,55);continue;}const damage=petResourceDamageAmount(a,br,false);br.hp=Math.max(0,(Number(br.hp)||1)-damage);br.pulse=1;spark(bc.x,bc.y,br.type==="rock"?"#a9b3bd":br.type==="bush"?"#d1315c":"#c99a5b",4,55);if(br.hp<=0){br.alive=false;br.gatherCredit=0;br.respawnAt=game.time+rand(12,22);}}
+    for(const br of blockers){const bc=resourceSolidCenter(br);if(br.type==="rainforestHive"||isBeeFlowerResource(br)){br.pulse=1;spark(bc.x,bc.y,isBeeFlowerResource(br)?"#ef8ac4":"#d0ad4c",4,55);continue;}const damage=petResourceDamageAmount(a,br,false);br.hp=Math.max(0,(Number(br.hp)||1)-damage);br.pulse=1;spark(bc.x,bc.y,br.type==="rock"?"#a9b3bd":br.type==="bush"?"#d1315c":"#c99a5b",4,55);if(br.hp<=0){br.alive=false;br.gatherCredit=0;br.respawnAt=game.time+rand(12,22);}}
     if(!r.alive)a._blockingResourceTarget=null;
   }
   return true;
@@ -21628,8 +21597,15 @@ function validDeathCamTarget(t) {
   if (!Number.isFinite(Number(t.x)) || !Number.isFinite(Number(t.y))) return false;
   return true;
 }
+function spawnQueenBroodFromBossOffline(victim,killer){
+  if(net.room||!victim||!(killer===player||killer?.owned)||victim._queenBroodSpawned||victim.type!=="queenbee"||!["superboss","bigmomma"].includes(victim.stage))return;
+  victim._queenBroodSpawned=true;const count=victim.stage==="bigmomma"?randi(3,5):randi(2,4);
+  for(let i=0;i<count;i++){const b=spawnWildAnimal(false,"baby","queenbee",victim,"rainforest");if(!b)continue;b.x=clamp(victim.x+rand(-105,105),35,WORLD_W-35);b.y=clamp(victim.y+rand(-90,90),35,WORLD_H-35);b.sleeping=true;b.enraged=false;b.tameFailedAggro=false;b._queenBrood=true;}
+  floatText(victim.x,victim.y-victim.r-32,`${count} baby queens!`,"#ffe66d");
+}
 function setKilledBy(victim, killer) {
   if (!victim || !killer || victim === killer) return;
+  spawnQueenBroodFromBossOffline(victim,killer);
   victim._killedBy = killer;
 }
 function setDeathCameraTarget(target, kind = "", id = "") {
@@ -21869,7 +21845,7 @@ function updatePlayer(dt) {
       const mount = player.riding;
       const desired = Math.atan2(dy, dx);
       smoothTurn(mount, desired, dt, mountedPetTurnSpeed(mount));
-      speed = Math.max(24, mount.speed || animalSpeed(mount.type, mount.stage, true)) * 2.30;
+      speed = Math.max(24, mount.speed || animalSpeed(mount.type, mount.stage, true)) * 2.30 * (1+(clamp(Math.floor(Number(player.saddleTier)||0),0,2)*.09));
       if (pointInsideWater(mount.x, mount.y)) speed *= 0.78;
       // Arrow/joystick direction steers the mount, but motion is always along
       // the direction the animal is actually facing right now. This preserves
@@ -22050,7 +22026,8 @@ function ensureHotbarInventoryState(){
   const keptHot=new Set(player.hotbarOrder),seenInv=new Set();
   player.inventoryOrder=[];
   for(const label of [...sourceInv,...overflow]){if(!label||keptHot.has(label)||seenInv.has(label))continue;seenInv.add(label);player.inventoryOrder.push(label);}
-  if(!player.hotbarOrder.includes("Fist")){if(player.hotbarOrder.length>=HOTBAR_MAX_SLOTS){const moved=player.hotbarOrder.pop();if(moved&&!player.inventoryOrder.includes(moved))player.inventoryOrder.unshift(moved);}player.hotbarOrder.unshift("Fist");}
+  const primary=primaryWeaponLabel();player.hotbarOrder=player.hotbarOrder.filter(x=>hotbarLabelAvailable(x)||x===primary||x==="Bucket");player.inventoryOrder=player.inventoryOrder.filter(x=>hotbarLabelAvailable(x));
+  if(!player.hotbarOrder.includes(primary)){if(player.hotbarOrder.length>=HOTBAR_MAX_SLOTS){const moved=player.hotbarOrder.pop();if(moved&&!player.inventoryOrder.includes(moved))player.inventoryOrder.unshift(moved);}player.hotbarOrder.unshift(primary);}
 }
 function registerHotbarItem(label) {
   if (!label) return;
@@ -22060,10 +22037,10 @@ function registerHotbarItem(label) {
 }
 function ensureHotbarAcquisitionOrder() {
   ensureHotbarInventoryState();
-  registerHotbarItem("Fist");
+  registerHotbarItem(primaryWeaponLabel());
   registerHotbarItem("Bucket");
-  for (const t of ["Axe","Pickaxe","Sword","Bow"]) if (player.owned[t]) registerHotbarItem(t);
-  if (player.hasSaddle) registerHotbarItem("Saddle");
+  for (const t of STARTER_WEAPON_IDS) if (player.owned[t]) registerHotbarItem(t);
+  for(const b of BUILDABLE_IDS)if(craftedItemCount(b)>0)registerHotbarItem(b);
   if ((player.berries||0)>0) registerHotbarItem("Berry");
   if((player.biomeMaterials?.jungleBerry||0)>0)registerHotbarItem("Jungle Fruit");
   if((player.biomeMaterials?.frostBerry||0)>0)registerHotbarItem("Frost Berry");
@@ -22072,24 +22049,23 @@ function ensureHotbarAcquisitionOrder() {
   if((player.biomeMaterials?.stoneFruit||0)>0)registerHotbarItem("Stone Fruit");
   if((player.biomeMaterials?.honeycomb||0)>0)registerHotbarItem("Honey Comb");
   if((player.biomeMaterials?.honey||0)>0)registerHotbarItem("Honey");
-  if (player.owned.Wall) registerHotbarItem("Wall");
-  if (player.owned.Tower) registerHotbarItem("Tower");
+
 }
 function hotbarLabelAvailable(label){
-  if(label==="Fist"||label==="Bucket")return true;
-  if(["Axe","Pickaxe","Sword","Bow"].includes(label))return !!player.owned[label];
-  if(label==="Saddle")return !!player.hasSaddle;
+  if(label==="Bucket")return true;if(label==="Fist")return !player.skillStarterWeapon;
+  if(STARTER_WEAPON_IDS.includes(label))return !!player.owned[label]&&label===primaryWeaponLabel();
+  if(BUILDABLE_IDS.includes(label))return craftedItemCount(label)>0;
   if(label==="Berry")return (player.berries||0)>0;
   const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey"}[label];
   if(mat)return (player.biomeMaterials?.[mat]||0)>0;
-  if(label==="Wall")return !!player.owned.Wall;if(label==="Tower")return !!player.owned.Tower;return false;
+  return false;
 }
-function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",Saddle:"Saddle",Tower:"Tower"})[special]||"";}
+function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill"})[special]||"";}
 function swapInventoryIntoHotbar(inLabel,outLabel){
   ensureHotbarInventoryState();
-  const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel==="Fist"||!player.inventoryOrder.includes(inLabel))return false;
+  const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel===primaryWeaponLabel()||!player.inventoryOrder.includes(inLabel))return false;
   player.hotbarOrder[idx]=inLabel;player.inventoryOrder=player.inventoryOrder.filter(v=>v!==inLabel);if(outLabel&&!player.inventoryOrder.includes(outLabel))player.inventoryOrder.push(outLabel);
-  if(player.tool===outLabel||specialHotbarLabel(player.heldSpecial)===outLabel){player.heldSpecial=null;player.tool="Fist";player.lastWeaponTool="Fist";}
+  if(player.tool===outLabel||specialHotbarLabel(player.heldSpecial)===outLabel){player.heldSpecial=null;player.tool=primaryWeaponLabel();player.lastWeaponTool=primaryWeaponLabel();}
   player._inventorySwapCandidate="";buildHotbar();syncHotbar();syncMobilePrimaryButton();return true;
 }
 function getHotbarItems() {
@@ -22101,10 +22077,10 @@ function getHotbarItems() {
   for (const label of player.hotbarOrder) {
     if (out.length>=hotkeys.length) break;
     let entry=null;
-    if (label === "Fist" || ["Axe","Pickaxe","Sword","Bow"].includes(label)) {
-      if (label === "Fist" || player.owned[label]) entry={tool:label,label};
+    if (label === "Fist" || STARTER_WEAPON_IDS.includes(label)) {
+      if ((label === "Fist" && !player.skillStarterWeapon) || player.owned[label]) entry={tool:label,label};
     } else if (label === "Bucket") { const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS); entry={tool:null,label:"Bucket",special:"Bucket",qty:sips>0?sips:""}; }
-    else if (label === "Saddle" && player.hasSaddle) entry={tool:null,label:"Saddle",special:"Saddle"};
+    else if (label === "Saddle" && craftedItemCount("Saddle")>0) entry={tool:null,label:"Saddle",special:"Saddle",qty:craftedItemCount("Saddle")};
     else if (label === "Berry") entry={tool:null,label:"Berry",special:"Berry",qty:player.berries||0};
     else if (label === "Jungle Fruit") entry={tool:null,label:"Jungle Fruit",special:"JungleBerry",qty:player.biomeMaterials?.jungleBerry||0};
     else if (label === "Frost Berry") entry={tool:null,label:"Frost Berry",special:"FrostBerry",qty:player.biomeMaterials?.frostBerry||0};
@@ -22113,8 +22089,9 @@ function getHotbarItems() {
     else if (label === "Stone Fruit") entry={tool:null,label:"Stone Fruit",special:"StoneFruit",qty:player.biomeMaterials?.stoneFruit||0};
     else if (label === "Honey Comb") entry={tool:null,label:"Honey Comb",special:"HoneyComb",qty:player.biomeMaterials?.honeycomb||0};
     else if (label === "Honey") entry={tool:null,label:"Honey",special:"Honey",qty:player.biomeMaterials?.honey||0};
-    else if (label === "Wall" && player.owned.Wall) entry={tool:null,label:"Wall"};
-    else if (label === "Tower" && player.owned.Tower) entry={tool:null,label:"Tower",special:"Tower"};
+    else if (label === "Wall" && craftedItemCount("Wall")>0) entry={tool:null,label:"Wall",special:"Wall",qty:craftedItemCount("Wall")};
+    else if (label === "Tower" && craftedItemCount("Tower")>0) entry={tool:null,label:"Tower",special:"Tower",qty:craftedItemCount("Tower")};
+    else if (label === "Windmill" && craftedItemCount("Windmill")>0) entry={tool:null,label:"Windmill",special:"Windmill",qty:craftedItemCount("Windmill")};
     if(entry) out.push({key:hotkeys[out.length],...entry});
   }
   return out;
@@ -22127,10 +22104,11 @@ function toolMaterialPalette(tier=0){
   return {base:"#82502c",mid:"#a96b3b",light:"#cf8a4f",dark:"#452a17"};
 }
 function iconSvg(name) {
+  const buildTier=BUILDABLE_IDS.includes(name)?craftedBuildTier(name):0,buildPal=toolMaterialPalette(buildTier);
   const axeTier=clamp(Math.floor(Number(player.toolTiers?.Axe)||0),0,2);
   const pickTier=clamp(Math.floor(Number(player.toolTiers?.Pickaxe)||0),0,2);
   const swordTier=clamp(Math.floor(Number(player.toolTiers?.Sword)||0),0,2);
-  const bowTier=clamp(Math.floor(Number(player.toolTiers?.Bow)||0),0,1);
+  const bowTier=clamp(Math.floor(Number(player.toolTiers?.Bow)||0),0,2);
   const ap=toolMaterialPalette(axeTier),pp=toolMaterialPalette(pickTier),sp=toolMaterialPalette(swordTier),bp=toolMaterialPalette(bowTier>=1?2:0);
   const spec=String(player.skillWeaponChoice||"");
   const axeIcon=`<g transform="translate(0.5 0.5)"><path d="M12.4 5.2 L15 5.2 L15 22.4 L12.4 22.4 Z" fill="${ap.base}" stroke="${ap.dark}" stroke-width="1"/><rect x="11.5" y="11" width="4.4" height="2.1" rx="0.9" fill="${ap.light}" opacity="0.62"/><path d="M4.9 10.2 L7.6 7.6 L12.4 7.6 L12.4 17.7 L7.6 17.7 L4.9 15.3 Z" fill="${ap.mid}" stroke="${ap.dark}" stroke-width="1.05"/></g>`;
@@ -22146,9 +22124,12 @@ function iconSvg(name) {
     Pickaxe: pickIcon,
     Sword: swordIcon,
     Bow: bowIcon,
-    Wall: '<rect x="3" y="3" width="20" height="20" rx="2" fill="#a9744f" stroke="#5c3a22" stroke-width="2"/><line x1="3" y1="13" x2="23" y2="13" stroke="#5c3a22" stroke-width="1.5"/><line x1="13" y1="3" x2="13" y2="13" stroke="#5c3a22" stroke-width="1.5"/>',
-    Tower: '<rect x="7" y="6" width="12" height="16" rx="2" fill="#6b5344"/><rect x="4" y="4" width="18" height="6" fill="#8a6a50"/><circle cx="13" cy="14" r="3" fill="#c94b4b"/>',
-    Saddle: '<path d="M5 9 Q13 4 21 9 L19 17 Q13 20 7 17 Z" fill="#9a6238" stroke="#4a2d18" stroke-width="2"/><path d="M8 10 Q13 7 18 10" fill="none" stroke="#d8b23f" stroke-width="2"/><path d="M9 17 L7 23 M17 17 L19 23" stroke="#5c3a22" stroke-width="2.2" stroke-linecap="round"/>',
+    TigerClaws: `<g stroke="#2b241d" stroke-width="1.2"><path d="M6 22 Q11 8 14 5" stroke="#e8d3a2" stroke-width="3"/><path d="M12 23 Q16 9 19 5" stroke="#e8d3a2" stroke-width="3"/><path d="M18 23 Q21 11 24 8" stroke="#e8d3a2" stroke-width="3"/></g>`,
+    BoxingGloves: `<g fill="#c94b4b" stroke="#54201f" stroke-width="1.3"><circle cx="11" cy="13" r="7"/><circle cx="21" cy="13" r="7"/><rect x="6" y="18" width="8" height="6" rx="2"/><rect x="18" y="18" width="8" height="6" rx="2"/></g>`,
+    Wall: `<rect x="3" y="3" width="20" height="20" rx="2" fill="${buildPal.mid}" stroke="${buildPal.dark}" stroke-width="2"/><line x1="3" y1="13" x2="23" y2="13" stroke="${buildPal.dark}" stroke-width="1.5"/><line x1="13" y1="3" x2="13" y2="13" stroke="${buildPal.dark}" stroke-width="1.5"/>`,
+    Tower: `<rect x="7" y="6" width="12" height="16" rx="2" fill="${buildPal.base}"/><rect x="4" y="4" width="18" height="6" fill="${buildPal.mid}"/><circle cx="13" cy="14" r="3" fill="${buildTier>=2?'#e2d16b':'#c94b4b'}"/>`,
+    Windmill: `<rect x="11" y="9" width="6" height="15" fill="${buildPal.base}"/><circle cx="14" cy="9" r="2.5" fill="${buildPal.light}"/><path d="M14 9 L14 1 M14 9 L26 9 M14 9 L14 17 M14 9 L2 9" stroke="${buildPal.light}" stroke-width="3"/>`,
+    Saddle: `<path d="M5 9 Q13 4 21 9 L19 17 Q13 20 7 17 Z" fill="${buildPal.base}" stroke="${buildPal.dark}" stroke-width="2"/><path d="M8 10 Q13 7 18 10" fill="none" stroke="${buildPal.light}" stroke-width="2"/><path d="M9 17 L7 23 M17 17 L19 23" stroke="${buildPal.dark}" stroke-width="2.2" stroke-linecap="round"/>`,
     Bucket: '<path d="M6 8 H20 L18 23 H8 Z" fill="#8c98a0" stroke="#252a2d" stroke-width="2"/><path d="M8 8 Q8 2 13 2 Q18 2 18 8" fill="none" stroke="#444b50" stroke-width="2"/><path class="bucket-water" d="M9 15 H17 L16.4 21 H9.6 Z" fill="#4aaed0"/><path d="M7 9 H19" stroke="#d7dde0" stroke-width="1.5"/>',
     Berry: '<circle cx="9" cy="15" r="5" fill="#d83d68"/><circle cx="17" cy="15" r="5" fill="#e65a80"/><circle cx="13" cy="10" r="4" fill="#c92e5c"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#6ab04c"/>',
     "Jungle Fruit": '<g><ellipse cx="13" cy="14" rx="8" ry="6.5" fill="#f07a42" stroke="#7c3c20" stroke-width="1.3"/><ellipse cx="10.5" cy="11.5" rx="2.2" ry="1.4" fill="#ffc16c" opacity=".8"/><path d="M13 7 Q16 2 22 5 Q18 9 13 9Z" fill="#3d8a45" stroke="#24572c" stroke-width="1"/></g>',
@@ -22177,7 +22158,7 @@ function buildHotbar() {
       div.title = "Empty — craft items to fill";
     } else {
       div.innerHTML = `<span class="key">${item.key}</span>${iconSvg(item.label)}${item.qty != null ? `<span class="qty">${item.qty}</span>` : ""}`;
-      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : item.label === "Stone Fruit" ? `Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration` : (item.tool ? toolDisplayName(item.tool) : item.label));
+      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : item.label === "Stone Fruit" ? `Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration` : (item.tool ? toolDisplayName(item.tool) : BUILDABLE_IDS.includes(item.label)?`${BUILD_TIER_META[item.label][craftedBuildTier(item.label)].name} ×${craftedItemCount(item.label)}`:item.label));
       div.addEventListener("click", () => handleHotkey(item.key));
     }
     bar.appendChild(div);
@@ -22207,7 +22188,8 @@ function syncHotbar() {
     const wallActive = item.label === "Wall" && player.heldSpecial === "Wall";
     const saddleActive = item.label === "Saddle" && player.heldSpecial === "Saddle";
     const towerActive = item.label === "Tower" && player.heldSpecial === "Tower";
-    s.classList.toggle("active", (isTool && item.tool === player.tool && !player.heldSpecial) || bucketActive || berryActive || honeyCombActive || biomeFoodActive || wallActive || saddleActive || towerActive);
+    const windmillActive = item.label === "Windmill" && player.heldSpecial === "Windmill";
+    s.classList.toggle("active", (isTool && item.tool === player.tool && !player.heldSpecial) || bucketActive || berryActive || honeyCombActive || biomeFoodActive || wallActive || saddleActive || towerActive || windmillActive);
     s.classList.toggle("locked", false);
     if (item.special === "Bucket") {
       const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS);player.bucketWater=sips>0;
@@ -22680,30 +22662,12 @@ function updatePetCardCooldowns() {
 }
 
 function skillNextThreshold(){ return skillXpNeededForLevel(player.skillLevel); }
-function pendingStoneSkillChoice(){
-  return Math.max(0,Math.floor(Number(player.skillLevel)||0))>=1 && !player.skillStoneChoice;
-}
-function pendingWeaponSkillChoice(){
-  const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
-  return lv>=6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe") && !player.skillWeaponChoice;
-}
-function skillLevelUsesWeaponChoice(level){
-  return Math.floor(Number(level)||0)===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe");
-}
+function pendingStoneSkillChoice(){return Math.max(0,Math.floor(Number(player.skillLevel)||0))>=1&&!player.skillStarterWeapon;}
+function pendingWeaponSkillChoice(){return false;}
+function skillLevelUsesWeaponChoice(level){return false;}
 function pendingSkillMilestone(){
-  // Every skill number earned gets one choice. Special branch levels replace
-  // the normal boost choice instead of adding a second popup for that level.
-  const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));
-  player.skillMilestones=player.skillMilestones||{};
-  for(let m=1;m<=lv;m++){
-    if(m===1){ if(!player.skillStoneChoice)return 1; continue; }
-    if(m===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
-      if(!player.skillWeaponChoice)return 6;
-      continue;
-    }
-    if(!player.skillMilestones[m])return m;
-  }
-  return 0;
+  const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));player.skillMilestones=player.skillMilestones||{};
+  for(let m=1;m<=lv;m++){if(m===1){if(!player.skillStarterWeapon)return 1;continue;}if(!player.skillMilestones[m])return m;}return 0;
 }
 function animateSkillHud(kind="gain"){
   const hud=el("skillHud"); if(!hud)return;
@@ -22746,99 +22710,38 @@ function gainSkillXp(amount,reason=""){
   }
 }
 function applyStoneSkillChoice(choice,announce=false){
-  if(!["stoneWall","stoneSword","stoneAxe"].includes(choice))return false;
-  player.skillStoneChoice=choice;
-  // Skill choices are UPGRADES, not free items. If the base item is already in
-  // the hotbar it changes in-place. If it is not owned yet, remember the tier so
-  // the upgrade is waiting when the player eventually crafts/acquires that item.
-  if(choice==="stoneWall")player.wallTier=Math.max(player.wallTier||0,1);
-  else if(choice==="stoneSword")player.toolTiers.Sword=Math.max(player.toolTiers?.Sword||0,1);
-  else if(choice==="stoneAxe")player.toolTiers.Axe=Math.max(player.toolTiers?.Axe||0,1);
+  const weapon=starterWeaponFromChoice(choice);if(!weapon)return false;
+  player.skillStoneChoice=choice;player.skillStarterWeapon=weapon;player.skillWeaponChoice="";
+  player.owned=player.owned||{};for(const w of STARTER_WEAPON_IDS)player.owned[w]=w===weapon;player.owned.Fist=false;
+  player.toolTiers=player.toolTiers||{};if(player.toolTiers[weapon]==null)player.toolTiers[weapon]=0;
+  player.tool=weapon;player.lastWeaponTool=weapon;player.heldSpecial=null;
+  player.hotbarOrder=(player.hotbarOrder||[]).map(x=>x==="Fist"?weapon:x).filter((x,i,a)=>!STARTER_WEAPON_IDS.includes(x)||x===weapon).filter((x,i,a)=>a.indexOf(x)===i);
+  player.inventoryOrder=(player.inventoryOrder||[]).filter(x=>x!=="Fist"&&(!STARTER_WEAPON_IDS.includes(x)||x===weapon));
   applyToolTierStats();buildHotbar();buildCraftList();syncHud();
-  if(announce){const c=STONE_SKILL_CHOICES.find(x=>x.id===choice);const owns=choice==="stoneWall"?!!player.owned.Wall:choice==="stoneSword"?!!player.owned.Sword:!!player.owned.Axe;banner(owns?`${c?.name||"Stone upgrade"} replaced your old version.`:`${c?.name||"Stone upgrade"} chosen — it will apply when you get the base item.`);}
+  if(announce)banner(`${weapon==="TigerClaws"?"Tiger's Claws":weapon==="BoxingGloves"?"Boxing Gloves":weapon} selected — Hands were replaced for this run.`);
   return true;
 }
-function applyWeaponSkillChoice(choice,announce=false){
-  const valid=player.skillStoneChoice==="stoneSword"?["daggers","longSword","spear"]:player.skillStoneChoice==="stoneAxe"?["doubleAxe","throwingAxe","battleAxe"]:[];
-  if(!valid.includes(choice))return false;
-  player.skillWeaponChoice=choice;
-  // The specialization is the iron-tier replacement of the existing weapon.
-  // It never grants the weapon itself or creates another hotbar entry.
-  if(player.skillStoneChoice==="stoneSword")player.toolTiers.Sword=Math.max(player.toolTiers?.Sword||0,2);
-  if(player.skillStoneChoice==="stoneAxe")player.toolTiers.Axe=Math.max(player.toolTiers?.Axe||0,2);
-  applyToolTierStats();buildHotbar();buildCraftList();syncHud();
-  if(announce){const c=[...SWORD_SPECIALIZATIONS,...AXE_SPECIALIZATIONS].find(x=>x.id===choice);const owns=player.skillStoneChoice==="stoneSword"?!!player.owned.Sword:!!player.owned.Axe;banner(owns?`${c?.name||"Weapon specialization"} replaced your current weapon.`:`${c?.name||"Weapon specialization"} chosen — it will apply when you get that weapon.`);}
-  return true;
+function applyWeaponSkillChoice(choice,announce=false){return false;}
+function clearSkillChoiceUi(){
+  const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");
+  if(ov)ov.style.display="none";
+  if(grid)grid.innerHTML="";
 }
 function showSkillChoice(milestone){
-  milestone=Math.floor(Number(milestone)||0);
-  const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");
-  if(!ov||!grid)return;
-  let choices=[];
-  if(milestone===1){
-    if(player.skillStoneChoice)return;
-    el("skillChoiceTitle").textContent="Skill 1 — Get a Better Sword, Axe, or Wall";
-    el("skillChoiceLead").textContent="Pick one upgrade path.";
-    choices=STONE_SKILL_CHOICES;
-  }else if(milestone===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
-    if(player.skillWeaponChoice)return;
-    const sword=player.skillStoneChoice==="stoneSword";
-    el("skillChoiceTitle").textContent=sword?"Skill 6 — Choose Your Sword Type":"Skill 6 — Choose Your Axe Type";
-    el("skillChoiceLead").textContent="Pick one specialization.";
-    choices=sword?SWORD_SPECIALIZATIONS:AXE_SPECIALIZATIONS;
-  }else{
-    milestone=Math.max(1,milestone);
-    if(player.skillMilestones?.[milestone])return;
-    if(isSkillStatMilestone(milestone)){
-      el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Your Stats`;
-      el("skillChoiceLead").textContent="Every 10 skill levels: choose Speed, Attack Power, or Defense.";
-      choices=SKILL_MILESTONE_CHOICES;
-    }else{
-      el("skillChoiceTitle").textContent=`Skill ${milestone} — Tool Upgrade`;
-      el("skillChoiceLead").textContent=milestone===2?"Your Skill 1 choice can become Iron, or choose one of the other paths.":"Upgrade a tool or gain a new one.";
-      choices=toolSkillChoicesForLevel(milestone);
-    }
-  }
-  grid.innerHTML="";
-  choices.forEach(c=>{
-    const d=document.createElement("div");d.className="skill-choice";
-    d.innerHTML=`<span class="skill-choice-icon">${c.icon}</span><b>${c.name}</b><small>${c.desc}</small>`;
-    d.onclick=()=>chooseSkillUpgrade(milestone,c.id,c.name);
-    grid.appendChild(d);
-  });
-  ov.style.display="block";
+  milestone=Math.floor(Number(milestone)||0);const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");if(!ov||!grid)return;
+  if(!game.started||game.over||player.dead){clearSkillChoiceUi();return;}let choices=[];
+  if(milestone===1){if(player.skillStarterWeapon)return;el("skillChoiceTitle").textContent="Skill 1 — Replace Your Hands";el("skillChoiceLead").textContent="Choose one weapon path. The other five stay unavailable for this run.";choices=STARTER_WEAPON_CHOICES;}
+  else if(isSkillStatMilestone(milestone)){el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Your Stats`;el("skillChoiceLead").textContent="Choose Speed, Attack Power, or Defense.";choices=SKILL_MILESTONE_CHOICES;}
+  else{if(player.skillMilestones?.[milestone])return;el("skillChoiceTitle").textContent=`Skill ${milestone} — Weapon or Craft Upgrade`;el("skillChoiceLead").textContent="Weapon upgrades only affect your Skill 1 weapon. Build upgrades unlock a better crafting recipe; they do not upgrade existing items for free.";choices=toolSkillChoicesForLevel(milestone);}
+  grid.innerHTML="";choices.forEach(c=>{const d=document.createElement("div");d.className="skill-choice";d.innerHTML=`<span class="skill-choice-icon">${c.icon}</span><b>${c.name}</b><small>${c.desc}</small>`;d.onclick=()=>chooseSkillUpgrade(milestone,c.id,c.name);grid.appendChild(d);});ov.style.display="block";
 }
 function chooseSkillUpgrade(milestone,id,name){
   milestone=Math.floor(Number(milestone)||0);
-  if(milestone===1){
-    if(!["stoneWall","stoneSword","stoneAxe"].includes(id)||player.skillStoneChoice)return;
-    if(net.room){try{net.room.send("skillChoice",{milestone:1,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
-    applyStoneSkillChoice(id,true);
-    el("skillChoiceOverlay").style.display="none";
-    syncSkillMilestonePrompt();
-    return;
-  }
-  if(milestone===6 && (player.skillStoneChoice==="stoneSword"||player.skillStoneChoice==="stoneAxe")){
-    const valid=player.skillStoneChoice==="stoneSword"?["daggers","longSword","spear"]:["doubleAxe","throwingAxe","battleAxe"];
-    if(!valid.includes(id)||player.skillWeaponChoice)return;
-    if(net.room){try{net.room.send("skillChoice",{milestone:6,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
-    applyWeaponSkillChoice(id,true);el("skillChoiceOverlay").style.display="none";syncSkillMilestonePrompt();return;
-  }
-  milestone=Math.max(1,milestone);
+  if(milestone===1){if(!starterWeaponFromChoice(id)||player.skillStarterWeapon)return;if(net.room){try{net.room.send("skillChoice",{milestone:1,choice:id});}catch(_){}clearSkillChoiceUi();return;}applyStoneSkillChoice(id,true);player.pendingSkillMilestone=pendingSkillMilestone();clearSkillChoiceUi();if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);return;}
   if(player.skillMilestones?.[milestone]||milestone>Math.max(0,Math.floor(Number(player.skillLevel)||0)))return;
-  const statLevel=isSkillStatMilestone(milestone);
-  const validToolIds=new Set(["toolSword","toolAxe","toolWall","toolPickaxe","toolBow","toolTower"]);
-  if(statLevel?!["speed","strength","defense"].includes(id):!validToolIds.has(id))return;
-  if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}el("skillChoiceOverlay").style.display="none";return;}
-  player.skillMilestones=player.skillMilestones||{};
-  player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};
-  player.skillMilestones[milestone]=id;
-  if(statLevel)player.skillRanks[id]=(player.skillRanks[id]||0)+1;
-  else applyToolSkillMilestones();
-  player.pendingSkillMilestone=pendingSkillMilestone();
-  el("skillChoiceOverlay").style.display="none";
-  banner(statLevel?`${name} upgraded!`:`${name} applied!`);
-  if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);
+  const stat=isSkillStatMilestone(milestone),fallbackStat=["speed","strength","defense"].includes(id),valid=stat?["speed","strength","defense"]:["weaponTier","buildWall","buildTower","buildSaddle","buildWindmill","speed","strength","defense"];
+  if(!valid.includes(id))return;if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}clearSkillChoiceUi();return;}
+  player.skillMilestones=player.skillMilestones||{};player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};player.skillMilestones[milestone]=id;if(stat||fallbackStat)player.skillRanks[id]=(player.skillRanks[id]||0)+1;else applyToolSkillMilestones();player.pendingSkillMilestone=pendingSkillMilestone();clearSkillChoiceUi();banner((stat||fallbackStat)?`${name} upgraded!`:`${name} unlocked for crafting/progression.`);if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);
 }
 function applySkillNetworkState(data={}){
   const oldLevel=Math.floor(Number(player.skillLevel)||0);
@@ -22851,7 +22754,7 @@ function applySkillNetworkState(data={}){
   };
   if(typeof data.stoneChoice==="string"&&data.stoneChoice)applyStoneSkillChoice(data.stoneChoice,false);
   if(data.milestones&&typeof data.milestones==="object"){player.skillMilestones={...data.milestones};applyToolSkillMilestones();}
-  if(typeof data.weaponChoice==="string"&&data.weaponChoice)applyWeaponSkillChoice(data.weaponChoice,false);
+  
   player.pendingSkillMilestone=Math.max(0,Math.floor(Number(data.pendingMilestone)||0));
   updateSkillHud();
   if(player.skillLevel>oldLevel){animateSkillHud("level-up");banner(`Skill ${player.skillLevel}!`);buildCraftList();}
@@ -22866,7 +22769,9 @@ function toolDisplayName(id){
   if(id==="Axe")return t>=2?"Iron Axe":t>=1?"Stone Axe":"Wood Axe";
   if(id==="Sword")return t>=2?"Iron Sword":t>=1?"Stone Sword":"Wood Sword";
   if(id==="Pickaxe")return t>=2?"Iron Pickaxe":t>=1?"Stone Pickaxe":"Wood Pickaxe";
-  if(id==="Bow")return t>=1?"Reinforced Bow":"Wood Bow";
+  if(id==="Bow")return t>=2?"Master Bow":t>=1?"Reinforced Bow":"Wood Bow";
+  if(id==="TigerClaws")return t>=2?"Apex Tiger Claws":t>=1?"Hardened Tiger Claws":"Tiger Claws";
+  if(id==="BoxingGloves")return t>=2?"Champion Boxing Gloves":t>=1?"Reinforced Boxing Gloves":"Boxing Gloves";
   return id;
 }
 function applyToolTierStats(){
@@ -22878,7 +22783,9 @@ function applyToolTierStats(){
   if((t.Sword||0)>=2) Object.assign(TOOLS.Sword,{dmg:18,range:58,cadence:.34});
   if((t.Pickaxe||0)>=1) Object.assign(TOOLS.Pickaxe,{dmg:7,gather:3.4,resourcePower:1.45,stoneWall:18});
   if((t.Pickaxe||0)>=2) Object.assign(TOOLS.Pickaxe,{dmg:9,gather:4.5,resourcePower:1.8,stoneWall:23});
-  if((t.Bow||0)>=1) Object.assign(TOOLS.Bow,{dmg:13,cadence:.46});
+  if((t.Bow||0)>=1) Object.assign(TOOLS.Bow,{dmg:13,cadence:.46}); if((t.Bow||0)>=2) Object.assign(TOOLS.Bow,{dmg:17,cadence:.40});
+  if((t.TigerClaws||0)>=1)Object.assign(TOOLS.TigerClaws,{dmg:9.5,range:47,cadence:.26});if((t.TigerClaws||0)>=2)Object.assign(TOOLS.TigerClaws,{dmg:13,range:50,cadence:.22,doubleHit:true});
+  if((t.BoxingGloves||0)>=1)Object.assign(TOOLS.BoxingGloves,{dmg:9.2,range:51,cadence:.30});if((t.BoxingGloves||0)>=2)Object.assign(TOOLS.BoxingGloves,{dmg:13.5,range:54,cadence:.28});
   const spec=String(player.skillWeaponChoice||"");
   if(spec==="daggers")Object.assign(TOOLS.Sword,{dmg:7.2,range:44,cadence:.22,swing:.14,doubleHit:true});
   else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:74,cadence:.50,swing:.28});
@@ -22886,7 +22793,7 @@ function applyToolTierStats(){
   else if(spec==="doubleAxe")Object.assign(TOOLS.Axe,{dmg:8.8,range:66,cadence:.72,swing:.58,gather:4.0,resourcePower:1.50,doubleHit:true});
   else if(spec==="throwingAxe")Object.assign(TOOLS.Axe,{dmg:16,range:50,cadence:.72,swing:.24,gather:1.7,resourcePower:.72,throwing:true});
   else if(spec==="battleAxe")Object.assign(TOOLS.Axe,{dmg:20,range:78,cadence:.68,swing:.50,gather:2.3,resourcePower:.95,woodWall:11});
-  const cm=player.craftBonuses?.combat||1; if(cm!==1) for(const k of ["Axe","Pickaxe","Sword","Bow"]) TOOLS[k].dmg*=cm;
+  const cm=player.craftBonuses?.combat||1; if(cm!==1) for(const k of ["Axe","Pickaxe","Sword","Bow","TigerClaws","BoxingGloves"]) TOOLS[k].dmg*=cm;
 }
 function upgradeCraft(id){
   const done=player._craftedUpgrades||(player._craftedUpgrades={}); if(done[id]){banner("Upgrade already crafted");return true;}
@@ -22937,49 +22844,12 @@ function buildCraftList() {
   }
 }
 function doCraft(c) {
-  if (!canAfford(c.cost)) { banner("Not enough resources", true); return; }
-  if (c.id.startsWith("Upgrade")) {
-    if(player._craftedUpgrades?.[c.id]){banner("Upgrade already crafted");return;}
-    const prereq={UpgradeStoneAxe:"Axe",UpgradeIronAxe:"Axe",UpgradeStoneSword:"Sword",UpgradeIronSword:"Sword",UpgradeStonePickaxe:"Pickaxe",UpgradeIronPickaxe:"Pickaxe",UpgradeBow:"Bow",UpgradeStoneWall:"Wall",UpgradeIronWall:"Wall",UpgradeStoneTower:"Tower",UpgradeHeavyTower:"Tower"}[c.id];
-    if(prereq&&prereq!=="Wall"&&prereq!=="Tower"&&!player.owned?.[prereq]){banner(`Craft the ${prereq} first — this is a replacement upgrade.`,true);return;}
-    if(prereq==="Wall"&&!player.owned.Wall){banner("Craft the Wall first — this is a replacement upgrade.",true);return;}
-    if(prereq==="Tower"&&!player.owned.Tower){banner("Craft the Tower first — this is a replacement upgrade.",true);return;}
-    pay(c.cost); if(!upgradeCraft(c.id)){return;} sfx.craft(); gainSkillXp(8,"upgrade"); banner(`Crafted ${c.name.replace("Upgrade → ","")} — it replaced the old version in the same slot.`); buildCraftList(); syncHud(); return;
-  }
-  if (c.id === "FieldKit") { pay(c.cost); player.health=clamp(player.health+70,0,player.maxHealth); sfx.eat(); gainSkillXp(5,"craft"); banner("Field Kit used: +70 HP"); buildCraftList(); syncHud(); return; }
-  if (["MasterGathererKit","FortressBuilderKit","CombatCrafterKit"].includes(c.id)) {
-    const done=player._craftedUpgrades||(player._craftedUpgrades={}); if(done[c.id]){banner("That mastery kit is already active");return;}
-    pay(c.cost); done[c.id]=true;
-    if(c.id==="MasterGathererKit")player.craftBonuses.gather=1.18;
-    if(c.id==="FortressBuilderKit")player.craftBonuses.buildCost=.78;
-    if(c.id==="CombatCrafterKit"){player.craftBonuses.combat=1.12;applyToolTierStats();}
-    sfx.craft(); banner(`${c.name} activated for this run!`); buildCraftList(); syncHud(); return;
-  }
-  if (c.id in TOOLS) {
-    if (player.owned[c.id]) { banner("Already own " + c.name); return; }
-    pay(c.cost); player.owned[c.id] = true; registerHotbarItem(c.id);
-    gainSkillXp(5,"craft"); sfx.craft(); banner("Crafted " + c.name + "! Added to hotbar — select it when you want to use it");
-    buildHotbar();
-  } else if (c.id === "Wall") {
-    pay(c.cost); player.owned.Wall = true; registerHotbarItem("Wall");
-    gainSkillXp(4,"craft"); sfx.craft(); banner("Wall added to hotbar — select it, then click to place");
-    buildHotbar();
-  } else if (c.id === "Tower") {
-    pay(c.cost); player.owned.Tower = true; registerHotbarItem("Tower");
-    gainSkillXp(6,"craft"); sfx.craft(); banner("Watch Tower added to hotbar — select it, then click to place");
-    buildHotbar();
-  } else if (c.id === "Saddle") {
-    if (player.hasSaddle) { banner("Already have a saddle"); return; }
-    pay(c.cost); player.hasSaddle = true; registerHotbarItem("Saddle");
-    gainSkillXp(4,"craft"); sfx.craft(); banner("Saddle added to hotbar — select it, then click a rideable pet");
-    buildHotbar();
-  } else if (c.id === "HealPack") {
-    pay(c.cost);
-    player.health = clamp(player.health + 40, 0, player.maxHealth);
-    sfx.eat(); banner("+40 HP");
-  }
-  buildCraftList();
-  syncHotbar();
+  if(!BUILDABLE_IDS.includes(c.id))return;
+  if(!canAfford(c.cost)){banner("Not enough resources",true);return;}
+  pay(c.cost);player.craftedCounts=player.craftedCounts||{};player.craftedTiers=player.craftedTiers||{};
+  player.craftedCounts[c.id]=craftedItemCount(c.id)+1;player.craftedTiers[c.id]=Math.max(craftedBuildTier(c.id),clamp(Number(c.tier)||0,0,2));
+  if(c.id==="Wall")player.wallTier=player.craftedTiers.Wall;if(c.id==="Tower")player.towerTier=player.craftedTiers.Tower;if(c.id==="Saddle"){player.saddleTier=player.craftedTiers.Saddle;player.hasSaddle=true;}if(c.id==="Windmill")player.windmillTier=player.craftedTiers.Windmill;
+  registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"?6:4,"craft");sfx.craft();banner(`Crafted 1 ${BUILD_TIER_META[c.id][c.tier].name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
 }
 el("closeCraft").addEventListener("click", () => el("craftOverlay").classList.remove("show"));
 el("craftList").addEventListener("wheel",e=>{e.stopPropagation();},{passive:true});
@@ -23020,7 +22890,7 @@ function buildInv() {
   const candidate=String(player._inventorySwapCandidate||"");
   if(candidate&&player.inventoryOrder?.includes(candidate)&&hotbarLabelAvailable(candidate)){
     const title=document.createElement("div");title.className="inv-slot inv-swap-title";title.innerHTML=`<span>Replace a hotbar slot with <b>${candidate}</b></span><span class="qty">Choose</span>`;grid.appendChild(title);
-    for(let i=0;i<player.hotbarOrder.length;i++){const label=player.hotbarOrder[i];const div=document.createElement("div");div.className="inv-slot inv-swap-slot";if(label==="Fist"){div.style.opacity=".48";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Locked</span>`;}else{div.style.cursor="pointer";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Replace</span>`;div.addEventListener("click",()=>{swapInventoryIntoHotbar(candidate,label);buildInv();});}grid.appendChild(div);}
+    for(let i=0;i<player.hotbarOrder.length;i++){const label=player.hotbarOrder[i];const div=document.createElement("div");div.className="inv-slot inv-swap-slot";if(label===primaryWeaponLabel()){div.style.opacity=".48";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Locked</span>`;}else{div.style.cursor="pointer";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Replace</span>`;div.addEventListener("click",()=>{swapInventoryIntoHotbar(candidate,label);buildInv();});}grid.appendChild(div);}
   }
 
   // ...and for selecting/equipping gear purchased from the in-game run shop.
@@ -23791,7 +23661,10 @@ function drawWall(w) {
   ctx.globalAlpha = fade;
   if (w.flash > 0) ctx.filter = "brightness(1.55)";
 
-  if (w.kind === "stoneSpike") {
+  if (String(w.kind||"").startsWith("windmill")) {
+    const tier=clamp(parseInt(String(w.kind).replace("windmill",""))||0,0,2),wood=tier>=2?"#77838b":tier>=1?"#8e9698":"#9b6a42",blade=tier>=2?"#e5ecef":tier>=1?"#d7dadd":"#ead9ae";const spin=game.time*(tier>=2?2.0:tier>=1?1.55:1.2)+(Number(w.x)||0)*.001;
+    ctx.fillStyle=wood;ctx.strokeStyle="#25221e";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-11,w.r);ctx.lineTo(-6,-5);ctx.lineTo(6,-5);ctx.lineTo(11,w.r);ctx.closePath();ctx.fill();ctx.stroke();ctx.save();ctx.translate(0,-8);ctx.rotate(spin);ctx.strokeStyle=blade;ctx.lineWidth=6;ctx.lineCap="round";for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(w.r+13,0);ctx.stroke();}ctx.restore();ctx.fillStyle="#d7b56f";circ(0,-8,5);
+  } else if (w.kind === "stoneSpike") {
     ctx.fillStyle = "#858f98"; ctx.strokeStyle = "#191b1b"; ctx.lineWidth = 4;
     roundRect(-w.r, -w.r, w.r * 2, w.r * 2, 6); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = "#5b6670"; ctx.lineWidth = 2;
@@ -25635,16 +25508,17 @@ function drawPlayer() {
     ctx.restore();
   } else if (holding === "HoneyComb" || holding === "Honey") {
     ctx.save();ctx.translate(0,armWalk*.32);drawHeldHoney(armFill,holding,swingEase);ctx.restore();
-  } else if (holding === "Wall" || holding === "Tower") {
+  } else if (holding === "Wall" || holding === "Tower" || holding === "Windmill") {
     ctx.save();
     ctx.translate(0, armWalk * 0.22);
     drawHeldWall(armFill);
     ctx.restore();
   } else if (holding === "Saddle") {
     ctx.save();ctx.translate(0,armWalk*0.22);drawHeldSaddle(armFill);ctx.restore();
-  } else if (holding === "Fist") {
-    drawArm(1, p.punchSide === 1 ? swingEase : 0, armFill, null, false, -armWalk);
-    drawArm(-1, p.punchSide === -1 ? swingEase : 0, armFill, null, false, armWalk);
+  } else if (holding === "Fist" || holding === "TigerClaws" || holding === "BoxingGloves") {
+    const extR=p.punchSide===1?swingEase:0,extL=p.punchSide===-1?swingEase:0;drawArm(1,extR,armFill,null,false,-armWalk);drawArm(-1,extL,armFill,null,false,armWalk);
+    if(holding==="TigerClaws"){ctx.strokeStyle="#f1dfad";ctx.lineWidth=2.4;for(const side of [-1,1])for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(33,side*(8+k*3-3));ctx.lineTo(45+swingEase*8,side*(8+k*3-3));ctx.stroke();}}
+    if(holding==="BoxingGloves"){ctx.fillStyle="#c94b4b";ctx.strokeStyle="#54201f";ctx.lineWidth=2;for(const side of [-1,1]){ctx.beginPath();ctx.arc(35+swingEase*7,side*11,7,0,TAU);ctx.fill();ctx.stroke();}}
   } else if (holding === "Axe" && throwingAxeOutForActor(player)) {
     // Empty hands while the Throwing Axe is in flight or returning.
     drawArm(1,swingEase,armFill,null,false,-armWalk);drawArm(-1,0,armFill,null,false,armWalk);
@@ -26964,7 +26838,7 @@ function finishRewardedRevive(serverData={}){
   applyReviveCarry(snapshot,serverData);
   player.dead=false;player.splitT=0;player.riding=null;game.over=false;game.revivePending=false;game.reviveCount=Math.max(0,Number(game.reviveCount)||0)+1;game.deathCamTarget=null;game.deathCamTargetKind="";game.deathCamTargetId="";
   el("overlay").classList.remove("show");game.camX=clamp(player.x-W/2,0,Math.max(0,WORLD_W-W));game.camY=clamp(player.y-H/2,0,Math.max(0,WORLD_H-H));
-  buildHotbar();syncHud();syncHotbar();syncPetCards();syncMobilePrimaryButton();if(net.room)setTimeout(ensureNetworkStarterPet,60);banner("Revived — your pet and part of your supplies came with you!");
+  buildHotbar();syncHud();syncHotbar();syncPetCards();syncMobilePrimaryButton();syncSkillMilestonePrompt();if(net.room)setTimeout(ensureNetworkStarterPet,60);banner("Revived — your pet and part of your supplies came with you!");
 }
 async function requestRunRevive(){
   if(!game.over||game.revivePending)return;
@@ -26982,6 +26856,7 @@ async function requestRunRevive(){
 }
 function endGame() {
   game.over = true;
+  clearSkillChoiceUi();
   const totalEarned=Math.floor(game.survivalTime*.4+game.kills*2+game.wave*3),previous=Math.max(0,Math.floor(Number(game.creditedDeathCubits)||0)),earned=Math.max(0,totalEarned-previous);
   game.creditedDeathCubits=totalEarned;game.earnedServs=(Number(game.earnedServs)||0)+earned;meta.servs+=earned;saveMeta();
   game.deathCarrySnapshot=captureDeathCarrySnapshot();
@@ -26990,6 +26865,7 @@ function endGame() {
 }
 
 function resetGame(options = {}) {
+  clearSkillChoiceUi();
   const firstEntry = !!options.firstEntry;
   const preserveLiveWorld = !!options.preserveLiveWorld;
   const instantLiveEntry = !!(options.instantLiveEntry && firstEntry && preserveLiveWorld && net.room);
@@ -27026,18 +26902,8 @@ function resetGame(options = {}) {
   player.tool = "Fist";
   player.lastWeaponTool = "Fist";
   player.heldSpecial = null;
-  player.owned = {
-    Fist: true,
-    Axe: !!meta.ownedStarters.startAxe,
-    Pickaxe: !!meta.ownedStarters.startPickaxe,
-    Sword: !!meta.ownedStarters.startSword,
-    Bow: !!meta.ownedStarters.startBow
-  };
-  player.hotbarOrder = ["Fist","Bucket"];player.inventoryOrder=[];player._inventorySwapCandidate="";
-  if (meta.ownedStarters.startAxe) registerHotbarItem("Axe");
-  if (meta.ownedStarters.startPickaxe) registerHotbarItem("Pickaxe");
-  if (meta.ownedStarters.startSword) registerHotbarItem("Sword");
-  if (meta.ownedStarters.startBow) registerHotbarItem("Bow");
+  player.owned={Fist:true,Axe:false,Pickaxe:false,Sword:false,Bow:false,TigerClaws:false,BoxingGloves:false};
+  player.hotbarOrder=["Fist","Bucket"];player.inventoryOrder=[];player._inventorySwapCandidate="";
   if (player.berries > 0) registerHotbarItem("Berry");
   mobileFacingAngle = player.angle;
   player.attackCd = 0; player.shootCd = 0; player.punchTimer = 0; player.punchSide = 1;
@@ -27045,9 +26911,8 @@ function resetGame(options = {}) {
   player.color = meta.color;
   player.username = meta.username || "Cube";
   player.inventory = [];
-  player.hasSaddle = !!meta.ownedStarters.saddle;
-  player.skillLevel=0;player.skillXp=0;player.skillMilestones={};player.pendingSkillMilestone=0;player.skillStoneChoice="";player.skillWeaponChoice="";player.skillRanks={speed:0,strength:0,defense:0};player.toolTiers={Axe:0,Pickaxe:0,Sword:0,Bow:0};player.wallTier=0;player.towerTier=0;player.craftBonuses={gather:1,buildCost:1,combat:1};player._craftedUpgrades={};applyToolTierStats();updateSkillHud();
-  if (player.hasSaddle) registerHotbarItem("Saddle");
+  player.hasSaddle = false;
+  player.skillLevel=0;player.skillXp=0;player.skillMilestones={};player.pendingSkillMilestone=0;player.skillStoneChoice="";player.skillWeaponChoice="";player.skillStarterWeapon="";player.skillRanks={speed:0,strength:0,defense:0};player.toolTiers={Axe:0,Pickaxe:0,Sword:0,Bow:0,TigerClaws:0,BoxingGloves:0};player.wallTier=0;player.towerTier=0;player.saddleTier=0;player.windmillTier=0;player.buildUnlockTiers={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedTiers={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedCounts={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftBonuses={gather:1,buildCost:1,combat:1};player._craftedUpgrades={};applyToolTierStats();updateSkillHud();
   player.pets = instantLiveEntry ? (livePetsBeforeReset || []).filter(p => p && !p.dead) : [];
   player.riding = instantLiveEntry && liveOwnBeforeReset?.ridingPetId ? (net.petVisuals.get(String(liveOwnBeforeReset.ridingPetId)) || null) : null;
 
@@ -27739,6 +27604,7 @@ function setupHome() {
   // setupHome is also called by account/card/theme refreshes. Those refreshes
   // must never put Home back on top of an active run or death screen.
   const homeMayShow = !game.started;
+  if(homeMayShow)clearSkillChoiceUi();
   if (home) {
     home.style.display = homeMayShow ? "flex" : "none";
     home.style.visibility = homeMayShow ? "visible" : "hidden";
@@ -27801,16 +27667,11 @@ function setupHome() {
     { id: "gold5", name: "Start with 5 Gold", price: 1200, category: "Resource", desc: "A small amount of run-only gold ready immediately." },
     { id: "gold15", name: "Start with 15 Gold", price: 3200, category: "Resource", desc: "Upgrades your permanent run start to 15 gold." },
     { id: "berries10", name: "Start with 10 Berries", price: 950, category: "Resource", desc: "Food and healing ready as soon as the run begins." },
-    { id: "startAxe", name: "Start with Axe", price: 2200, category: "Tool", desc: "Always begin with an Axe in your hotbar." },
-    { id: "startPickaxe", name: "Start with Pickaxe", price: 2500, category: "Tool", desc: "Always begin with a Pickaxe in your hotbar." },
-    { id: "startSword", name: "Start with Sword", price: 4200, category: "Combat", desc: "Always begin with a Sword for early combat." },
-    { id: "startBow", name: "Start with Bow", price: 5200, category: "Combat", desc: "Always begin with a Bow for ranged attacks." },
     { id: "speedyBoots", name: "Speedy Boots", price: 6500, category: "Mobility", desc: "Move 18% faster on foot every run. Does not boost mounted speed." },
     { id: "ironShell", name: "Iron Shell", price: 12000, category: "Defense", desc: "Start every run with a 250-HP protective shell. It absorbs damage before real health and cannot be healed." },
     { id: "hunterWrap", name: "Hunter's Wrap", price: 8000, category: "Combat", desc: "Deal 10% more player damage every run. Stacks with temporary run-shop gear." },
     { id: "gatherGloves", name: "Gatherer's Gloves", price: 6000, category: "Skill", desc: "Gain 15% more wood, stone, berries, and mined gold every run." },
     { id: "animalWhisperer", name: "Animal Whisperer", price: 9500, category: "Skill", desc: "Increase pet and species-card drop chance by 30% every run." },
-    { id: "saddle", name: "Start with Saddle", price: 1800, category: "Utility", desc: "Always begin ready to ride a mountable pet." },
   ];
   const grid = el("shopGrid");
   if (el("starterShopServs")) el("starterShopServs").textContent = meta.servs;
@@ -28456,6 +28317,7 @@ el("homeBtn").addEventListener("click", () => {
 
   // Close every gameplay modal so no invisible overlay can block the Home screen.
   hideLootPopup();
+  clearSkillChoiceUi();
   el("overlay").classList.remove("show");
   el("craftOverlay").classList.remove("show");
   el("invOverlay").classList.remove("show");
