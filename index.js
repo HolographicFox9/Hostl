@@ -16,6 +16,9 @@ const publicDir = path.join(__dirname, "public");
 const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 const REWARDED_AD_SECRET = String(process.env.HOSTL_REWARDED_AD_SECRET || "").trim();
 const REWARDED_ADS_CONFIGURED = REWARDED_AD_SECRET.length >= 32;
+const HOSTL_DAILY_AD_CUBITS = 100;
+const HOSTL_CUBIT_REVIVE_COST = 100;
+const reviveAuthorizations = new Map();
 // Account records are server-authoritative. For true persistence across Render deploys/restarts,
 // HOSTL_DATA_DIR should point at a mounted persistent disk (recommended: /var/data/hostl).
 // Without a persistent mount, the fallback project data folder can be replaced by the host.
@@ -600,6 +603,7 @@ normalizeLoadedAccounts();
 for (const a of Object.values(accountDb.byId || {})) {
   ensureGoldCubits(a);
   ensurePetProgressState(a);
+  ensureRewardedDailyCubitMode(a);
   repairSpecialPromoEntitlements(a);
 }
 saveAccounts();
@@ -626,6 +630,7 @@ function accountRecoverySnapshot(a) {
     selectedTheme:accountCanUseTheme(a,safeText(a.selectedTheme||"",40))?safeText(a.selectedTheme,40):"",
     achievements:cloneObj(a.achievements),
     lastDailyCubits:safeText(a.lastDailyCubits||"",20),
+    dailyCubitRewardMode:safeText(a.dailyCubitRewardMode||"",32),
     lastDailyChest:safeText(a.lastDailyChest||"",20),
     redeemedCodes:[...ensureRedeemedCodes(a)],
     speciesCards:cloneObj(a.speciesCards),
@@ -680,7 +685,7 @@ function restoreAccountFromRecovery(payload,googleProfile) {
     email:safeText(googleProfile.email,120).toLowerCase(), picture:safeText(googleProfile.picture,500),
     goldCubits:Math.max(0,Math.min(1000000000,Math.floor(Number(snap.goldCubits)||0))),
     unlockedThemes:Array.isArray(snap.unlockedThemes)?snap.unlockedThemes:[], selectedTheme:safeText(snap.selectedTheme||"",40), achievements:(snap.achievements&&typeof snap.achievements==="object"&&!Array.isArray(snap.achievements))?snap.achievements:{},
-    lastDailyCubits:safeText(snap.lastDailyCubits||"",20), lastDailyChest:safeText(snap.lastDailyChest||"",20), redeemedCodes:Array.isArray(snap.redeemedCodes)?snap.redeemedCodes:[],
+    lastDailyCubits:safeText(snap.lastDailyCubits||"",20), dailyCubitRewardMode:safeText(snap.dailyCubitRewardMode||"",32), lastDailyChest:safeText(snap.lastDailyChest||"",20), redeemedCodes:Array.isArray(snap.redeemedCodes)?snap.redeemedCodes:[],
     speciesCards:(snap.speciesCards&&typeof snap.speciesCards==="object"&&!Array.isArray(snap.speciesCards))?snap.speciesCards:{}, ownedStarters:(snap.ownedStarters&&typeof snap.ownedStarters==="object"&&!Array.isArray(snap.ownedStarters))?snap.ownedStarters:{},
     petStages:(snap.petStages&&typeof snap.petStages==="object"&&!Array.isArray(snap.petStages))?snap.petStages:{}, petStatUpgrades:(snap.petStatUpgrades&&typeof snap.petStatUpgrades==="object"&&!Array.isArray(snap.petStatUpgrades))?snap.petStatUpgrades:{},
     starterPetType:safeText(snap.starterPetType||"",24).toLowerCase(), starterPetName:safeText(snap.starterPetName||"",20), starterPetGender:snap.starterPetGender==="Female"?"Female":"Male",
@@ -789,12 +794,31 @@ function utcDayKey() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
 }
-function applyDailyCubits(account) {
-  const today = utcDayKey();
-  if (account.lastDailyCubits === today) return false;
-  account.lastDailyCubits = today;
-  addGoldCubits(account, 10);
+function ensureRewardedDailyCubitMode(account) {
+  if (!account || typeof account !== "object") return false;
+  if (account.dailyCubitRewardMode === "rewarded100v1") return false;
+  // Builds before 664 granted a small daily login bonus automatically and reused
+  // lastDailyCubits for it. Reset that legacy day once so every existing account
+  // can enter the new rewarded-ad daily system cleanly.
+  account.dailyCubitRewardMode = "rewarded100v1";
+  account.lastDailyCubits = "";
   return true;
+}
+function issueReviveAuthorization(account, method, runId) {
+  const token = crypto.randomBytes(24).toString("base64url");
+  reviveAuthorizations.set(token, { uid:String(account?.userId||""), method:String(method||""), runId:safeText(runId,96), exp:Date.now()+2*60*1000 });
+  if (reviveAuthorizations.size > 5000) {
+    const now=Date.now();
+    for (const [k,v] of reviveAuthorizations) if (!v || Number(v.exp||0) < now) reviveAuthorizations.delete(k);
+  }
+  return token;
+}
+function consumeReviveAuthorization(userId, token) {
+  const key=String(token||"");
+  const row=reviveAuthorizations.get(key);
+  reviveAuthorizations.delete(key);
+  if(!row || Number(row.exp||0)<Date.now() || String(row.uid||"")!==String(userId||"")) return null;
+  return {ok:true,method:row.method,runId:row.runId};
 }
 
 // Official HOSTL promo codes. Add future codes here and redeploy.
@@ -899,13 +923,13 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 591, gameBuild: 663, rulesVersion: "661", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 592, gameBuild: 664, rulesVersion: "664", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 591, gameBuild: 663 });
+  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 592, gameBuild: 664, rulesVersion: "664" });
 });
 
 app.get("/auth/config", (_req, res) => {
@@ -953,6 +977,7 @@ app.post("/auth/google", async (req, res) => {
         selectedTheme: "forestGold",
         achievements: {},
         lastDailyCubits: "",
+        dailyCubitRewardMode: "rewarded100v1",
         lastDailyChest: "",
         redeemedCodes: [],
         speciesCards: {},
@@ -994,7 +1019,9 @@ app.post("/auth/google", async (req, res) => {
       repairSpecialPromoEntitlements(account);
       account.updatedAt = new Date().toISOString();
     }
-    const dailyGranted = applyDailyCubits(account);
+    const dailyModeMigrated = ensureRewardedDailyCubitMode(account);
+    const dailyGranted = false;
+    if (dailyModeMigrated) account.updatedAt = new Date().toISOString();
     await saveAccounts();
     const sessionToken = signSession(userId);
     setSessionCookie(res, sessionToken);
@@ -1008,7 +1035,8 @@ app.post("/auth/google", async (req, res) => {
 app.get("/api/account", requireAccount, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const a=accountDb.byId[req.hostlUserId];
-  if(repairSpecialPromoEntitlements(a)){a.updatedAt=new Date().toISOString();await saveAccounts();}
+  const dailyModeMigrated=ensureRewardedDailyCubitMode(a);
+  if(dailyModeMigrated||repairSpecialPromoEntitlements(a)){a.updatedAt=new Date().toISOString();await saveAccounts();}
   // Returning the already-verified token lets the browser restore its local copy from
   // the HttpOnly cookie after a reload without asking Google to sign in again.
   res.json({ ok: true, token: req.hostlSessionToken, account: publicAccount(a) });
@@ -1166,6 +1194,40 @@ app.post("/api/themes/ad-unlock", requireAccount, async (req,res)=>{
   const proof=verifyRewardedAdProof(a,req.body?.adProof,"theme",id); if(!proof.ok)return res.status(proof.status).json({ok:false,error:proof.error,rewardedAdsConfigured:REWARDED_ADS_CONFIGURED});
   consumeRewardedAdProof(a,proof); a.unlockedThemes.push(id); a.updatedAt=new Date().toISOString(); await saveAccounts();
   res.json({ok:true,themeId:id,account:publicAccount(a)});
+});
+
+app.post("/api/daily-cubits", requireAccount, async (req,res)=>{
+  const a=accountDb.byId[req.hostlUserId];
+  ensureRewardedDailyCubitMode(a);
+  const day=utcDayKey();
+  if(a.lastDailyCubits===day)return res.status(409).json({ok:false,error:"already_claimed",account:publicAccount(a)});
+  const proof=verifyRewardedAdProof(a,req.body?.adProof,"dailyCubits",day);
+  if(!proof.ok)return res.status(proof.status).json({ok:false,error:proof.error,rewardedAdsConfigured:REWARDED_ADS_CONFIGURED,account:publicAccount(a)});
+  consumeRewardedAdProof(a,proof);
+  addGoldCubits(a,HOSTL_DAILY_AD_CUBITS);
+  a.lastDailyCubits=day;
+  a.updatedAt=new Date().toISOString();
+  await saveAccounts();
+  res.json({ok:true,amount:HOSTL_DAILY_AD_CUBITS,account:publicAccount(a)});
+});
+
+app.post("/api/revive-authorization", requireAccount, async (req,res)=>{
+  const a=accountDb.byId[req.hostlUserId];
+  const method=safeText(req.body?.method,16).toLowerCase();
+  const runId=safeText(req.body?.runId,96);
+  if(!runId)return res.status(400).json({ok:false,error:"missing_run_id"});
+  if(method==="ad"){
+    const proof=verifyRewardedAdProof(a,req.body?.adProof,"revive",runId);
+    if(!proof.ok)return res.status(proof.status).json({ok:false,error:proof.error,rewardedAdsConfigured:REWARDED_ADS_CONFIGURED,account:publicAccount(a)});
+    consumeRewardedAdProof(a,proof);
+  }else if(method==="cubits"){
+    if(ensureGoldCubits(a)<HOSTL_CUBIT_REVIVE_COST)return res.status(409).json({ok:false,error:"not_enough_cubits",cost:HOSTL_CUBIT_REVIVE_COST,account:publicAccount(a)});
+    setGoldCubits(a,ensureGoldCubits(a)-HOSTL_CUBIT_REVIVE_COST);
+  }else return res.status(400).json({ok:false,error:"unknown_revive_method"});
+  a.updatedAt=new Date().toISOString();
+  await saveAccounts();
+  const reviveToken=issueReviveAuthorization(a,method,runId);
+  res.json({ok:true,method,cost:method==="cubits"?HOSTL_CUBIT_REVIVE_COST:0,reviveToken,account:publicAccount(a)});
 });
 
 app.post("/api/open-chest", requireAccount, async (req,res)=>{
@@ -1388,6 +1450,7 @@ configureHostlAccountHooks({
   rewardGameplayMaterial,
   grantWorldReward:grantWorldAccountReward,
   recordAchievement:recordVerifiedAchievement,
+  consumeReviveAuthorization(userId,token){ return consumeReviveAuthorization(userId,token); },
   onPresenceJoin(userId,key,worldId){ markGamePresence(userId,key,worldId); },
   onPresenceLeave(userId,key){ clearGamePresence(userId,key); }
 });

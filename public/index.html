@@ -5506,6 +5506,32 @@ button:focus-visible{
 }
 </style>
 
+
+<style id="hostl-update-663-hud">
+/* 663 compact translucent bottom HUD */
+#bottomDock{bottom:6px;display:grid;grid-template-columns:26px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:6px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(96vw,650px);}
+#resourceStrip{grid-area:resources;gap:5px;padding-left:31px;justify-content:center;overflow:visible;}
+.dock-res{font-size:10px;padding:2px 6px;border-width:2px;background:rgba(226,215,173,.76);}
+#skillHud{grid-area:skill;width:min(230px,58vw);justify-self:center;padding:0;}
+#skillHudTop{margin-bottom:1px;font-size:8px;}#skillHudTop b{font-size:9px;}#skillTrack{height:7px;border-width:1px;}
+#hydrationHud{grid-area:hydration;width:24px;height:52px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+#hydrationHudTop{width:100%;height:10px;justify-content:center;margin:0 0 1px;font-size:7px;line-height:8px;}#hydrationHudTop b{display:none;}
+#hydrationTrack{width:18px;height:40px;border-radius:7px;border-width:2px;}
+#hydrationFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .18s ease-out;background:linear-gradient(180deg,#8ce9ff 0%,#42bce4 52%,#258cc1 100%);}
+#hotbar{grid-area:hotbar;gap:4px;padding:3px 4px;border-radius:12px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.slot{width:46px;height:46px;border-width:2px;border-radius:9px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
+.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:23px;height:23px}.slot .key{font-size:9px}.slot .qty{font-size:9px}.slot .label{font-size:7px}
+#waterFillBtn{left:50%;bottom:104px;transform:translateX(-50%);min-width:94px;height:40px;border-color:#7edcff;background:linear-gradient(180deg,#2daee0,#1676b7);color:#effcff;box-shadow:0 5px 0 #0d5687,0 9px 18px rgba(0,0,0,.25);}
+#waterFillBtn:active{transform:translateX(-50%) translateY(2px);background:linear-gradient(180deg,#249dcc,#12669f);}
+#tameBtn{bottom:104px;}
+.inv-hotbar-title,.inv-swap-title{grid-column:1/-1;background:rgba(72,94,69,.56)!important;border-color:rgba(221,194,100,.4)!important}.inv-hotbar-item:hover,.inv-swap-slot:hover{border-color:#d6b058!important;background:rgba(90,112,78,.42)!important}
+body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-width:calc(100vw - 12px);grid-template-columns:22px minmax(0,1fr);column-gap:3px;}
+body.mobile-performance #resourceStrip{padding-left:24px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
+body.mobile-performance #hydrationHud{width:21px;height:45px}body.mobile-performance #hydrationTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop{font-size:6px}
+body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:2px;padding:2px 3px;width:max-content;max-width:calc(100vw - 36px);justify-self:center;}
+body.mobile-performance .slot{width:41px;height:41px;border-width:2px}body.mobile-performance .slot .ico{width:21px;height:21px}
+body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:calc(var(--phone-bottom) + 91px);}
+</style>
 </head>
 <body>
 <div id="bootLoadingScreen" class="boot-loaded" role="status" aria-live="polite">
@@ -5616,6 +5642,8 @@ button:focus-visible{
       <div id="finalWave">1<span>wave</span></div>
     </div>
     <p style="font-size:13px;opacity:0.75;">Earned <span class="cubit-token"></span> <b id="finalServs" style="color:#f4c65f;">0</b> Gold Cubits</p>
+    <button class="btn" id="reviveBtn" type="button">Watch Ad to Revive</button>
+    <div id="reviveStatus">First revive each run uses a rewarded ad.</div>
     <button class="btn" id="restartBtn">Try again</button>
     <button class="btn secondary" id="homeBtn">Home</button>
   </div>
@@ -5643,7 +5671,7 @@ button:focus-visible{
   <div class="card">
     <button class="btn secondary modal-close" id="closeInv">Close (E)</button>
     <h1 class="modal-title-clear">Inventory</h1>
-    <p class="lead">Resources and run-shop gear. Click bought gear here to equip it.</p>
+    <p class="lead">Resources stay here. When all 10 hotbar slots are full, usable items go here too — click one to swap it into your hotbar.</p>
     <div class="inv-grid" id="invGrid"></div>
   </div>
 </div>
@@ -5833,6 +5861,34 @@ button:focus-visible{
   </div>
 </div>
 
+
+<style id="hostl-game664-ads-revive">
+/* 664: ad placement shells and rewarded-ad actions. Actual ad creative is mounted
+   by the provider only after it is configured/approved. */
+#home .home-ad-rail{grid-column:3 !important;align-self:center;justify-self:stretch;display:flex;flex-direction:column;gap:10px;min-width:0;}
+#home .hostl-display-ad{position:relative;width:100%;min-height:132px;border:1px solid color-mix(in srgb,var(--ht-muted,#d8c59a) 24%,transparent);border-radius:12px;background:rgba(0,0,0,.18);overflow:hidden;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--ht-muted,#d8c59a) 72%,transparent);font:800 9px/1.2 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;}
+#home .hostl-display-ad::before{content:"Advertisement";position:absolute;left:7px;top:5px;font-size:7px;letter-spacing:.08em;opacity:.58;z-index:2;pointer-events:none;}
+#home .hostl-display-ad.ad-mounted .hostl-ad-placeholder{display:none;}
+#home .hostl-ad-placeholder{opacity:.5;padding:18px;text-align:center;}
+#home .home-reward-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;width:min(520px,100%);}
+#home .home-reward-btn{flex:1 1 190px;min-height:38px;padding:8px 11px;border-radius:10px;border:2px solid var(--hostl-ink,#172019);background:color-mix(in srgb,var(--ht-special,#d6a441) 38%,var(--ht-panel2,#203129) 62%);color:var(--ht-text,#f2eedc);font:900 11px/1.1 system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 0 rgba(8,12,9,.5);}
+#home .home-reward-btn:disabled{cursor:not-allowed;opacity:.56;filter:saturate(.7);}
+#homeRewardStatus{flex-basis:100%;min-height:12px;font-size:9px;color:var(--ht-muted,#c7c0a8);}
+#overlay #reviveBtn{background:linear-gradient(180deg,#e8bd4f,#b77b1d);color:#19140b;border-color:#ffe39a;margin-top:7px;}
+#overlay #reviveBtn:disabled{opacity:.55;cursor:not-allowed;filter:grayscale(.25);}
+#overlay #reviveStatus{min-height:16px;margin:6px 0 3px;font-size:11px;opacity:.78;}
+@media(max-width:900px){
+  body.mobile-home-layout #home .home-ad-rail{grid-column:1/-1 !important;flex-direction:row;gap:7px;width:100%;}
+  body.mobile-home-layout #home .hostl-display-ad{min-height:64px;}
+  body.mobile-home-layout #home .home-reward-row{width:100%;gap:5px;}
+  body.mobile-home-layout #home .home-reward-btn{min-height:34px;padding:6px;font-size:9px;}
+}
+@media(max-width:620px){
+  #home .home-ad-rail{grid-column:1/-1 !important;display:flex;flex-direction:column;gap:6px;width:100%;}
+  #home .hostl-display-ad{min-height:58px;}
+}
+</style>
+
 <div id="home">
   <div id="homeThemeFx" aria-hidden="true"></div>
   <div class="home-shell">
@@ -5902,6 +5958,11 @@ button:focus-visible{
             </label>
           </div>
           <div id="dailyServsHint" class="home-inline-note"></div>
+          <div class="home-reward-row" aria-label="Daily ad rewards">
+            <button id="homeDailyCubitsBtn" class="home-reward-btn" type="button">Watch Ad • +100 Cubits</button>
+            <button id="homeDailyChestBtn" class="home-reward-btn" type="button">Watch Ad • Free Chest</button>
+            <div id="homeRewardStatus"></div>
+          </div>
 
           <div class="online-panel">
             <button type="button" class="online-mode-btn selected" id="offlineModeBtn">Offline</button>
@@ -5930,6 +5991,10 @@ button:focus-visible{
             <button id="homeUpdatesBtn" class="home-side-action home-updates-action" type="button"><span>News</span><span class="home-new-badge">NEW</span></button>
           </div>
         </div>
+        <aside class="home-ad-rail" aria-label="Advertisements">
+          <div id="homeAdTop" class="hostl-display-ad" data-hostl-ad-placement="home_right_top"><span class="hostl-ad-placeholder">Ad space</span></div>
+          <div id="homeAdBottom" class="hostl-display-ad" data-hostl-ad-placement="home_right_bottom"><span class="hostl-ad-placeholder">Ad space</span></div>
+        </aside>
       </div>
 
     </div>
@@ -6007,7 +6072,7 @@ button:focus-visible{
           <h4>10. Changes</h4>
           <p>This policy may be updated as HOSTL changes or legal and service-provider requirements change. Important updates will be posted with a revised effective date.</p>
           <h4>11. Contact</h4>
-          <p>For privacy questions or account-deletion requests, contact <a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a>.</p>
+          <p>For privacy questions or account-deletion requests, contact <a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a> or call <a href="tel:+16782623262">(678) 262-3262</a>.</p>
         </section>
 
         <section class="legal-panel" data-legal-panel="terms">
@@ -6037,13 +6102,13 @@ button:focus-visible{
           <h4>11. Changes to These Terms</h4>
           <p>These terms may change as HOSTL develops. Continued use of HOSTL after updated terms are posted means the updated terms apply going forward.</p>
           <h4>12. Contact</h4>
-          <p>Questions about these terms can be sent to <a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a>.</p>
+          <p>Questions about these terms can be sent to <a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a> or by phone at <a href="tel:+16782623262">(678) 262-3262</a>.</p>
         </section>
 
         <section class="legal-panel" data-legal-panel="contact">
           <h3>Contact HoloFox9 Studios</h3>
           <p>For HOSTL support, privacy questions, account-deletion requests, bug reports, or other game-related issues:</p>
-          <p><strong>HoloFox9 Studios</strong><br><a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a></p>
+          <p><strong>HoloFox9 Studios</strong><br>Email: <a href="mailto:holofox9studios@gmail.com">holofox9studios@gmail.com</a><br>Phone: <a href="tel:+16782623262">(678) 262-3262</a></p>
           <p>If your message is about an account, include your HOSTL username or player ID when possible. Never email your password.</p>
         </section>
       </div>
@@ -6369,7 +6434,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 38000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "661";
+const CUBE_SHARED_RULES_VERSION = "664";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -10977,10 +11042,11 @@ function applyChestNetworkReward(data={}) {
   const c=net.chestVisuals.get(data.id); if(c){spark(c.x,c.y-6,"#ffd85f",18,130);sfx.chestOpen();}
 }
 function applyTameNetworkResult(data={}) {
-  if (data.pending) { game.tamePending = true; banner(`Taming…${Number.isFinite(Number(data.chance)) ? " "+Math.round(Number(data.chance)*100)+"% chance" : ""}`); return; }
+  if(Number.isFinite(Number(data.honeycomb))){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials.honeycomb=Math.max(0,Math.floor(Number(data.honeycomb)||0));if(player.biomeMaterials.honeycomb<=0&&player.heldSpecial==="HoneyComb")restoreLastWeaponAfterSpecial();syncHotbar();syncMobilePrimaryButton();}
+  if (data.pending) { game.tamePending = true; banner(`Taming…${Number.isFinite(Number(data.chance)) ? " "+Math.round(Number(data.chance)*100)+"% chance" : ""}${data.usedComb?" • bee ate 1 Honey Comb":""}`); return; }
   game.tamePending = false;
   if (data.reason === "max") { banner("Max 4 regular pets! Bred family pets do not use a slot.", true); return; }
-  if (data.success) { if (sfx.tame) sfx.tame(); banner(`Tamed ${PET_TYPES[data.type]?.name||"pet"}!`); achievementTamedSpecies(String(data.type||"")); }
+  if (data.success) { if (sfx.tame) sfx.tame(); banner(`Tamed ${PET_TYPES[data.type]?.name||"pet"}!${Number(data.bonusXp)>0?` +${Math.floor(Number(data.bonusXp))} starting XP`:""}`); achievementTamedSpecies(String(data.type||"")); }
   else if (data.type) { banner(`${PET_TYPES[data.type]?.name||"Animal"} resisted taming`, true); }
 }
 function applyPetBreedNetworkResult(data={}) {
@@ -11073,6 +11139,10 @@ function applyNetworkHarvestReward(data = {}) {
   const tx = target ? target.x : player.x;
   const ty = target ? target.y : player.y;
 
+  if (kind === "hiveMiss") {
+    floatText(tx,ty-24,"No Honey Comb","#e7c66d");
+    return;
+  }
   if (kind === "biomeMaterial") {
     const material=String(data.material||""),metaInfo=BIOME_MATERIAL_META[material];
     if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");if(material==="honeycomb")registerHotbarItem("Honey Comb");if(material==="honey")registerHotbarItem("Honey");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
@@ -11255,6 +11325,8 @@ async function connectMultiplayer(options={}) {
       if(data?.message)banner(String(data.message),data.ok===false);
     });
     room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||"");if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit")player._stoneFruitUntil=game.time+20;if(food==="honey"){player._honeyRushUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(data?.message)banner(String(data.message));restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("revived", (data={}) => { finishRewardedRevive(data); });
+    room.onMessage("reviveDenied", () => { game.revivePending=false; updateReviveDeathUi("The server could not authorize that revive."); });
     room.onMessage("resourceReward", applyNetworkHarvestReward);
     room.onMessage("goldBalance", data => {
       applyConfirmedNetworkGold(data?.balance, data?.delta);
@@ -15798,7 +15870,7 @@ function runPetXpMul(){return runShop.cape==="mentorCape"?1.50:1;}
 function runDefenseMul(){return (runShop.armor==="guardianArmor"?.66:runShop.armor==="ironArmor"?.78:runShop.armor==="leatherArmor"?.88:1) * skillDefenseMul();}
 
 const TAME_BASE_CHANCE = Object.assign(Object.fromEntries(Object.keys(PET_TYPES).map(type => [type, PET_RARITY_TAME_CHANCE[petRarity(type)] ?? .38])),{workerbee:.28,queenbee:.12,dronebee:.62});
-function tameChanceFor(type){const combBonus=player?.heldSpecial==="HoneyComb" ? .22 : 0;return clamp((TAME_BASE_CHANCE[type] ?? .38)+runTameBonus()+combBonus,.08,.95);}
+function tameChanceFor(type){const combReady=isWildBeeType(type)&&player?.heldSpecial==="HoneyComb"&&Math.max(0,Number(player?.biomeMaterials?.honeycomb)||0)>0;const combBonus=combReady ? .22 : 0;return clamp((TAME_BASE_CHANCE[type] ?? .38)+runTameBonus()+combBonus,.08,.95);}
 function beeSleepSpawnChance(type,stage){ if(type!=="queenbee"&&type!=="workerbee"&&type!=="dronebee") return stage==="bigmomma"?0.96:stage==="superboss"?0.88:stage==="boss"?0.75:stage==="baby"?0.65:0; if(type==="queenbee"&&stage==="bigmomma") return 0.985; if(stage==="baby") return 0.84; if(stage==="boss") return 0.28; if(stage==="superboss") return 0.12; if(stage==="bigmomma") return 0.58; return 0.18; }
 function beeNapChance(type,stage,enraged=false){ if(type!=="queenbee"&&type!=="workerbee"&&type!=="dronebee") return stage==="baby"?0.10:(["boss","superboss","bigmomma"].includes(stage)&&!enraged?(stage==="bigmomma"?0.22:0.08):0); if(stage==="baby") return 0.20; if(stage==="boss") return enraged?0:0.035; if(stage==="superboss") return enraged?0:0.02; if(stage==="bigmomma") return enraged?0:0.34; return enraged?0:0.014; }
 
@@ -16099,6 +16171,7 @@ const player = {
   color: COLORS[0], username: "Cube",
   inventory: [], // {id, qty}
   hotbarOrder: ["Fist"],
+  inventoryOrder: [],
   hasSaddle: false,
   skillLevel: 0, skillXp: 0, skillMilestones: {}, pendingSkillMilestone: 0, skillStoneChoice:"", skillWeaponChoice:"",
   skillRanks: {speed:0,strength:0,defense:0},
@@ -16118,6 +16191,7 @@ let game = {
   startPetGender: "Male",
   startPetCustomizationType: "",
   earnedServs: 0,
+  runId: "", reviveCount: 0, reviveAdUsed: false, revivePending: false, deathCarrySnapshot: null, creditedDeathCubits: 0,
   homeCamReady: false, homeTargetX: 0, homeTargetY: 0,
   tamePending: false,
   firstLightReady: false,
@@ -16812,6 +16886,7 @@ function hiveBeeStageOffline(type,hiveOrdinal=0,first=false){
   return Math.random()<.55?"baby":"adult";
 }
 function weightedHiveBeeTypeOffline(){const q=Math.random();return q<.62?"dronebee":q<.92?"workerbee":"queenbee";}
+function hiveHatchStageOffline(type){if(type==="workerbee"){const q=Math.random();return q<.28?"boss":q<.78?"adult":"baby";}return Math.random()<.56?"baby":"adult";}
 function spawnHiveBeeOffline(hiveIdx,type,stage){
   const hive=resources[hiveIdx];if(!hive||!hive.alive||hive.type!=="rainforestHive")return null;
   const bee=spawnWildAnimal(false,stage,type,null,"rainforest");if(!bee)return null;
@@ -16832,7 +16907,7 @@ function updateHiveBeeSpawnersOffline(dt){
     const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;
     hive._beeSpawnT=(Number.isFinite(Number(hive._beeSpawnT))?Number(hive._beeSpawnT):300)-step;if(hive._beeSpawnT>0)continue;
     let hiveCount=0;for(const a of animals)if(a&&!a.dead&&!a.owned&&isWildBeeType(a.type)&&a._hiveHomeIdx===i)hiveCount++;
-    if(hiveCount<14){const type=weightedHiveBeeTypeOffline(),stage=Math.random()<.56?"baby":"adult";spawnHiveBeeOffline(i,type,stage);}
+    if(hiveCount<14){const type=weightedHiveBeeTypeOffline(),stage=hiveHatchStageOffline(type);spawnHiveBeeOffline(i,type,stage);}
     hive._beeSpawnT=300;
   }
 }
@@ -16854,7 +16929,7 @@ function updateWorkerBeeJobOffline(a,dt,hive){
   if(state==="flower"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}const d=dist(a.x,a.y,f.x,f.y);const aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);if(d>Math.max(22,(f.solidR||18)+12))moveFacing(a,(a.speed||60)*.82,dt);else{a._beeWorkState="collect";a._beeWorkTimer=rand(1.8,3.0);a._beePollen=true;f.pulse=Math.max(Number(f.pulse)||0,.3);}return true;}
   if(state==="collect"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);if(a._beeWorkTimer<=0)a._beeWorkState="home";return true;}
   if(state==="home"){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;if(d>stop)moveFacing(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;}
-  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen)growHiveFromPollenOffline(hive);a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
+  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen){growHiveFromPollenOffline(hive);giveWildExpOffline(a,6,"pollen");}a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
   a._beeWorkState="seek";return false;
 }
 function updateDroneBeeHiveLifeOffline(a,dt,hive){
@@ -17003,6 +17078,7 @@ function startWildMorningBreeding() {
     used.add(a); used.add(mate); pairs++;
   }
 }
+function wildBreedingBabyCount(mother,father){const lvl=Math.max(1,Number(mother?.level)||1,Number(father?.level)||1);const stageBonus=Math.max(["baby","adult","boss","superboss","bigmomma"].indexOf(mother?.stage),["baby","adult","boss","superboss","bigmomma"].indexOf(father?.stage));return clamp(1+Math.floor((lvl-1)/2)+(stageBonus>=3?1:0),1,3);}
 function spawnWildBabyFromParents(mother, father) {
   if (!mother || !father || mother.dead || father.dead || mother.type !== father.type) return null;
   const type = mother.type, stage = "baby";
@@ -17049,8 +17125,8 @@ function updateWildMorningMate(a, dt) {
   moveFacing(a, a.speed * 0.78, dt);
   const touchD = Math.max(14, (Number(a.r)||18) * 0.42 + (Number(mate.r)||18) * 0.42);
   if (dist(a.x, a.y, mate.x, mate.y) <= touchD) {
-    if (a.gender === "Female") spawnWildBabyFromParents(a, mate);
-    else if (mate.gender === "Female") spawnWildBabyFromParents(mate, a);
+    const mother=a.gender==="Female"?a:(mate.gender==="Female"?mate:null),father=a.gender==="Male"?a:(mate.gender==="Male"?mate:null);
+    if(mother&&father){const babies=wildBreedingBabyCount(mother,father);for(let n=0;n<babies;n++)spawnWildBabyFromParents(mother,father);}
     else clearWildMatePair(a);
   }
   return true;
@@ -18020,7 +18096,7 @@ function gatherResource(r, t, toolOverride=null) {
   if(biomeInfo){
     if(r.type==="forestGiantFlower"||r.type==="rainforestGiantFlower"){r.pulse=1;spark(r.x,r.y,biomeInfo.color,5,48);return;}
     if(r.type==="rainforestHive"){
-      const yieldAmt=toolName==="Axe"?2:1,honeyAmt=1;r.pulse=1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials.honeycomb=(player.biomeMaterials.honeycomb||0)+yieldAmt;player.biomeMaterials.honey=(player.biomeMaterials.honey||0)+honeyAmt;registerHotbarItem("Honey Comb");registerHotbarItem("Honey");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);floatText(r.x,r.y-20,`+${yieldAmt} Honey Comb  +${honeyAmt} Honey`,biomeInfo.color);spark(r.x,r.y,biomeInfo.color,toolName==="Axe"?8:5,toolName==="Axe"?95:60);syncHud();syncHotbar();sfx.logHit();return;
+      const gotComb=Math.random()<.26,honeyAmt=1;r.pulse=1;player.biomeMaterials=player.biomeMaterials||{};if(gotComb){player.biomeMaterials.honeycomb=(player.biomeMaterials.honeycomb||0)+1;registerHotbarItem("Honey Comb");}player.biomeMaterials.honey=(player.biomeMaterials.honey||0)+honeyAmt;registerHotbarItem("Honey");gainSkillXp(gotComb?1.1:.45,"gather");consumeHydration(.9);floatText(r.x,r.y-20,gotComb?`+1 Honey Comb  +${honeyAmt} Honey`:`No comb this hit  +${honeyAmt} Honey`,gotComb?biomeInfo.color:"#e7c66d");spark(r.x,r.y,biomeInfo.color,gotComb?7:4,gotComb?86:54);syncHud();syncHotbar();sfx.logHit();return;
     }
     const correct=(biomeInfo.category==="wood"&&toolName==="Axe")||(biomeInfo.category==="stone"&&toolName==="Pickaxe")||(biomeInfo.category==="soft"&&(toolName==="Fist"||toolName==="Axe"));
     let dmg=(t.resourcePower==null?1:t.resourcePower)*(correct?1.25:.68); if(toolName==="Sword")dmg*=.35;
@@ -18137,18 +18213,22 @@ function eatBerry() {
     syncMobilePrimaryButton();
     return;
   }
-  player.berries--;
   const berryMount = player.riding && !player.riding.dead ? player.riding : null;
+  const targetFull = berryMount ? berryMount.hp >= berryMount.maxHp-0.01 : player.health >= player.maxHealth-0.01;
+  const hydrationFull = (Number(player.hydration)||0) >= 99.99;
+  if(targetFull && hydrationFull){banner(berryMount?"Your mount is already at full health":"You are already full health and hydration",true);return;}
+  player.berries--;
   if (berryMount) {
     berryMount.hp = clamp(berryMount.hp + 22, 0, berryMount.maxHp);
-    if (net.room) { try { net.room.send("heal", { amount: 22, petId: berryMount.netId || "", target: "mount" }); } catch (_) {} }
+    if (net.room) { try { net.room.send("heal", { amount: 22, petId: berryMount.netId || "", target: "mount", hydration: 6, source: "berry" }); } catch (_) {} }
     floatText(berryMount.x, berryMount.y - berryMount.r - 18, "+22", "#7be08a");
   } else {
     const heal=meta?.ownedStarters?.herbalWrap?30:22;
     player.health = clamp(player.health + heal, 0, player.maxHealth);
-    if (net.room) { try { net.room.send("heal", { amount: heal, target: "player" }); } catch (_) {} }
+    if (net.room) { try { net.room.send("heal", { amount: heal, target: "player", hydration: 6, source: "berry" }); } catch (_) {} }
     floatText(player.x, player.y - 28, `+${heal}`, "#7be08a");
   }
+  if(!hydrationFull){player.hydration=clamp((Number(player.hydration)||0)+6,0,100);updateHydrationHud();}
   player.attackCd = Math.max(player.attackCd, 0.3);
   player.punchTimer = 0.22;
   player.swingWeapon = "Fist";
@@ -18172,6 +18252,8 @@ function selectBiomeFood(food){
 }
 function eatBiomeFood(food){
   const count=Math.max(0,Math.floor(Number(player.biomeMaterials?.[food])||0));if(count<1){restoreLastWeaponAfterSpecial();syncHotbar();return;}
+  const hpFull=player.health>=player.maxHealth-.01,hydrationFull=(Number(player.hydration)||0)>=99.99;
+  if((food==="frostBerry"||food==="goodCactus"||food==="badCactus")&&hpFull&&hydrationFull){banner(food==="frostBerry"?"You are already full health and hydration":"You are already full health and hydration — save the cactus",true);return;}
   player.attackCd=.32;player.punchTimer=.22;player.swingWeapon="Fist";
   if(net.room){try{net.room.send("biomeFood",{food});}catch(_){}return;}
   player.biomeMaterials[food]=count-1;
@@ -18763,16 +18845,16 @@ function nearbyWildFightCandidates(grid, x, y) {
 }
 
 
-function giveWildKillExpOffline(a,victim){
-  if(!a||a.dead||a.owned||!victim)return;
-  const need=({baby:4,adult:65,boss:210,superboss:560})[a.stage];if(!need)return;
-  a.exp=Math.max(0,Number(a.exp)||0)+petKillXpForAnimal(victim);a.level=Math.max(1,Number(a.level)||1)+1;
-  if(a.exp<need)return;
-  let next=({baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"})[a.stage];if(!next)return;
-  if(next==="bigmomma"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);return;}
-  a.exp=Math.max(0,a.exp-need);a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;
-  floatText(a.x,a.y-a.r-18,`${next.toUpperCase()}!`,"#ffe66d");
+function wildExpNeedOffline(a){const base={baby:28,adult:72,boss:150,superboss:300,bigmomma:999999}[a?.stage]||999999;return Math.round(base*(1+Math.max(0,(Number(a?.level)||1)-1)*.18));}
+function giveWildExpOffline(a,amount,reason="wild"){
+  if(!a||a.dead||a.owned||a.stage==="bigmomma")return;amount=Math.max(0,Number(amount)||0);if(amount<=0)return;
+  a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(1,Math.floor(Number(a.level)||1));let safety=0;
+  while(safety++<12){const need=wildExpNeedOffline(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:3,adult:4,boss:5,superboss:6}[a.stage]||999;if(a.level<growAt)continue;
+    const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}
+    a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;floatText(a.x,a.y-a.r-18,`${next.toUpperCase()}!`,"#ffe66d");
+  }
 }
+function giveWildKillExpOffline(a,victim){if(!a||!victim)return;giveWildExpOffline(a,petKillXpForAnimal(victim),"hunt");}
 function chooseWildlifeFightTarget(a) {
   if (!a || a.dead || a.owned) return null;
   const babyHunter = a.stage === "baby" && !isNeutralBeeType(a.type);
@@ -19445,6 +19527,14 @@ function tryTameNearby() {
     if (d < bestD) { bestD = d; best = a; }
   }
   if (!best) { banner("No sleeping baby nearby (press T)", true); return; }
+  const chance = tameChanceFor(best.type);
+  const usedBeeComb = isWildBeeType(best.type) && player.heldSpecial === "HoneyComb" && Math.max(0,Number(player.biomeMaterials?.honeycomb)||0)>0;
+  if(usedBeeComb){
+    player.biomeMaterials.honeycomb=Math.max(0,(Number(player.biomeMaterials.honeycomb)||0)-1);
+    sfx.eat();
+    if(player.biomeMaterials.honeycomb<=0)restoreLastWeaponAfterSpecial();
+    syncHotbar();
+  }
   game.tamePending = true;
   // suspense build-up sound
   if (sfx.tameTry) sfx.tameTry();
@@ -19460,8 +19550,7 @@ function tryTameNearby() {
       o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.65);
     } catch (_) {}
   }
-  const chance = tameChanceFor(best.type);
-  banner(`Taming… ${Math.round(chance*100)}% chance`);
+  banner(`Taming… ${Math.round(chance*100)}% chance${usedBeeComb?" • bee ate 1 Honey Comb":""}`);
   setTimeout(() => {
     game.tamePending = false;
     if (best.dead || best.owned) return;
@@ -19479,7 +19568,8 @@ function tryTameNearby() {
       best.desperateAggro = false;
       best.fleeUntil = 0;
       best.enraged = false;
-      best.exp = 0; best.level = 1; best.combat = 0; best.atkCd = 0;
+      best.exp = usedBeeComb && isWildBeeType(best.type) ? 30 : 0; best.level = 1; best.combat = 0; best.atkCd = 0;
+      if(usedBeeComb&&isWildBeeType(best.type))best._xpBarShownAt=performance.now();
       best.speed = upgradedPetSpeed(best.type, best.stage);
       best.maxHp = upgradedPetMaxHp(best.type, best.stage);
       best.hp = best.maxHp;
@@ -19502,7 +19592,7 @@ function tryTameNearby() {
       saveMeta();
       achievementTamedSpecies(best.type);
       gainSkillXp(25,"tame");
-      banner(`Tamed ${PET_TYPES[best.type].name}! +1 Card (${meta.speciesCards[best.type]}/${cardsNeeded(best.type)})`);
+      banner(`Tamed ${PET_TYPES[best.type].name}!${usedBeeComb?" +30 starting XP":""} +1 Card (${meta.speciesCards[best.type]}/${cardsNeeded(best.type)})`);
     } else {
       // fail — sad sound + attacks you
       try {
@@ -20245,11 +20335,11 @@ function resolveAnimalWorld(a) {
 
 
 function tryWildEatBerryOffline(a,dt){
-  if(!a||a.dead||a.owned||a.sleeping||a.enraged||(a.combat||0)>0||combatTargetAlive(a.hostileTarget)||(a.type!=="deer"&&a.type!=="rabbit"))return false;
+  if(!a||a.dead||a.owned||a.sleeping||a.enraged||(a.combat||0)>0||combatTargetAlive(a.hostileTarget)||isWildBeeType(a.type))return false;
   if((Number(a._berryCooldownUntil)||0)>game.time)return false;
   let b=a._berryTarget;if(!b||!b.alive||b.type!=="bush"||dist(a.x,a.y,b.x,b.y)>430){b=null;for(const q of queryStaticNearby("resources",a.x,a.y,320+(a.speed||60)*.8)){if(!q.alive||q.type!=="bush")continue;if(!b||dist(a.x,a.y,q.x,q.y)<dist(a.x,a.y,b.x,b.y))b=q;}a._berryTarget=b;}
   if(!b)return false;const c=resourceSolidCenter(b),d=dist(a.x,a.y,c.x,c.y);if(d>(a.r||18)+(b.solidR||12)+8){smoothTurn(a,angTo(a.x,a.y,c.x,c.y),dt,3.6);a.x+=Math.cos(a.angle)*(a.speed||60)*.48*dt;a.y+=Math.sin(a.angle)*(a.speed||60)*.48*dt;return true;}
-  b.hp=Math.max(0,(b.hp||1)-Math.max(.25,(b.maxHp||8)*.035));b.pulse=1;a.hp=Math.min(a.maxHp,a.hp+a.maxHp*.06);a._berryCooldownUntil=game.time+rand(8,15);a._berryTarget=null;if(b.hp<=0){b.alive=false;b.respawnAt=game.time+rand(12,22);}return true;
+  b.hp=Math.max(0,(b.hp||1)-Math.max(.18,(b.maxHp||8)*.022));b.pulse=1;a.hp=Math.min(a.maxHp,a.hp+a.maxHp*.06);giveWildExpOffline(a,3,"eat");a._berryCooldownUntil=game.time+rand(11,20);a._berryTarget=null;if(b.hp<=0){b.alive=false;b.respawnAt=game.time+rand(12,22);}return true;
 }
 function wildAbilityAreaOffline(source,x,y,range,damage,opts={}){
   const hits=[];
@@ -20578,11 +20668,10 @@ function updateAnimals(dt) {
   // ~350 distant animals fully simulated created a lot of short-lived arrays
   // and eventually large browser garbage-collection pauses. Nearby/combat
   // wildlife remains full-rate; distant wildlife gets a cheap timer tick.
-  const fullSimRange = (typeof performanceReliefActive === "function" && performanceReliefActive()) ? 1000 : 1550;
+  const fullSimRange = (typeof performanceReliefActive === "function" && performanceReliefActive()) ? 900 : 1250;
   const fullSimRange2 = fullSimRange * fullSimRange;
   for (const a of animals) {
     if (a.dead || a.owned) continue;
-    if (keepWildInHomeBiomeOffline(a, dt)) continue;
     const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
 
     const adx = a.x - player.x, ady = a.y - player.y;
@@ -20591,9 +20680,10 @@ function updateAnimals(dt) {
     const forceFullSim = playerRelevantTarget || a.enemyOwner || a.mateTarget || a.tameFailedAggro || a.desperateAggro || (a.recentHit || 0) > 0;
     if (farAway && !forceFullSim) {
       a._farTickAccum = (a._farTickAccum || 0) + dt;
-      if (a._farTickAccum < 0.72) continue;
-      const fdt = Math.min(0.9, a._farTickAccum);
+      if (a._farTickAccum < 0.84) continue;
+      const fdt = Math.min(0.95, a._farTickAccum);
       a._farTickAccum = 0;
+      if (keepWildInHomeBiomeOffline(a, fdt)) continue;
       a.flash = Math.max(0, (a.flash || 0) - fdt);
       a.atkCd = Math.max(0, (a.atkCd || 0) - fdt);
       a.abilityCd = Math.max(0, (a.abilityCd || 0) - fdt);
@@ -20604,6 +20694,7 @@ function updateAnimals(dt) {
       continue;
     }
     a._farTickAccum = 0;
+    if (keepWildInHomeBiomeOffline(a, dt)) continue;
     if (a.flash > 0) a.flash -= dt;
     if (a.atkCd > 0) a.atkCd -= dt;
     if (a.abilityCd > 0) a.abilityCd -= dt;
@@ -21706,7 +21797,7 @@ function applyMovementHydration(dt,moveMul=1){
 }
 function updateHydrationHud(){
   const h=clamp(Number(player.hydration)||0,0,100),fill=el("hydrationFill"),txt=el("hydrationText"),hud=el("hydrationHud");
-  if(fill)fill.style.width=h.toFixed(1)+"%";if(txt)txt.textContent=Math.round(h)+"%";if(hud)hud.classList.toggle("low",h<HYDRATION_NORMAL_SPEED_AT);
+  if(fill){fill.style.width="100%";fill.style.height=h.toFixed(1)+"%";}if(txt)txt.textContent=Math.round(h)+"%";if(hud)hud.classList.toggle("low",h<HYDRATION_NORMAL_SPEED_AT);
 }
 function nearestPond(maxExtra=78){
   let best=null,bestD=Infinity;
@@ -21947,29 +22038,59 @@ function syncHud() {
   }
 }
 
+const HOTBAR_MAX_SLOTS = 10;
+function ensureHotbarInventoryState(){
+  if(!Array.isArray(player.hotbarOrder))player.hotbarOrder=["Fist","Bucket"];
+  if(!Array.isArray(player.inventoryOrder))player.inventoryOrder=[];
+  const sourceHot=player.hotbarOrder.map(v=>v==="Jungle Berry"?"Jungle Fruit":v).filter(Boolean);
+  const sourceInv=player.inventoryOrder.map(v=>v==="Jungle Berry"?"Jungle Fruit":v).filter(Boolean);
+  const hot=[],overflow=[],seenHot=new Set();
+  for(const label of sourceHot){if(seenHot.has(label))continue;seenHot.add(label);if(hot.length<HOTBAR_MAX_SLOTS)hot.push(label);else overflow.push(label);}
+  player.hotbarOrder=hot;
+  const keptHot=new Set(player.hotbarOrder),seenInv=new Set();
+  player.inventoryOrder=[];
+  for(const label of [...sourceInv,...overflow]){if(!label||keptHot.has(label)||seenInv.has(label))continue;seenInv.add(label);player.inventoryOrder.push(label);}
+  if(!player.hotbarOrder.includes("Fist")){if(player.hotbarOrder.length>=HOTBAR_MAX_SLOTS){const moved=player.hotbarOrder.pop();if(moved&&!player.inventoryOrder.includes(moved))player.inventoryOrder.unshift(moved);}player.hotbarOrder.unshift("Fist");}
+}
 function registerHotbarItem(label) {
   if (!label) return;
-  if (!Array.isArray(player.hotbarOrder)) player.hotbarOrder = ["Fist","Bucket"];
-  if (!player.hotbarOrder.includes("Fist")) player.hotbarOrder.unshift("Fist");
-  if (!player.hotbarOrder.includes(label)) player.hotbarOrder.push(label);
+  ensureHotbarInventoryState();
+  if(player.hotbarOrder.includes(label)||player.inventoryOrder.includes(label))return;
+  if(player.hotbarOrder.length<HOTBAR_MAX_SLOTS)player.hotbarOrder.push(label);else player.inventoryOrder.push(label);
 }
 function ensureHotbarAcquisitionOrder() {
-  if (!Array.isArray(player.hotbarOrder)) player.hotbarOrder=["Fist","Bucket"];
-  // Migrate the old display label without touching the saved jungleBerry material key.
-  player.hotbarOrder=player.hotbarOrder.map(v=>v==="Jungle Berry"?"Jungle Fruit":v);
+  ensureHotbarInventoryState();
   registerHotbarItem("Fist");
   registerHotbarItem("Bucket");
   for (const t of ["Axe","Pickaxe","Sword","Bow"]) if (player.owned[t]) registerHotbarItem(t);
   if (player.hasSaddle) registerHotbarItem("Saddle");
-  if ((player.berries||0)>0 || player.hotbarOrder.includes("Berry")) {if ((player.berries||0)>0) registerHotbarItem("Berry");}
+  if ((player.berries||0)>0) registerHotbarItem("Berry");
   if((player.biomeMaterials?.jungleBerry||0)>0)registerHotbarItem("Jungle Fruit");
   if((player.biomeMaterials?.frostBerry||0)>0)registerHotbarItem("Frost Berry");
   if((player.biomeMaterials?.goodCactus||0)>0)registerHotbarItem("Cactus A");
   if((player.biomeMaterials?.badCactus||0)>0)registerHotbarItem("Cactus B");
   if((player.biomeMaterials?.stoneFruit||0)>0)registerHotbarItem("Stone Fruit");
-  if((player.biomeMaterials?.honeycomb||0)>0)registerHotbarItem("Honey Comb");if((player.biomeMaterials?.honey||0)>0)registerHotbarItem("Honey");
+  if((player.biomeMaterials?.honeycomb||0)>0)registerHotbarItem("Honey Comb");
+  if((player.biomeMaterials?.honey||0)>0)registerHotbarItem("Honey");
   if (player.owned.Wall) registerHotbarItem("Wall");
   if (player.owned.Tower) registerHotbarItem("Tower");
+}
+function hotbarLabelAvailable(label){
+  if(label==="Fist"||label==="Bucket")return true;
+  if(["Axe","Pickaxe","Sword","Bow"].includes(label))return !!player.owned[label];
+  if(label==="Saddle")return !!player.hasSaddle;
+  if(label==="Berry")return (player.berries||0)>0;
+  const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey"}[label];
+  if(mat)return (player.biomeMaterials?.[mat]||0)>0;
+  if(label==="Wall")return !!player.owned.Wall;if(label==="Tower")return !!player.owned.Tower;return false;
+}
+function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",Saddle:"Saddle",Tower:"Tower"})[special]||"";}
+function swapInventoryIntoHotbar(inLabel,outLabel){
+  ensureHotbarInventoryState();
+  const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel==="Fist"||!player.inventoryOrder.includes(inLabel))return false;
+  player.hotbarOrder[idx]=inLabel;player.inventoryOrder=player.inventoryOrder.filter(v=>v!==inLabel);if(outLabel&&!player.inventoryOrder.includes(outLabel))player.inventoryOrder.push(outLabel);
+  if(player.tool===outLabel||specialHotbarLabel(player.heldSpecial)===outLabel){player.heldSpecial=null;player.tool="Fist";player.lastWeaponTool="Fist";}
+  player._inventorySwapCandidate="";buildHotbar();syncHotbar();syncMobilePrimaryButton();return true;
 }
 function getHotbarItems() {
   // Slots are acquisition-stable: an existing item keeps its number and every
@@ -21985,13 +22106,13 @@ function getHotbarItems() {
     } else if (label === "Bucket") { const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS); entry={tool:null,label:"Bucket",special:"Bucket",qty:sips>0?sips:""}; }
     else if (label === "Saddle" && player.hasSaddle) entry={tool:null,label:"Saddle",special:"Saddle"};
     else if (label === "Berry") entry={tool:null,label:"Berry",special:"Berry",qty:player.berries||0};
-    else if (label === "Jungle Fruit" && (player.biomeMaterials?.jungleBerry||0)>0) entry={tool:null,label:"Jungle Fruit",special:"JungleBerry",qty:player.biomeMaterials.jungleBerry||0};
-    else if (label === "Frost Berry" && (player.biomeMaterials?.frostBerry||0)>0) entry={tool:null,label:"Frost Berry",special:"FrostBerry",qty:player.biomeMaterials.frostBerry||0};
-    else if (label === "Cactus A" && (player.biomeMaterials?.goodCactus||0)>0) entry={tool:null,label:"Cactus A",special:"GoodCactus",qty:player.biomeMaterials.goodCactus||0};
-    else if (label === "Cactus B" && (player.biomeMaterials?.badCactus||0)>0) entry={tool:null,label:"Cactus B",special:"BadCactus",qty:player.biomeMaterials.badCactus||0};
-    else if (label === "Stone Fruit" && (player.biomeMaterials?.stoneFruit||0)>0) entry={tool:null,label:"Stone Fruit",special:"StoneFruit",qty:player.biomeMaterials.stoneFruit||0};
-    else if (label === "Honey Comb" && (player.biomeMaterials?.honeycomb||0)>0) entry={tool:null,label:"Honey Comb",special:"HoneyComb",qty:player.biomeMaterials.honeycomb||0};
-    else if (label === "Honey" && (player.biomeMaterials?.honey||0)>0) entry={tool:null,label:"Honey",special:"Honey",qty:player.biomeMaterials.honey||0};
+    else if (label === "Jungle Fruit") entry={tool:null,label:"Jungle Fruit",special:"JungleBerry",qty:player.biomeMaterials?.jungleBerry||0};
+    else if (label === "Frost Berry") entry={tool:null,label:"Frost Berry",special:"FrostBerry",qty:player.biomeMaterials?.frostBerry||0};
+    else if (label === "Cactus A") entry={tool:null,label:"Cactus A",special:"GoodCactus",qty:player.biomeMaterials?.goodCactus||0};
+    else if (label === "Cactus B") entry={tool:null,label:"Cactus B",special:"BadCactus",qty:player.biomeMaterials?.badCactus||0};
+    else if (label === "Stone Fruit") entry={tool:null,label:"Stone Fruit",special:"StoneFruit",qty:player.biomeMaterials?.stoneFruit||0};
+    else if (label === "Honey Comb") entry={tool:null,label:"Honey Comb",special:"HoneyComb",qty:player.biomeMaterials?.honeycomb||0};
+    else if (label === "Honey") entry={tool:null,label:"Honey",special:"Honey",qty:player.biomeMaterials?.honey||0};
     else if (label === "Wall" && player.owned.Wall) entry={tool:null,label:"Wall"};
     else if (label === "Tower" && player.owned.Tower) entry={tool:null,label:"Tower",special:"Tower"};
     if(entry) out.push({key:hotkeys[out.length],...entry});
@@ -22889,6 +23010,18 @@ function buildInv() {
     grid.appendChild(div);
   }
   for(const [material,qty] of Object.entries(player.biomeMaterials||{})){if(!(qty>0))continue;const mi=BIOME_MATERIAL_META[material]||{name:material,color:"#d8e2c7"};const div=document.createElement("div");div.className="inv-slot";div.innerHTML=`<span style="color:${mi.color}">◆ ${mi.name}</span><span class="qty">${qty}</span>`;grid.appendChild(div);}
+
+  ensureHotbarAcquisitionOrder();
+  const overflow=(player.inventoryOrder||[]).filter(hotbarLabelAvailable);
+  if(overflow.length){
+    const title=document.createElement("div");title.className="inv-slot inv-hotbar-title";title.innerHTML=`<span>🎒 Hotbar Items</span><span class="qty">${overflow.length} stored</span>`;grid.appendChild(title);
+    for(const label of overflow){const div=document.createElement("div");div.className="inv-slot inv-hotbar-item";div.style.cursor="pointer";div.innerHTML=`<span>${label}</span><span class="qty">${player.hotbarOrder.length<HOTBAR_MAX_SLOTS?"Add":"Swap"}</span>`;div.title=player.hotbarOrder.length<HOTBAR_MAX_SLOTS?"Put this item in the hotbar":"Choose a hotbar slot to replace";div.addEventListener("click",()=>{if(player.hotbarOrder.length<HOTBAR_MAX_SLOTS){player.inventoryOrder=player.inventoryOrder.filter(v=>v!==label);player.hotbarOrder.push(label);buildHotbar();syncHotbar();buildInv();}else{player._inventorySwapCandidate=label;buildInv();}});grid.appendChild(div);}
+  }
+  const candidate=String(player._inventorySwapCandidate||"");
+  if(candidate&&player.inventoryOrder?.includes(candidate)&&hotbarLabelAvailable(candidate)){
+    const title=document.createElement("div");title.className="inv-slot inv-swap-title";title.innerHTML=`<span>Replace a hotbar slot with <b>${candidate}</b></span><span class="qty">Choose</span>`;grid.appendChild(title);
+    for(let i=0;i<player.hotbarOrder.length;i++){const label=player.hotbarOrder[i];const div=document.createElement("div");div.className="inv-slot inv-swap-slot";if(label==="Fist"){div.style.opacity=".48";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Locked</span>`;}else{div.style.cursor="pointer";div.innerHTML=`<span>${i===9?0:i+1}. ${label}</span><span class="qty">Replace</span>`;div.addEventListener("click",()=>{swapInventoryIntoHotbar(candidate,label);buildInv();});}grid.appendChild(div);}
+  }
 
   // ...and for selecting/equipping gear purchased from the in-game run shop.
   const purchasedGear = RUN_SHOP_ITEMS.filter(item => runShop.purchased.has(item.id));
@@ -26782,19 +26915,78 @@ function draw(menuMode = false) {
 // ---------- main loop ----------
 let last = performance.now();
 let restartAllowedAt = 0;
+function captureDeathCarrySnapshot(){
+  return {
+    wood:Math.max(0,Math.floor(Number(player.wood)||0)), stone:Math.max(0,Math.floor(Number(player.stone)||0)),
+    gold:Math.max(0,Math.floor(Number(player.gold)||0)), berries:Math.max(0,Math.floor(Number(player.berries)||0)),
+    biomeMaterials:{...(player.biomeMaterials||{})}
+  };
+}
+function updateReviveDeathUi(message=""){
+  const btn=el("reviveBtn"),status=el("reviveStatus");if(!btn||!status)return;
+  const logged=!!window.__hostlIsAccountLoggedIn?.(),adsReady=!!window.__hostlRewardedAdsReady?.();
+  btn.disabled=!!game.revivePending;
+  if(!logged){btn.textContent="Sign In to Revive";status.textContent=message||"Rewarded revives use your HOSTL account so the ad reward can be verified.";return;}
+  if(!game.reviveAdUsed){
+    btn.textContent=adsReady?"Watch Ad to Revive":"Revive Ad Pending Verification";
+    btn.disabled=btn.disabled||!adsReady;
+    status.textContent=message||(adsReady?"First revive this run uses a rewarded ad. You return with your pet and part of your supplies.":"Rewarded ads are not connected to the server yet.");
+  }else{
+    const balance=Number(window.__hostlGetGoldCubits?.()??0),cost=100;
+    btn.textContent=`Revive — ${cost} Gold Cubits`;btn.disabled=btn.disabled||balance<cost;
+    status.textContent=message||(balance<cost?`You need ${cost} Gold Cubits to revive again this run.`:"Further revives in this run cost Gold Cubits.");
+  }
+}
+function applyReviveCarry(snapshot={},serverData={}){
+  player.wood=Math.max(0,Math.floor((Number(snapshot.wood)||0)*.35));
+  player.stone=Math.max(0,Math.floor((Number(snapshot.stone)||0)*.35));
+  player.berries=Math.max(0,Math.floor((Number(snapshot.berries)||0)*.50));
+  player.gold=Number.isFinite(Number(serverData?.gold))?Math.max(0,Math.floor(Number(serverData.gold))):Math.max(0,Math.floor((Number(snapshot.gold)||0)*.35));
+  const src=(serverData?.biomeMaterials&&typeof serverData.biomeMaterials==="object")?serverData.biomeMaterials:(snapshot.biomeMaterials||{});
+  const next={};for(const [k,v] of Object.entries(src))next[k]=serverData?.biomeMaterials?Math.max(0,Math.floor(Number(v)||0)):Math.max(0,Math.floor((Number(v)||0)*.35));player.biomeMaterials=next;
+}
+function spawnStarterPetAfterReviveOffline(){
+  if(net.room||!game.startPet||!PET_TYPES[game.startPet]||player.pets.some(p=>p&&!p.dead&&p.type===game.startPet))return;
+  const type=game.startPet,stage=starterStageFor(type),rr=animalRadius(type,stage),maxHp=upgradedPetMaxHp(type,stage),coats=PET_TYPES[type].coats||[PET_TYPES[type].color],coat=coats[randi(0,coats.length-1)];
+  player.pets.push({type,stage,x:player.x+45,y:player.y,angle:0,r:rr,hp:maxHp*.60,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:starterPetNameValue(),gender:canonicalAnimalGender(type,starterPetGenderValue()),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0});
+}
+function finishRewardedRevive(serverData={}){
+  if(!game.revivePending&&!game.over)return;
+  const snapshot=game.deathCarrySnapshot||{};
+  if(net.room){
+    syncNetworkFullWorld(true);
+    if(Number.isFinite(Number(serverData.x)))player.x=Number(serverData.x);if(Number.isFinite(Number(serverData.y)))player.y=Number(serverData.y);
+    player.health=Number.isFinite(Number(serverData.health))?Number(serverData.health):player.maxHealth*.60;player.hydration=Number.isFinite(Number(serverData.hydration))?Number(serverData.hydration):65;player.bucketWater=true;player.bucketSips=Math.max(0,Math.min(BUCKET_MAX_SIPS,Math.floor(Number(serverData.bucketSips)||2)));
+  }else{
+    const sx=player.x,sy=player.y,spawn=chooseRandomPlayerSpawn(sx,sy,760);player.x=spawn.x;player.y=spawn.y;player.angle=rand(-Math.PI,Math.PI);player.health=Math.max(1,player.maxHealth*.60);player.hydration=65;player.bucketWater=true;player.bucketSips=Math.min(BUCKET_MAX_SIPS,2);
+    for(const pet of player.pets){if(!pet)continue;pet.dead=false;pet.hp=Math.max(1,pet.maxHp*.60);pet.x=player.x+rand(-52,52);pet.y=player.y+rand(-52,52);pet.follow=true;pet.orderMode="follow";}spawnStarterPetAfterReviveOffline();
+  }
+  applyReviveCarry(snapshot,serverData);
+  player.dead=false;player.splitT=0;player.riding=null;game.over=false;game.revivePending=false;game.reviveCount=Math.max(0,Number(game.reviveCount)||0)+1;game.deathCamTarget=null;game.deathCamTargetKind="";game.deathCamTargetId="";
+  el("overlay").classList.remove("show");game.camX=clamp(player.x-W/2,0,Math.max(0,WORLD_W-W));game.camY=clamp(player.y-H/2,0,Math.max(0,WORLD_H-H));
+  buildHotbar();syncHud();syncHotbar();syncPetCards();syncMobilePrimaryButton();if(net.room)setTimeout(ensureNetworkStarterPet,60);banner("Revived — your pet and part of your supplies came with you!");
+}
+async function requestRunRevive(){
+  if(!game.over||game.revivePending)return;
+  if(!window.__hostlIsAccountLoggedIn?.()){try{window.__hostlOpenAccountForTheme?.();}catch(_){}updateReviveDeathUi("Sign in first so HOSTL can verify the rewarded revive.");return;}
+  const method=game.reviveAdUsed?"cubits":"ad";game.revivePending=true;updateReviveDeathUi(method==="ad"?"Opening rewarded ad…":"Authorizing Cubit revive…");
+  const result=await window.__hostlAuthorizeRevive?.(game.runId,method);
+  if(!result?.ok){game.revivePending=false;updateReviveDeathUi(result?.message||"That revive could not be authorized.");return;}
+  if(method==="ad")game.reviveAdUsed=true;
+  if(net.room){
+    try{
+      net.room.send("revive",{reviveToken:String(result.reviveToken||"")});
+      setTimeout(()=>{if(game.revivePending&&game.over){game.revivePending=false;updateReviveDeathUi("The revive response timed out. Try again if you are still down.");}},6500);
+    }catch(_){game.revivePending=false;updateReviveDeathUi("The multiplayer server could not receive the revive.");}
+  } else finishRewardedRevive({});
+}
 function endGame() {
   game.over = true;
-  // servs earned
-  const earned = Math.floor(game.survivalTime * 0.4 + game.kills * 2 + game.wave * 3);
-  game.earnedServs = earned;
-  meta.servs += earned;
-  saveMeta();
-  el("finalTime").childNodes[0].nodeValue = fmtTime(game.survivalTime);
-  el("finalKills").childNodes[0].nodeValue = String(game.kills);
-  el("finalWave").childNodes[0].nodeValue = String(game.wave);
-  el("finalServs").textContent = earned;
-  restartAllowedAt = performance.now() + 650;
-  el("overlay").classList.add("show");
+  const totalEarned=Math.floor(game.survivalTime*.4+game.kills*2+game.wave*3),previous=Math.max(0,Math.floor(Number(game.creditedDeathCubits)||0)),earned=Math.max(0,totalEarned-previous);
+  game.creditedDeathCubits=totalEarned;game.earnedServs=(Number(game.earnedServs)||0)+earned;meta.servs+=earned;saveMeta();
+  game.deathCarrySnapshot=captureDeathCarrySnapshot();
+  el("finalTime").childNodes[0].nodeValue = fmtTime(game.survivalTime);el("finalKills").childNodes[0].nodeValue=String(game.kills);el("finalWave").childNodes[0].nodeValue=String(game.wave);el("finalServs").textContent=earned;
+  restartAllowedAt=performance.now()+650;el("overlay").classList.add("show");updateReviveDeathUi();
 }
 
 function resetGame(options = {}) {
@@ -26841,7 +27033,7 @@ function resetGame(options = {}) {
     Sword: !!meta.ownedStarters.startSword,
     Bow: !!meta.ownedStarters.startBow
   };
-  player.hotbarOrder = ["Fist","Bucket"];
+  player.hotbarOrder = ["Fist","Bucket"];player.inventoryOrder=[];player._inventorySwapCandidate="";
   if (meta.ownedStarters.startAxe) registerHotbarItem("Axe");
   if (meta.ownedStarters.startPickaxe) registerHotbarItem("Pickaxe");
   if (meta.ownedStarters.startSword) registerHotbarItem("Sword");
@@ -26886,6 +27078,7 @@ function resetGame(options = {}) {
   }
 
   game.survivalTime = 0; game.kills = 0; game.waveTimer = 4;
+  game.runId=(globalThis.crypto?.randomUUID?.()||(`run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`));game.reviveCount=0;game.reviveAdUsed=false;game.revivePending=false;game.deathCarrySnapshot=null;game.creditedDeathCubits=0;
   if (!instantLiveEntry) {
     game.time = 0; game.wave = 0;
   } else {
@@ -28140,6 +28333,11 @@ function enterGameplayUi() {
   last = performance.now();
 }
 
+const HOSTL_PLAY_INTERSTITIAL_CHANCE=.25;
+async function maybeShowPlayInterstitial(){
+  if(typeof window.__hostlInterstitialAdProvider!=="function"||Math.random()>=HOSTL_PLAY_INTERSTITIAL_CHANCE)return false;
+  try{await window.__hostlInterstitialAdProvider("play",{placement:"play_start"});return true;}catch(_){return false;}
+}
 el("playBtn").addEventListener("click", async () => {
   if ((game.started && !game.over) || playStartInProgress) return;
   playStartInProgress = true;
@@ -28149,6 +28347,7 @@ el("playBtn").addEventListener("click", async () => {
   // allowed to cancel Play; if it is still connecting, it finishes in background.
   hideLoadingScreen();
   await waitOneFrame();
+  await maybeShowPlayInterstitial();
 
   try {
     closeCardInventory();closeStarterShop();closeChooseStarterPet();closePlayerDesign();closeHomeThemes();
@@ -28234,6 +28433,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
+el("reviveBtn").addEventListener("click", (e) => {e.preventDefault();e.stopPropagation();requestRunRevive();});
 el("restartBtn").addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -28490,6 +28690,8 @@ window.__hostlGetGoldCubits = function(){
   if(!accountState.loggedIn) return null;
   return Math.max(0,Math.floor(Number(accountState.goldCubits)||0));
 };
+window.__hostlIsAccountLoggedIn = () => !!accountState.loggedIn;
+window.__hostlRewardedAdsReady = () => !!rewardedAdsConfigured;
 
 function utcDayKey() {
   if (hostlServerDayKey) return hostlServerDayKey;
@@ -28635,6 +28837,11 @@ window.__hostlBuyTheme = async function(themeId, shownPrice){
     showPurchaseReveal(HOME_THEMES?.[themeId]?.name||"Theme",`theme:${themeId}`,"Purchased","Permanent Home theme unlocked");
   }catch(_){ showGameMessage?.("Theme", "Could not reach the HOSTL server."); }
 };
+function mountHostlDisplayAds(){
+  const provider=window.__hostlDisplayAdProvider;if(typeof provider!=="function")return;
+  document.querySelectorAll(".hostl-display-ad[data-hostl-ad-placement]").forEach(slot=>{if(slot.dataset.hostlAdMounted==="1")return;try{const result=provider(slot,String(slot.dataset.hostlAdPlacement||""));if(result!==false){slot.dataset.hostlAdMounted="1";slot.classList.add("ad-mounted");}}catch(_){}});
+}
+window.__hostlMountDisplayAds=mountHostlDisplayAds;window.addEventListener("hostl-ad-provider-ready",mountHostlDisplayAds);setTimeout(mountHostlDisplayAds,0);
 async function requestRewardedAdProof(kind,subject){
   if(!rewardedAdsConfigured)return "";
   // Provider integration point: the rewarded-ad SDK must return a short-lived,
@@ -28647,6 +28854,13 @@ async function requestRewardedAdProof(kind,subject){
   }catch(_){}
   return "";
 }
+window.__hostlAuthorizeRevive = async function(runId,method){
+  if(!accountState.loggedIn||!hostlSessionToken)return {ok:false,message:"A HOSTL account is required for verified rewarded revives."};
+  method=String(method||"").toLowerCase();let adProof="";
+  if(method==="ad"){if(!rewardedAdsConfigured)return {ok:false,message:"Rewarded ads are not connected yet."};adProof=await requestRewardedAdProof("revive",String(runId||""));if(!adProof)return {ok:false,message:"The revive ad was not completed or could not be verified."};}
+  try{const r=await fetch("/api/revive-authorization",{method:"POST",headers:{"Content-Type":"application/json",...accountAuthHeaders()},body:JSON.stringify({runId:String(runId||""),method,adProof})});const data=await r.json().catch(()=>({}));if(data?.account){setAccountFromServer(data.account);saveAccountSession();syncAccountUi();}if(!r.ok)return {ok:false,message:data?.error==="not_enough_cubits"?`You need ${Number(data.cost||100)} Gold Cubits to revive again.`:String(data?.error||"").includes("ad_")?"The server could not verify that rewarded ad.":"That revive could not be authorized."};return {ok:true,reviveToken:String(data.reviveToken||""),method:data.method||method};}catch(_){return {ok:false,message:"Could not reach the HOSTL server for the revive."};}
+};
+
 window.__hostlUnlockAdTheme = async function(themeId){
   if(!accountState.loggedIn){ window.__hostlOpenAccountForTheme(); return; }
   if(!rewardedAdsConfigured){ showGameMessage?.("Rewarded Ads", "Rewarded ads are not connected on this server yet, so ad-only themes cannot be granted for free."); return; }
@@ -28813,8 +29027,9 @@ function syncAccountUi(msg="") {
   }
   const ds = document.getElementById("dailyCubitStatus");
   if (ds) ds.textContent = accountState.loggedIn
-    ? (accountState.lastDailyCubits===utcDayKey() ? "Daily +10 Gold Cubits claimed for today." : "Daily Gold Cubits available.")
+    ? (accountState.lastDailyCubits===utcDayKey() ? "Daily +100 Gold Cubits claimed for today." : "Daily +100 Gold Cubits are ready after a rewarded ad.")
     : "";
+  syncHomeAdRewardButtons();
   const am = document.getElementById("accountMsg"); if (am) am.textContent = msg;
   syncChestUi();
   syncPromoCodeUi();
@@ -29165,6 +29380,21 @@ async function redeemPromoCode() {
 }
 
 // Theme unlocks are handled exclusively by the Home Themes screen above.
+function syncHomeAdRewardButtons(){
+  const cubitBtn=document.getElementById("homeDailyCubitsBtn"),accountCubitBtn=document.getElementById("accountDailyCubitsBtn"),chestBtn=document.getElementById("homeDailyChestBtn"),status=document.getElementById("homeRewardStatus");
+  const logged=!!accountState.loggedIn,ads=!!rewardedAdsConfigured,day=utcDayKey(),cubitDone=accountState.lastDailyCubits===day,chestDone=accountState.lastDailyChest===day;
+  const cubitButtons=[cubitBtn,accountCubitBtn].filter(Boolean);
+  for(const btn of cubitButtons){btn.disabled=logged&&(!ads||cubitDone);btn.textContent=!logged?"Sign In • +100 Cubits":!ads?"Ads Pending • +100 Cubits":cubitDone?"100 Cubits Claimed":"Watch Ad • +100 Cubits";}
+  if(chestBtn){chestBtn.disabled=logged&&(!ads||chestDone);chestBtn.textContent=!logged?"Sign In • Free Chest":!ads?"Ads Pending • Free Chest":chestDone?"Free Chest Claimed":"Watch Ad • Free Chest";}
+  if(status)status.textContent=!logged?"Daily ad rewards require a HOSTL account.":!ads?"Rewarded ad rewards will activate after the verified ad provider is connected.":(!cubitDone||!chestDone?"Daily rewarded-ad claims are ready.":"Both daily ad rewards are claimed for today.");
+}
+async function claimDailyCubitsNow(){
+  if(!accountState.loggedIn){openAccountModal();return;}const day=utcDayKey();if(accountState.lastDailyCubits===day){showGameMessage("Daily Cubits","You already claimed today's 100 Gold Cubits.");syncHomeAdRewardButtons();return;}if(!rewardedAdsConfigured){showGameMessage("Daily Cubits","Rewarded ads are not connected on this server yet.");return;}
+  const adProof=await requestRewardedAdProof("dailyCubits",day);if(!adProof){showGameMessage("Daily Cubits","The rewarded ad was not completed or could not be verified.");return;}
+  try{const r=await fetch("/api/daily-cubits",{method:"POST",headers:{"Content-Type":"application/json",...accountAuthHeaders()},body:JSON.stringify({adProof})});const data=await r.json().catch(()=>({}));if(data?.account)setAccountFromServer(data.account);saveAccountSession();syncAccountUi();syncHomeAdRewardButtons();if(!r.ok){showGameMessage("Daily Cubits",data?.error==="already_claimed"?"You already claimed today's reward.":"The server could not verify the rewarded ad.");return;}showGameMessage("Daily Cubits",`+${Number(data.amount||100)} Gold Cubits added to your account.`);}catch(_){showGameMessage("Daily Cubits","Could not reach the HOSTL server.");}
+}
+window.__hostlClaimDailyCubits=claimDailyCubitsNow;
+
 function syncChestUi() {
   const btn = document.getElementById("dailyChestBtn");
   const status = document.getElementById("dailyChestStatus");
@@ -29236,6 +29466,7 @@ async function openDailyChestNow() {
   if(!adProof){ showChestResult("Wooden Chest", ["The rewarded ad was not completed or could not be verified."]); return; }
   openAccountChest("Wooden Chest",0,"daily",true,adProof);
 }
+window.__hostlOpenDailyChest=openDailyChestNow;
 function buyCubitChest(button) {
   const cost = Number(button?.dataset?.cost)||0;
   const name = button?.dataset?.name || "Forest Chest";
@@ -29282,7 +29513,7 @@ async function initializeGoogleSignIn() {
   try {
     const cfg=await fetch("/auth/config", {cache:"no-store"}).then(r=>r.json());
     rewardedAdsConfigured=!!cfg?.rewardedAdsConfigured;
-    try{syncChestUi();}catch(_){}
+    try{syncChestUi();syncHomeAdRewardButtons();mountHostlDisplayAds();}catch(_){}
     if (!cfg?.googleClientId) {
       if(status) status.textContent="Google Sign-In needs GOOGLE_CLIENT_ID added in Render first.";
       return;
@@ -29319,7 +29550,6 @@ async function handleGoogleCredential(response) {
     const bits=[];
     if(data.recovered) bits.push("HOSTL account recovered from your secure browser backup");
     else if(data.created) bits.push("HOSTL account created with 500 Gold Cubits");
-    if(data.dailyGranted) bits.push("+10 daily Gold Cubits");
     syncAccountUi(bits.length ? bits.join(" · ") : "Signed in with Google.");
     startFriendsLoops();
   } catch (err) {
@@ -29611,6 +29841,10 @@ document.addEventListener("keydown", e => {
   }
 });
 
+document.addEventListener("click",e=>{
+  const daily=e.target?.closest?.("#homeDailyCubitsBtn,#accountDailyCubitsBtn");if(daily){e.preventDefault();claimDailyCubitsNow();return;}
+  const chest=e.target?.closest?.("#homeDailyChestBtn");if(chest){e.preventDefault();openDailyChestNow();}
+});
 syncAchievementAccountBridge();
 restoreAccountSession();
 if (document.readyState === "loading") {
@@ -29658,6 +29892,7 @@ syncAchievementAccountBridge();
         </div>
       </div>
       <p id="dailyCubitStatus" class="muted"></p>
+      <div class="modal-row"><button id="accountDailyCubitsBtn" class="account-btn" type="button">Watch Ad • Claim 100 Cubits</button></div>
       <div class="modal-row">
         <button id="openShopFromAccount" class="account-btn" type="button">Open Shop</button>
         <button id="logoutBtn" class="account-btn" type="button">Log Out</button>
