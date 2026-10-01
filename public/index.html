@@ -27849,11 +27849,15 @@ function closeCardInventory() {
 }
 
 const HOSTL_BODY_STYLES = [
-  {id:"classic",name:"Classic Cube",price:0,desc:"The original HOSTL cube body."},
-  {id:"round",name:"Round Cube",price:0,desc:"A softer rounded cube body with the same HOSTL face style."},
-  {id:"wide",name:"Wide Cube",price:0,desc:"A broader, shorter cube body with wider sides."},
-  {id:"tall",name:"Tall Cube",price:0,desc:"A taller, slimmer cube body."},
-  {id:"cut",name:"Cut-Corner Cube",price:0,desc:"A cube body with angled corners instead of round corners."}
+  {id:"classic",name:"Classic Cube",price:0,desc:"Your original HOSTL cube body."},
+  {id:"round",name:"Round Cube",price:0,desc:"A softer rounded cube in your thick-outline style."},
+  {id:"wide",name:"Wide Cube",price:0,desc:"A broad cube body that feels heavier and wider."},
+  {id:"tall",name:"Tall Cube",price:0,desc:"A taller slimmer body with the same big-eyed face."},
+  {id:"cut",name:"Cut-Corner Cube",price:0,desc:"A sharp-edged cube with chopped corners."},
+  {id:"diamond",name:"Diamond Body",price:0,desc:"A point-up diamond body in the same HOSTL style."},
+  {id:"blob",name:"Blob Body",price:0,desc:"A squishy rounded blob body with the same face style."},
+  {id:"droplet",name:"Droplet Body",price:0,desc:"A droplet-shaped body with a soft pointed top."},
+  {id:"capsule",name:"Capsule Body",price:0,desc:"A pill-shaped body with a thicker top and bottom."}
 ];
 function hostlBodyStyleInfo(id){ return HOSTL_BODY_STYLES.find(s=>s.id===id) || HOSTL_BODY_STYLES[0]; }
 function ensureBodyCosmeticsState(){
@@ -27871,44 +27875,127 @@ function hostlSelectedBodyStyleName(){ return hostlBodyStyleInfo(hostlCurrentBod
 let HOSTL_RENDER_BODY_STYLE_OVERRIDE="";
 function hostlRenderBodyStyleId(){ return HOSTL_RENDER_BODY_STYLE_OVERRIDE || hostlCurrentBodyStyleId(); }
 function syncBodyStyleNetwork(){ try{if(net.room)net.room.send("playerProfile",{username:String(meta.username||"Cube").trim().slice(0,14)||"Cube",color:String(meta.color||COLORS[0]),bodyStyle:hostlCurrentBodyStyleId()});}catch(_){} }
+function hostlTraceBodyVariantPath(g,bx,by,bw,bh,id){
+  g.beginPath();
+  if(id==="diamond"){
+    g.moveTo(bx+bw*.5,by);
+    g.lineTo(bx+bw,by+bh*.48);
+    g.lineTo(bx+bw*.5,by+bh);
+    g.lineTo(bx,by+bh*.48);
+    g.closePath();
+    return;
+  }
+  if(id==="droplet"){
+    g.moveTo(bx+bw*.50,by);
+    g.bezierCurveTo(bx+bw*.80,by+bh*.06,bx+bw,by+bh*.30,bx+bw*.90,by+bh*.58);
+    g.bezierCurveTo(bx+bw*.82,by+bh*.88,bx+bw*.64,by+bh,bx+bw*.50,by+bh);
+    g.bezierCurveTo(bx+bw*.36,by+bh,bx+bw*.18,by+bh*.88,bx+bw*.10,by+bh*.58);
+    g.bezierCurveTo(bx,by+bh*.30,bx+bw*.20,by+bh*.06,bx+bw*.50,by);
+    g.closePath();
+    return;
+  }
+  if(id==="blob"){
+    g.moveTo(bx+bw*.22,by+bh*.04);
+    g.bezierCurveTo(bx+bw*.56,by-bh*.04,bx+bw*.92,by+bh*.08,bx+bw*.94,by+bh*.38);
+    g.bezierCurveTo(bx+bw*.99,by+bh*.73,bx+bw*.82,by+bh*.98,bx+bw*.48,by+bh*.98);
+    g.bezierCurveTo(bx+bw*.16,by+bh*.99,bx-bw*.01,by+bh*.78,bx+bw*.02,by+bh*.45);
+    g.bezierCurveTo(bx+bw*.04,by+bh*.18,bx+bw*.08,by+bh*.08,bx+bw*.22,by+bh*.04);
+    g.closePath();
+    return;
+  }
+  if(id==="capsule"){
+    const r=bw*.32;
+    g.moveTo(bx+r,by);
+    g.lineTo(bx+bw-r,by);
+    g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);
+    g.lineTo(bx+bw,by+bh-r);
+    g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
+    g.lineTo(bx+r,by+bh);
+    g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);
+    g.lineTo(bx,by+r);
+    g.quadraticCurveTo(bx,by,bx+r,by);
+    g.closePath();
+    return;
+  }
+  if(id==="cut"){
+    const c=Math.min(bw,bh)*.16;
+    g.moveTo(bx+c,by);g.lineTo(bx+bw-c,by);g.lineTo(bx+bw,by+c);g.lineTo(bx+bw,by+bh-c);
+    g.lineTo(bx+bw-c,by+bh);g.lineTo(bx+c,by+bh);g.lineTo(bx,by+bh-c);g.lineTo(bx,by+c);g.closePath();
+    return;
+  }
+  if(id==="wide"){
+    const r=Math.min(bw,bh)*.15;
+    g.moveTo(bx+r,by);
+    g.lineTo(bx+bw-r,by);
+    g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);
+    g.lineTo(bx+bw,by+bh-r);
+    g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
+    g.lineTo(bx+r,by+bh);
+    g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);
+    g.lineTo(bx,by+r);
+    g.quadraticCurveTo(bx,by,bx+r,by);
+    g.closePath();
+    return;
+  }
+  const r=id==="round"?Math.min(bw,bh)*.24:id==="tall"?Math.min(bw,bh)*.18:Math.min(bw,bh)*.14;
+  g.moveTo(bx+r,by);
+  g.lineTo(bx+bw-r,by);
+  g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);
+  g.lineTo(bx+bw,by+bh-r);
+  g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
+  g.lineTo(bx+r,by+bh);
+  g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);
+  g.lineTo(bx,by+r);
+  g.quadraticCurveTo(bx,by,bx+r,by);
+  g.closePath();
+}
 function hostlDrawBodyVariant(x,y,w,h,styleId,targetCtx=ctx){
   const id=String(styleId||hostlRenderBodyStyleId());
   if(id==="classic") return false;
   const g=targetCtx;
-  const base="#3c94e6", dark="#2175b9", edge="#155a91", shine="#69b9f2";
+  const base="#3c94e6", edge="#124f82", glim="#8fd3ff";
   let bx=x,by=y,bw=w,bh=h;
-  if(id==="round"){bx=x+1.5;by=y+.5;bw=w-3;bh=h-1;}
-  else if(id==="wide"){bx=x;by=y+3.5;bw=w;bh=h-7;}
-  else if(id==="tall"){bx=x+4;by=y;bw=w-8;bh=h;}
+  if(id==="round"){bx=x+1;by=y+1;bw=w-2;bh=h-2;}
+  else if(id==="wide"){bx=x-.5;by=y+3;bw=w+1;bh=h-6;}
+  else if(id==="tall"){bx=x+3.5;by=y-.5;bw=w-7;bh=h+1;}
   else if(id==="cut"){bx=x+1;by=y+1;bw=w-2;bh=h-2;}
+  else if(id==="diamond"){bx=x+1.5;by=y+.5;bw=w-3;bh=h-1;}
+  else if(id==="blob"){bx=x+1;by=y+1;bw=w-2;bh=h-2;}
+  else if(id==="droplet"){bx=x+3;by=y;bw=w-6;bh=h;}
+  else if(id==="capsule"){bx=x+4;by=y+1.5;bw=w-8;bh=h-3;}
   g.save();
-  const grad=g.createLinearGradient(bx,by,bx+bw,by+bh);
-  grad.addColorStop(0,shine);grad.addColorStop(.30,base);grad.addColorStop(1,dark);
-  g.fillStyle=grad;g.strokeStyle=edge;g.lineWidth=Math.max(.8,w*.035);g.lineJoin="round";
-  g.beginPath();
-  if(id==="cut"){
-    const c=Math.min(bw,bh)*.17;
-    g.moveTo(bx+c,by);g.lineTo(bx+bw-c,by);g.lineTo(bx+bw,by+c);g.lineTo(bx+bw,by+bh-c);
-    g.lineTo(bx+bw-c,by+bh);g.lineTo(bx+c,by+bh);g.lineTo(bx,by+bh-c);g.lineTo(bx,by+c);g.closePath();
-  }else if(id==="wide"){
-    const r=Math.min(7,bh*.22);
-    g.moveTo(bx+r,by);g.bezierCurveTo(bx+bw*.34,by-1,bx+bw*.66,by-1,bx+bw-r,by);
-    g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);g.lineTo(bx+bw,by+bh-r);g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
-    g.bezierCurveTo(bx+bw*.66,by+bh+1,bx+bw*.34,by+bh+1,bx+r,by+bh);g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);g.lineTo(bx,by+r);g.quadraticCurveTo(bx,by,bx+r,by);g.closePath();
-  }else{
-    const r=id==="round"?Math.min(10,bw*.26):Math.min(6,bw*.18);
-    g.moveTo(bx+r,by);g.lineTo(bx+bw-r,by);g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);g.lineTo(bx+bw,by+bh-r);
-    g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);g.lineTo(bx+r,by+bh);g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);g.lineTo(bx,by+r);g.quadraticCurveTo(bx,by,bx+r,by);g.closePath();
-  }
-  g.fill();g.stroke();
-  // Simple glossy upper-left highlight, matching the clean HOSTL cube art style.
-  g.globalAlpha=.28;g.fillStyle="#d7f2ff";g.beginPath();g.roundRect?.(bx+bw*.10,by+bh*.08,bw*.12,bh*.50,Math.max(1,bw*.05));
-  if(typeof g.roundRect==="function")g.fill(); else {g.fillRect(bx+bw*.10,by+bh*.08,bw*.10,bh*.48);}g.globalAlpha=1;
-  // The face is part of the body itself, not an accessory.
-  const eyeY=by+bh*.78, eyeGap=bw*.22, eyeR=Math.max(2.6,Math.min(bw,bh)*.105);
+  g.fillStyle=base;
+  g.strokeStyle=edge;
+  g.lineWidth=Math.max(2.2,Math.min(bw,bh)*.10);
+  g.lineJoin="round";
+  g.lineCap="round";
+  hostlTraceBodyVariantPath(g,bx,by,bw,bh,id);
+  g.fill();
+  g.stroke();
+  // right-side squeezed body glim, using the same silhouette in a lighter blue.
+  g.save();
+  g.globalAlpha=.70;
+  g.translate(bx+bw*.64, by+bh*.14);
+  g.scale(.34,.72);
+  g.fillStyle=glim;
+  g.strokeStyle='rgba(255,255,255,0)';
+  hostlTraceBodyVariantPath(g,0,0,bw*.72,bh*.72,id);
+  g.fill();
+  g.restore();
+  // Bigger eyes like the original art.
+  const eyeY=by+bh*.60;
+  const eyeGap=bw*.16;
+  const eyeRx=Math.max(2.7,Math.min(bw,bh)*.12);
+  const eyeRy=Math.max(3.3,Math.min(bw,bh)*.15);
   for(const ex of [bx+bw*.5-eyeGap,bx+bw*.5+eyeGap]){
-    g.fillStyle="#05090c";g.beginPath();g.arc(ex,eyeY,eyeR,0,Math.PI*2);g.fill();
-    g.fillStyle="#f7fbff";g.beginPath();g.arc(ex-eyeR*.18,eyeY-eyeR*.15,eyeR*.38,0,Math.PI*2);g.fill();
+    g.fillStyle="#071018";
+    g.beginPath();
+    g.ellipse(ex,eyeY,eyeRx,eyeRy,0,0,Math.PI*2);
+    g.fill();
+    g.fillStyle="#eaf8ff";
+    g.beginPath();
+    g.ellipse(ex-eyeRx*.18,eyeY-eyeRy*.18,eyeRx*.36,eyeRy*.34,0,0,Math.PI*2);
+    g.fill();
   }
   g.restore();
   return true;
