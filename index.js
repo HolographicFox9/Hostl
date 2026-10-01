@@ -24,11 +24,19 @@ const reviveAuthorizations = new Map();
 // Without a persistent mount, the fallback project data folder can be replaced by the host.
 const DATA_DIR = String(process.env.HOSTL_DATA_DIR || path.join(__dirname, "data")).trim();
 const ACCOUNT_FILE = path.join(DATA_DIR, "accounts.json");
+const ACCOUNT_BACKUP_FILE = path.join(DATA_DIR, "accounts.backup.json");
 const SESSION_SECRET = String(process.env.HOSTL_SESSION_SECRET || crypto.randomBytes(32).toString("hex"));
+// Keep recovery signatures independent from normal login-session rotation. Existing
+// builds signed recovery snapshots with HOSTL_SESSION_SECRET, so verification below
+// accepts both secrets for backward compatibility.
+const RECOVERY_SECRET = String(process.env.HOSTL_RECOVERY_SECRET || process.env.HOSTL_SESSION_SECRET || SESSION_SECRET);
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 if (!process.env.HOSTL_SESSION_SECRET) {
   console.warn("HOSTL_SESSION_SECRET is not set. Login sessions will reset whenever the server restarts.");
+}
+if (!process.env.HOSTL_RECOVERY_SECRET && !process.env.HOSTL_SESSION_SECRET) {
+  console.warn("HOSTL recovery signing has no stable secret. Browser recovery snapshots will become invalid after a server restart. Set HOSTL_RECOVERY_SECRET (recommended) or HOSTL_SESSION_SECRET.");
 }
 if (!GOOGLE_CLIENT_ID) {
   console.warn("GOOGLE_CLIENT_ID is not set. Google Sign-In will remain disabled.");
@@ -42,29 +50,90 @@ const ACCOUNT_STORAGE_PERSISTENT = !!process.env.HOSTL_DATA_DIR;
 if (!ACCOUNT_STORAGE_PERSISTENT) {
   console.warn("HOSTL account storage is using the local filesystem fallback. Set HOSTL_DATA_DIR to a mounted persistent disk path for deploy-safe permanent accounts.");
 }
-function loadAccounts() {
+function emptyAccountDb() {
+  return { byId: {}, byGoogleSub: {}, globalCodeClaims: {}, friendChats: {}, tradeOffers: {} };
+}
+function normalizeAccountDbShape(parsed) {
+  return {
+    byId: parsed?.byId && typeof parsed.byId === "object" && !Array.isArray(parsed.byId) ? parsed.byId : {},
+    byGoogleSub: parsed?.byGoogleSub && typeof parsed.byGoogleSub === "object" && !Array.isArray(parsed.byGoogleSub) ? parsed.byGoogleSub : {},
+    globalCodeClaims: parsed?.globalCodeClaims && typeof parsed.globalCodeClaims === "object" && !Array.isArray(parsed.globalCodeClaims) ? parsed.globalCodeClaims : {},
+    friendChats: parsed?.friendChats && typeof parsed.friendChats === "object" && !Array.isArray(parsed.friendChats) ? parsed.friendChats : {},
+    tradeOffers: parsed?.tradeOffers && typeof parsed.tradeOffers === "object" && !Array.isArray(parsed.tradeOffers) ? parsed.tradeOffers : {}
+  };
+}
+function readAccountFile(file) {
+  const raw=fs.readFileSync(file,"utf8");
+  const parsed=JSON.parse(raw);
+  if(!parsed || typeof parsed!=="object" || Array.isArray(parsed)) throw new Error("account database root is not an object");
+  return normalizeAccountDbShape(parsed);
+}
+function quarantineBrokenAccountFile(file,label="broken") {
   try {
-    if (!fs.existsSync(ACCOUNT_FILE)) return { byId: {}, byGoogleSub: {}, globalCodeClaims: {}, friendChats: {}, tradeOffers: {} };
-    const parsed = JSON.parse(fs.readFileSync(ACCOUNT_FILE, "utf8"));
-    return {
-      byId: parsed?.byId && typeof parsed.byId === "object" ? parsed.byId : {},
-      byGoogleSub: parsed?.byGoogleSub && typeof parsed.byGoogleSub === "object" ? parsed.byGoogleSub : {},
-      globalCodeClaims: parsed?.globalCodeClaims && typeof parsed.globalCodeClaims === "object" ? parsed.globalCodeClaims : {},
-      friendChats: parsed?.friendChats && typeof parsed.friendChats === "object" ? parsed.friendChats : {},
-      tradeOffers: parsed?.tradeOffers && typeof parsed.tradeOffers === "object" ? parsed.tradeOffers : {}
-    };
-  } catch (err) {
-    console.error("Failed to load HOSTL accounts:", err);
-    return { byId: {}, byGoogleSub: {}, globalCodeClaims: {}, friendChats: {}, tradeOffers: {} };
+    if(!fs.existsSync(file)) return "";
+    const target=path.join(DATA_DIR,`accounts.${label}.${Date.now()}.json`);
+    fs.copyFileSync(file,target);
+    try{fs.unlinkSync(file);}catch(_){}
+    console.error(`Preserved unreadable HOSTL account data at ${target}`);
+    return target;
+  } catch(err) {
+    console.error("Could not preserve unreadable HOSTL account data:",err);
+    return "";
   }
+}
+let ACCOUNT_LOAD_SOURCE = "empty";
+let ACCOUNT_LOAD_HAD_ERROR = false;
+function loadAccounts() {
+  if (fs.existsSync(ACCOUNT_FILE)) {
+    try {
+      const db=readAccountFile(ACCOUNT_FILE);
+      ACCOUNT_LOAD_SOURCE="primary";
+      return db;
+    } catch (err) {
+      ACCOUNT_LOAD_HAD_ERROR=true;
+      console.error("Failed to load HOSTL accounts.json:", err);
+      quarantineBrokenAccountFile(ACCOUNT_FILE,"corrupt");
+    }
+  }
+  if (fs.existsSync(ACCOUNT_BACKUP_FILE)) {
+    try {
+      const db=readAccountFile(ACCOUNT_BACKUP_FILE);
+      ACCOUNT_LOAD_SOURCE="backup";
+      console.warn("HOSTL restored account database from accounts.backup.json.");
+      return db;
+    } catch (err) {
+      ACCOUNT_LOAD_HAD_ERROR=true;
+      console.error("Failed to load HOSTL account backup:",err);
+      quarantineBrokenAccountFile(ACCOUNT_BACKUP_FILE,"backup-corrupt");
+    }
+  }
+  ACCOUNT_LOAD_SOURCE="empty";
+  return emptyAccountDb();
 }
 let accountDb = loadAccounts();
 let saveChain = Promise.resolve();
 function saveAccounts() {
   saveChain = saveChain.then(async () => {
     const temp = `${ACCOUNT_FILE}.tmp`;
-    await fs.promises.writeFile(temp, JSON.stringify(accountDb), "utf8");
+    const backupTemp = `${ACCOUNT_BACKUP_FILE}.tmp`;
+    const json=JSON.stringify(accountDb);
+    await fs.promises.writeFile(temp, json, "utf8");
+    // Keep one known-previous full database before replacing the primary. This
+    // protects against partial/corrupt writes while still using an atomic rename.
+    if (fs.existsSync(ACCOUNT_FILE)) {
+      try {
+        await fs.promises.copyFile(ACCOUNT_FILE, backupTemp);
+        await fs.promises.rename(backupTemp, ACCOUNT_BACKUP_FILE);
+      } catch(err) {
+        try{await fs.promises.unlink(backupTemp);}catch(_){}
+        console.error("Failed to rotate HOSTL account backup:",err);
+      }
+    }
     await fs.promises.rename(temp, ACCOUNT_FILE);
+    // Seed a backup on the first successful save or after restoring from a wiped path.
+    if (!fs.existsSync(ACCOUNT_BACKUP_FILE)) {
+      try { await fs.promises.copyFile(ACCOUNT_FILE, ACCOUNT_BACKUP_FILE); } catch(err) { console.error("Failed to seed HOSTL account backup:",err); }
+    }
   }).catch(err => console.error("Failed to save HOSTL accounts:", err));
   return saveChain;
 }
@@ -603,12 +672,40 @@ function normalizeLoadedAccounts() {
   const newByGoogleSub = {};
   for (const [sub, oldId] of Object.entries(accountDb.byGoogleSub || {})) {
     const mapped = idMap.get(String(oldId));
-    if (mapped && newById[mapped]) newByGoogleSub[sub] = mapped;
+    const target=mapped?newById[mapped]:null;
+    // Trust the lookup only when it points at a real account and does not
+    // contradict that account's own Google subject.
+    if (target && (!safeText(target.googleSub,200) || safeText(target.googleSub,200)===String(sub))) newByGoogleSub[sub] = mapped;
   }
+  // The account record itself also stores googleSub. Rebuild missing/corrupt lookup
+  // entries from those records so a damaged byGoogleSub map cannot create a blank duplicate account.
+  // If an older bug already created two records for the same Google account, prefer
+  // the record with more permanent progress; ties prefer the older identity.
+  const bestGoogleRecord=new Map();
+  for (const [id,a] of Object.entries(newById)) {
+    const sub=safeText(a?.googleSub,200); if(!sub)continue;
+    const row={id,a,score:recoveryProgressWeight(a)+(cleanDisplayName(a.username||"")||cleanDisplayName(a.displayName||"")?6:0),created:Date.parse(String(a.createdAt||"")),gold:ensureGoldCubits(a)};
+    const old=bestGoogleRecord.get(sub);
+    let better=!old || row.score>old.score;
+    if(old && row.score===old.score){
+      if(Number.isFinite(row.created)&&Number.isFinite(old.created)&&row.created!==old.created)better=row.created<old.created;
+      else if(row.gold!==old.gold)better=row.gold>old.gold;
+    }
+    if(better)bestGoogleRecord.set(sub,row);
+  }
+  for(const [sub,row] of bestGoogleRecord) newByGoogleSub[sub]=row.id;
   accountDb.byGoogleSub = newByGoogleSub;
   const newClaims = {};
   for (const [code, oldId] of Object.entries(accountDb.globalCodeClaims || {})) {
     newClaims[code] = idMap.get(String(oldId)) || String(oldId);
+  }
+  // Rebuild code ownership from each account too. The redeem route only consults
+  // this map for global-once codes, so retaining extra non-global entries is harmless.
+  for(const [id,a] of Object.entries(newById)){
+    for(const rawCode of Array.isArray(a?.redeemedCodes)?a.redeemedCodes:[]){
+      const code=safeText(rawCode,40).toUpperCase();
+      if(code && !newClaims[code]) newClaims[code]=id;
+    }
   }
   accountDb.globalCodeClaims = newClaims;
 }
@@ -627,8 +724,8 @@ saveAccounts();
 // On the next Google sign-in, that snapshot can rebuild the SAME Google-linked account
 // if the server-side accounts.json disappeared. The browser cannot edit the snapshot
 // without invalidating the signature, and Google identity must still match before restore.
-function recoverySubHash(googleSub) {
-  return crypto.createHmac("sha256", SESSION_SECRET).update(`hostl-account-recovery-sub:${String(googleSub||"")}`).digest("base64url");
+function recoverySubHash(googleSub,secret=RECOVERY_SECRET) {
+  return crypto.createHmac("sha256", secret).update(`hostl-account-recovery-sub:${String(googleSub||"")}`).digest("base64url");
 }
 function accountRecoverySnapshot(a) {
   ensureGoldCubits(a); ensureTitleState(a); ensureEconomyState(a); ensurePetProgressState(a); ensureSocialState(a); ensureStarterPetEntitlements(a); ensureShopPurchases(a); ensureRedeemedCodes(a);
@@ -672,20 +769,32 @@ function accountRecoverySnapshot(a) {
 }
 function signAccountRecovery(a) {
   if(!a?.googleSub) return "";
-  const payload={v:1,iat:Date.now(),subHash:recoverySubHash(a.googleSub),account:accountRecoverySnapshot(a)};
+  // Do not mint a different token every time /api/friends polls. A stable token
+  // until the account actually changes prevents good historical snapshots from
+  // being pushed out of browser storage by heartbeat traffic.
+  const updated=Date.parse(String(a.updatedAt||""));
+  const created=Date.parse(String(a.createdAt||""));
+  const iat=Number.isFinite(updated)?updated:(Number.isFinite(created)?created:Date.now());
+  const payload={v:1,iat,subHash:recoverySubHash(a.googleSub,RECOVERY_SECRET),account:accountRecoverySnapshot(a)};
   const body=b64url(JSON.stringify(payload));
-  const sig=crypto.createHmac("sha256",SESSION_SECRET).update(`hostl-recovery:${body}`).digest("base64url");
+  const sig=crypto.createHmac("sha256",RECOVERY_SECRET).update(`hostl-recovery:${body}`).digest("base64url");
   return `${body}.${sig}`;
 }
 function verifyAccountRecoveryToken(token,googleSub) {
   try{
     const [body,sig]=String(token||"").split(".");
     if(!body||!sig)return null;
-    const expected=crypto.createHmac("sha256",SESSION_SECRET).update(`hostl-recovery:${body}`).digest("base64url");
-    const aa=Buffer.from(sig),bb=Buffer.from(expected); if(aa.length!==bb.length||!crypto.timingSafeEqual(aa,bb))return null;
     const payload=JSON.parse(Buffer.from(body,"base64url").toString("utf8"));
-    if(Number(payload?.v)!==1 || payload?.subHash!==recoverySubHash(googleSub) || !payload?.account || typeof payload.account!=="object") return null;
-    return payload;
+    if(Number(payload?.v)!==1 || !payload?.account || typeof payload.account!=="object") return null;
+    const secrets=[...new Set([RECOVERY_SECRET,SESSION_SECRET].filter(Boolean))];
+    for(const secret of secrets){
+      const expected=crypto.createHmac("sha256",secret).update(`hostl-recovery:${body}`).digest("base64url");
+      const aa=Buffer.from(sig),bb=Buffer.from(expected);
+      if(aa.length!==bb.length||!crypto.timingSafeEqual(aa,bb))continue;
+      if(payload?.subHash!==recoverySubHash(googleSub,secret))continue;
+      return payload;
+    }
+    return null;
   }catch(_){return null;}
 }
 function restoreAccountFromRecovery(payload,googleProfile) {
@@ -725,20 +834,35 @@ function bestAccountRecoveryPayload(rawTokens, googleSub, current=null) {
     if(candidate) valid.push(candidate);
   }
   if(!valid.length) return null;
-  // Keep only the newest signed snapshot for each historical HOSTL user id.
+
+  // Group by historical HOSTL id. For normal recovery we use the newest snapshot
+  // for each id, which avoids rolling legitimate purchases/spending backward. If a
+  // freak replacement-account collision reused the SAME numeric id, also keep the
+  // newest snapshot from before the replacement account was created.
   const byUser=new Map();
   for(const candidate of valid){
-    const id=String(candidate?.account?.userId||"");
-    const old=byUser.get(id);
-    if(!old || Number(candidate.iat||0)>Number(old.iat||0)) byUser.set(id,candidate);
+    const id=String(candidate?.account?.userId||""); if(!id)continue;
+    if(!byUser.has(id))byUser.set(id,[]);
+    byUser.get(id).push(candidate);
   }
-  let choices=[...byUser.values()];
+  let choices=[];
+  const currentCreated=current?Date.parse(String(current.createdAt||"")):NaN;
+  for(const [id,rows] of byUser){
+    rows.sort((a,b)=>Number(b.iat||0)-Number(a.iat||0));
+    if(rows[0])choices.push(rows[0]);
+    if(current && id===String(current.userId||"") && Number.isFinite(currentCreated)){
+      const historical=rows.find(x=>Number(x.iat||0)>0 && Number(x.iat||0)<currentCreated);
+      if(historical && historical!==rows[0])choices.push(historical);
+    }
+  }
+  if(!choices.length)return null;
+
   if(current){
     const rescuers=choices.filter(candidate=>shouldRecoverOverExistingAccount(current,candidate));
     if(rescuers.length) choices=rescuers;
     else {
       const sameId=choices.filter(candidate=>String(candidate?.account?.userId||"")===String(current.userId||""));
-      if(sameId.length) choices=sameId;
+      if(sameId.length){ sameId.sort((a,b)=>Number(b.iat||0)-Number(a.iat||0)); choices=[sameId[0]]; }
     }
   }
   choices.sort((a,b)=>{
@@ -788,7 +912,7 @@ function accountLooksLikeFreshReplacement(a) {
 function shouldRecoverOverExistingAccount(current,payload) {
   if(!current||!payload?.account) return false;
   const oldId=String(payload.account.userId||""),currentId=String(current.userId||"");
-  if(!oldId || oldId===currentId) return false;
+  if(!oldId) return false;
   const issued=Number(payload.iat||0),currentCreated=Date.parse(String(current.createdAt||""));
   // The replacement account must have been created after the signed old-account backup.
   // That is the fingerprint of "server save vanished, then a new device logged in first".
@@ -801,6 +925,12 @@ function shouldRecoverOverExistingAccount(current,payload) {
 function recoverOverExistingAccount(current,payload,googleProfile) {
   if(!shouldRecoverOverExistingAccount(current,payload)) return null;
   const obsoleteId=String(current.userId||"");
+  const desiredId=String(payload?.account?.userId||"");
+  // Rare but possible: a replacement account can randomly receive the same numeric
+  // ID as the lost account. Free that exact fresh record so recovery can restore the
+  // original identity instead of unnecessarily allocating a second ID.
+  const reuseSameId=obsoleteId && desiredId===obsoleteId && accountDb.byId[obsoleteId]===current && current.googleSub===googleProfile.sub;
+  if(reuseSameId) delete accountDb.byId[obsoleteId];
   const restored=restoreAccountFromRecovery(payload,googleProfile);
   if(obsoleteId && obsoleteId!==String(restored.userId||"") && accountDb.byId[obsoleteId]?.googleSub===googleProfile.sub) delete accountDb.byId[obsoleteId];
   accountDb.byGoogleSub[googleProfile.sub]=restored.userId;
@@ -1030,13 +1160,13 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 594, gameBuild: 681, rulesVersion: "681", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 595, gameBuild: 682, rulesVersion: "667", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountRecoverySecretStable: !!(process.env.HOSTL_RECOVERY_SECRET||process.env.HOSTL_SESSION_SECRET), accountDbLoadSource:ACCOUNT_LOAD_SOURCE, accountDbLoadHadError:ACCOUNT_LOAD_HAD_ERROR, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 594, gameBuild: 681, rulesVersion: "681" });
+  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 595, gameBuild: 682, rulesVersion: "667" });
 });
 
 app.get("/auth/config", (_req, res) => {

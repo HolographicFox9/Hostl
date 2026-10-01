@@ -58,17 +58,17 @@ RENDER DEPLOYMENT
 3. Build command: npm install
 4. Start command: npm start
 5. Health check path: /healthz
-6. Keep HOSTL_SESSION_SECRET private and stable. render.yaml generates one for a Blueprint deployment.
-7. For durable accounts, mount persistent storage and set HOSTL_DATA_DIR as described in
-   PERSISTENT_ACCOUNT_STORAGE.txt.
+6. Keep HOSTL_SESSION_SECRET and HOSTL_RECOVERY_SECRET private and stable. render.yaml generates both for a Blueprint deployment.
+7. For durable accounts, mount persistent storage and set HOSTL_DATA_DIR as shown in
+   render-persistent-example.yaml.
 8. Open the Render HTTPS service URL. The root redirects to /index.html?server=self and the game
    connects back to that service over secure WebSocket.
 
 BUILD CHECK
 /healthz should report:
-- serverBuild: 575
-- gameBuild: 645
-- rulesVersion: 600
+- serverBuild: 595
+- gameBuild: 682
+- rulesVersion: 667
 - rewardedAdsConfigured: true/false
 - accountStoragePersistent: true/false
 
@@ -158,3 +158,14 @@ BUG FIX / BUILD 681
 - Existing accounts that redeemed the older broken OVCC are repaired once automatically.
 - Repair markers prevent the missing Gold Cubits from being granted repeatedly.
 - Body cosmetics remain empty/disabled for now.
+
+ACCOUNT SAFETY BUG FIX 682
+- Browser recovery snapshots are now stable between heartbeat/friends polling. A good historical recovery backup is no longer pushed out by a stream of identical fresh tokens.
+- Recovery token storage keeps the strongest historical snapshot for each HOSTL account identity plus the newest useful snapshot.
+- accounts.json now has an automatic accounts.backup.json rotation. If the primary JSON is unreadable, HOSTL preserves the damaged file and attempts the backup instead of silently overwriting it with an empty database.
+- Google account lookup mappings are rebuilt from each account record on server startup, preventing a damaged byGoogleSub lookup table from creating a duplicate blank account.
+- Global promo-code ownership is rebuilt from redeemedCodes during startup normalization.
+- Temporary network/server errors no longer erase the browser's saved HOSTL login token or recovery backups.
+- Logout no longer has a late async save race that could partially restore account state after the player logged out.
+- HOSTL_RECOVERY_SECRET is now supported separately from the normal session secret. Keep this environment variable private and stable. Old recovery tokens signed with HOSTL_SESSION_SECRET remain accepted for backward compatibility.
+- The free Render filesystem is still not durable storage. For true server-side permanence, use the persistent-disk blueprint or another durable database/storage service. Browser recovery is a safety net, not a replacement for persistent server storage.

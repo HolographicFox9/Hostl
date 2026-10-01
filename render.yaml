@@ -13,3 +13,5 @@ services:
         value: production
       - key: HOSTL_SESSION_SECRET
         generateValue: true
+      - key: HOSTL_RECOVERY_SECRET
+        generateValue: true

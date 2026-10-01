@@ -28736,15 +28736,64 @@ bootHostlGame();
 // ---------- account / Gold Cubits / expanded shop ----------
 const ACCOUNT_STORAGE_KEY = "hostlAccountSessionV2";
 const ACCOUNT_RECOVERY_STORAGE_KEY = "hostlAccountRecoveryTokensV1";
+function decodeAccountRecoveryToken(token){
+  try{
+    const body=String(token||"").split(".")[0]; if(!body)return null;
+    const b64=body.replace(/-/g,"+").replace(/_/g,"/");
+    const pad="=".repeat((4-b64.length%4)%4),bin=atob(b64+pad),bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }catch(_){return null;}
+}
+function recoveryTokenUserId(token){ return String(decodeAccountRecoveryToken(token)?.account?.userId||""); }
+function browserRecoveryProgressScore(token){
+  const snap=decodeAccountRecoveryToken(token)?.account||{};
+  let score=0;
+  const cards=(snap.speciesCards&&typeof snap.speciesCards==="object")?snap.speciesCards:{};
+  score+=Object.values(cards).reduce((n,v)=>n+Math.min(200,Math.max(0,Math.floor(Number(v)||0))),0)*.15;
+  const owned=(snap.ownedStarters&&typeof snap.ownedStarters==="object")?snap.ownedStarters:{};
+  score+=Object.values(owned).filter(Boolean).length*18;
+  const ranks={baby:0,adult:1,boss:2,superboss:3,bigmomma:4};
+  const stages=(snap.petStages&&typeof snap.petStages==="object")?snap.petStages:{};
+  score+=Object.values(stages).reduce((n,v)=>n+(ranks[String(v||"baby")]||0)*14,0);
+  const ups=(snap.petStatUpgrades&&typeof snap.petStatUpgrades==="object")?snap.petStatUpgrades:{};
+  for(const stats of Object.values(ups))if(stats&&typeof stats==="object")score+=Object.values(stats).reduce((n,v)=>n+Math.max(0,Math.floor(Number(v)||0))*5,0);
+  score+=Object.keys((snap.achievements&&typeof snap.achievements==="object")?snap.achievements:{}).length*12;
+  score+=(Array.isArray(snap.unlockedThemes)?snap.unlockedThemes.length:0)*8;
+  score+=(Array.isArray(snap.craftedStarters)?snap.craftedStarters.length:0)*18;
+  score+=(Array.isArray(snap.learnedSkills)?snap.learnedSkills.length:0)*18;
+  score+=(Array.isArray(snap.redeemedCodes)?snap.redeemedCodes.length:0)*24;
+  score+=(Array.isArray(snap.starterPetEntitlements)?snap.starterPetEntitlements.length:0)*30;
+  score+=Math.max(0,Math.floor(Number(snap.testerRank)||0))*250+Math.max(0,Math.floor(Number(snap.ownerRank)||0))*500;
+  return score;
+}
+function pruneAccountRecoveryTokens(tokens){
+  const groups=new Map(),seen=new Set();
+  for(const raw of Array.isArray(tokens)?tokens:[]){
+    const token=typeof raw==="string"?raw:""; if(!token.includes(".")||seen.has(token))continue; seen.add(token);
+    const payload=decodeAccountRecoveryToken(token),id=String(payload?.account?.userId||""); if(!id)continue;
+    const row={token,id,iat:Math.max(0,Number(payload?.iat)||0),score:browserRecoveryProgressScore(token)};
+    const g=groups.get(id)||{best:null,newest:null};
+    if(!g.best || row.score>g.best.score || (row.score===g.best.score&&row.iat>g.best.iat))g.best=row;
+    if(!g.newest || row.iat>g.newest.iat)g.newest=row;
+    groups.set(id,g);
+  }
+  const chosen=[];
+  for(const g of groups.values()){
+    if(g.best)chosen.push(g.best);
+    if(g.newest&&g.newest.token!==g.best?.token)chosen.push(g.newest);
+  }
+  // Prioritize the strongest historical snapshot for every account identity. This
+  // stops a newly-created blank replacement account from evicting the older good backup.
+  chosen.sort((a,b)=>(b.score-a.score)||(b.iat-a.iat));
+  return chosen.slice(0,8).map(x=>x.token);
+}
 function loadAccountRecoveryTokens(){
-  try{const raw=localStorage.getItem(ACCOUNT_RECOVERY_STORAGE_KEY);const v=raw?JSON.parse(raw):[];return Array.isArray(v)?v.filter(x=>typeof x==="string"&&x.includes(".")).slice(0,8):[];}catch(_){return[];}
+  try{const raw=localStorage.getItem(ACCOUNT_RECOVERY_STORAGE_KEY);const v=raw?JSON.parse(raw):[];return pruneAccountRecoveryTokens(v);}catch(_){return[];}
 }
 function rememberAccountRecoveryToken(token){
   token=String(token||""); if(!token.includes("."))return;
-  try{const list=loadAccountRecoveryTokens().filter(x=>x!==token);list.unshift(token);localStorage.setItem(ACCOUNT_RECOVERY_STORAGE_KEY,JSON.stringify(list.slice(0,8)));}catch(_){}
-}
-function recoveryTokenUserId(token){
-  try{const body=String(token||"").split(".")[0];if(!body)return"";const b64=body.replace(/-/g,"+").replace(/_/g,"/");const pad="=".repeat((4-b64.length%4)%4);const payload=JSON.parse(atob(b64+pad));return String(payload?.account?.userId||"");}catch(_){return"";}
+  try{const list=pruneAccountRecoveryTokens([token,...loadAccountRecoveryTokens()]);localStorage.setItem(ACCOUNT_RECOVERY_STORAGE_KEY,JSON.stringify(list));}catch(_){}
 }
 function forgetRecoveryForUser(userId){
   userId=String(userId||"");if(!userId)return;
@@ -28835,14 +28884,15 @@ window.__hostlStarterPetPreferenceChanged = function(pref={}){
 };
 async function saveStarterPetPreferenceNow(){
   if(!accountState.loggedIn || !hostlSessionToken) return false;
+  const requestToken=hostlSessionToken;
   const pending=window.__hostlPendingStarterPetPreference;
   if(!pending) return true;
   const sent={...pending},seq=++starterPetPreferenceRequestSeq;
   try{
     const r=await fetch("/api/account",{method:"PUT",headers:{"Content-Type":"application/json",...accountAuthHeaders()},credentials:"same-origin",body:JSON.stringify({starterPetType:sent.type,starterPetName:sent.name,starterPetGender:sent.gender})});
     const data=await r.json().catch(()=>({}));
-    if(r.status===401){logoutAccount(false);return false;}
-    if(!r.ok||!data?.account)return false;
+    if(r.status===401){if(hostlSessionToken===requestToken)logoutAccount(false);return false;}
+    if(!r.ok||!data?.account||!accountState.loggedIn||hostlSessionToken!==requestToken)return false;
     const current=window.__hostlPendingStarterPetPreference;
     const same=current&&current.type===sent.type&&current.name===sent.name&&current.gender===sent.gender;
     if(same && seq===starterPetPreferenceRequestSeq) window.__hostlPendingStarterPetPreference=null;
@@ -28983,6 +29033,7 @@ window.__hostlUnlockAdTheme = async function(themeId){
 };
 async function pushAccountProfileNow() {
   if (!accountState.loggedIn || !hostlSessionToken) return false;
+  const requestToken=hostlSessionToken;
   try {
     const r = await fetch("/api/account", {
       method:"PUT",
@@ -28998,10 +29049,10 @@ async function pushAccountProfileNow() {
         starterPetGender:meta.starterPetGender||"Male"
       })
     });
-    if (r.status===401) { logoutAccount(false); return false; }
+    if (r.status===401) { if(hostlSessionToken===requestToken)logoutAccount(false); return false; }
     if (!r.ok) return false;
     const data=await r.json();
-    if (data?.account) setAccountFromServer(data.account);
+    if (data?.account && accountState.loggedIn && hostlSessionToken===requestToken) setAccountFromServer(data.account);
     return true;
   } catch (_) { return false; }
 }
@@ -29054,11 +29105,36 @@ async function refreshAccountEntitlementsForRun() {
 
 async function restoreAccountSession() {
   try { hostlSessionToken = localStorage.getItem(ACCOUNT_STORAGE_KEY) || ""; } catch (_) { hostlSessionToken=""; }
+  let r=null;
   try {
-    // The server also keeps an HttpOnly HOSTL session cookie. That cookie lets a player
-    // remain signed in after a normal reload even if the local token is unavailable.
-    const r=await fetch("/api/account", { headers:accountAuthHeaders(), cache:"no-store", credentials:"same-origin" });
-    if (!r.ok) throw new Error("session expired");
+    r=await fetch("/api/account", { headers:accountAuthHeaders(), cache:"no-store", credentials:"same-origin" });
+  } catch (_) {
+    // A temporary outage must never erase the saved login token or browser recovery
+    // backups. The next reconnect/login can continue from the same account identity.
+    syncAccountUi(hostlSessionToken ? "Account sync is temporarily unavailable. Your saved login and recovery backup were kept." : "");
+    return false;
+  }
+  if(!r.ok){
+    if(r.status!==401){
+      syncAccountUi("Account server is temporarily unavailable. Your saved login and recovery backup were kept.");
+      return false;
+    }
+    // A genuine authentication failure can clear the active session, but recovery
+    // snapshots remain untouched so Google sign-in can rebuild a lost server account.
+    hostlSessionToken="";
+    window.__hostlAccountSessionActive = false;
+    window.__hostlLatestPetProgressSnapshot = null;
+    window.__hostlPendingStarterPetPreference = null;
+    clearTimeout(starterPetPreferenceSaveTimer);
+    accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
+    window.__hostlThemeAccountState={loggedIn:false,unlockedThemes:[],goldCubits:0};
+    try { window.__hostlRefreshThemeAccess?.(); } catch(_) {}
+    try { window.__hostlResetGuestProfile?.(); } catch (_) {}
+    saveAccountSession();
+    syncAccountUi();
+    return false;
+  }
+  try {
     let data=await r.json();
     if (!data?.account) throw new Error("account missing");
     if (data.token) hostlSessionToken=String(data.token);
@@ -29075,21 +29151,12 @@ async function restoreAccountSession() {
     syncAchievementAccountBridge();
     syncAccountUi("Account restored.");
     startFriendsLoops();
-    return;
+    return true;
   } catch (_) {
-    hostlSessionToken="";
-    window.__hostlAccountSessionActive = false;
-    window.__hostlLatestPetProgressSnapshot = null;
-    window.__hostlPendingStarterPetPreference = null;
-    clearTimeout(starterPetPreferenceSaveTimer);
-    accountState = { loggedIn:false,userId:"",username:"",displayName:"",email:"",picture:"",goldCubits:0,unlockedThemes:[],selectedTheme:"",achievements:{},speciesCards:{},ownedStarters:{},petStages:{},petStatUpgrades:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",materials:{},craftedStarters:[],learnedSkills:[],title:"",unlockedTitles:[],testerRank:0,ownerRank:0,starterPetEntitlements:[],starterPetEntitlement:null,lastDailyCubits:"",lastDailyChest:"",createdAt:"",friendCount:0 };
-    window.__hostlThemeAccountState={loggedIn:false,unlockedThemes:[],goldCubits:0};
-    try { window.__hostlRefreshThemeAccess?.(); } catch(_) {}
-    // Guest mode is a clean profile. Never inherit any account starter gear,
-    // pet progress, permanent perks, selected pet, cards, or Gold Cubits.
-    try { window.__hostlResetGuestProfile?.(); } catch (_) {}
-    saveAccountSession();
-    syncAccountUi();
+    // Bad/transient response: keep the existing local session instead of turning it
+    // into a destructive guest reset. A later refresh will try again.
+    syncAccountUi("Account sync could not finish. Your saved login and recovery backup were kept.");
+    return false;
   }
 }
 function claimDailyCubits() {
@@ -29406,10 +29473,13 @@ function renderMaterialsAndRecipes(){
 }
 async function accountAction(path,body){
   if(!accountState.loggedIn){ openAccountModal(); return null; }
+  const requestToken=hostlSessionToken;
   try{
     const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",...accountAuthHeaders()},credentials:"same-origin",body:JSON.stringify(body||{})});
-    const data=await r.json().catch(()=>({})); if(r.status===401){ logoutAccount(false); return null; }
-    if(data?.account) setAccountFromServer(data.account); syncAccountUi(); return {ok:r.ok,data};
+    const data=await r.json().catch(()=>({})); if(r.status===401){ if(hostlSessionToken===requestToken)logoutAccount(false); return null; }
+    if(data?.account && accountState.loggedIn && hostlSessionToken===requestToken) setAccountFromServer(data.account);
+    if(hostlSessionToken===requestToken) syncAccountUi();
+    return {ok:r.ok,data};
   }catch(_){ return {ok:false,data:{error:"network"}}; }
 }
 async function buyShopListing(slotId){
@@ -29675,9 +29745,14 @@ async function handleGoogleCredential(response) {
 function logoutAccount(showMessage=true) {
   stopFriendsLoops(); closeFriendsModal();
   clearTimeout(accountSaveTimer);
-  if(accountState.loggedIn) pushAccountProfileNow();
+  const logoutToken=hostlSessionToken;
+  if(accountState.loggedIn && logoutToken){
+    // Fire-and-forget the final preferences, but never apply its response after logout.
+    // The old async path could finish late and accidentally mark the browser logged in again.
+    try{fetch("/api/account",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":`Bearer ${logoutToken}`},credentials:"same-origin",keepalive:true,body:JSON.stringify({title:accountState.title||"",selectedTheme:accountState.selectedTheme||currentHomeTheme||"forestGold",starterPetType:meta.starterPetType||"",starterPetName:meta.starterPetName||"",starterPetGender:meta.starterPetGender||"Male"})});}catch(_){}
+  }
   // Clear the server-side browser session cookie as well as the local token.
-  try { fetch("/auth/logout", {method:"POST", headers:accountAuthHeaders(), credentials:"same-origin", keepalive:true}); } catch (_) {}
+  try { fetch("/auth/logout", {method:"POST", headers:logoutToken?{"Authorization":`Bearer ${logoutToken}`}:{}, credentials:"same-origin", keepalive:true}); } catch (_) {}
   hostlSessionToken="";
   window.__hostlAccountSessionActive = false;
   window.__hostlPendingStarterPetPreference = null;
@@ -29827,7 +29902,7 @@ function closeFriendsModal(){ document.getElementById("friendsModal")?.classList
 async function sendPresence(){ if(!accountState.loggedIn||!hostlSessionToken)return; try{await friendApi("/api/presence",{method:"POST"});}catch(_){}}
 function startFriendsLoops(){ clearInterval(friendsPollTimer);clearInterval(presenceTimer); sendPresence(); friendsPollTimer=setInterval(()=>{if(accountState.loggedIn)refreshFriends(false);},5000); presenceTimer=setInterval(sendPresence,20000); }
 function stopFriendsLoops(){ clearInterval(friendsPollTimer);clearInterval(presenceTimer);clearInterval(friendChatTimer);friendsPollTimer=presenceTimer=friendChatTimer=0; }
-async function refreshFriends(render=true){ if(!accountState.loggedIn)return; try{const r=await friendApi("/api/friends"); if(!r.ok)return; friendsData=await r.json(); if(friendsData?.account){ setAccountFromServer(friendsData.account); syncAccountUi(); } if(render)renderFriendsUi();}catch(_){}}
+async function refreshFriends(render=true){ if(!accountState.loggedIn)return; const requestToken=hostlSessionToken; try{const r=await friendApi("/api/friends"); if(!r.ok)return; const next=await r.json(); if(!accountState.loggedIn||hostlSessionToken!==requestToken)return; friendsData=next; if(friendsData?.account){ setAccountFromServer(friendsData.account); syncAccountUi(); } if(render)renderFriendsUi();}catch(_){}}
 function renderFriendsUi(){
   const req=document.getElementById("friendRequestsList"), list=document.getElementById("friendsList"); if(!req||!list)return;
   req.innerHTML=""; const incoming=friendsData.incoming||[], outgoing=friendsData.outgoing||[];
