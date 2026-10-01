@@ -704,6 +704,96 @@ function restoreAccountFromRecovery(payload,googleProfile) {
   for(const code of a.redeemedCodes){const def=PROMO_CODES.get(String(code).toUpperCase());if(def?.globalOnce&&!accountDb.globalCodeClaims[String(code).toUpperCase()])accountDb.globalCodeClaims[String(code).toUpperCase()]=userId;}
   return a;
 }
+function bestAccountRecoveryPayload(rawTokens, googleSub, current=null) {
+  const supplied=Array.isArray(rawTokens)?rawTokens.slice(0,8):[];
+  const valid=[];
+  for(const raw of supplied){
+    const candidate=verifyAccountRecoveryToken(safeText(raw,180000),googleSub);
+    if(candidate) valid.push(candidate);
+  }
+  if(!valid.length) return null;
+  // Keep only the newest signed snapshot for each historical HOSTL user id.
+  const byUser=new Map();
+  for(const candidate of valid){
+    const id=String(candidate?.account?.userId||"");
+    const old=byUser.get(id);
+    if(!old || Number(candidate.iat||0)>Number(old.iat||0)) byUser.set(id,candidate);
+  }
+  let choices=[...byUser.values()];
+  if(current){
+    const rescuers=choices.filter(candidate=>shouldRecoverOverExistingAccount(current,candidate));
+    if(rescuers.length) choices=rescuers;
+    else {
+      const sameId=choices.filter(candidate=>String(candidate?.account?.userId||"")===String(current.userId||""));
+      if(sameId.length) choices=sameId;
+    }
+  }
+  choices.sort((a,b)=>{
+    const scoreDiff=recoveryProgressWeight(b.account)-recoveryProgressWeight(a.account);
+    if(Math.abs(scoreDiff)>0.001) return scoreDiff;
+    const ac=Date.parse(String(a?.account?.createdAt||"")),bc=Date.parse(String(b?.account?.createdAt||""));
+    if(Number.isFinite(ac)&&Number.isFinite(bc)&&ac!==bc) return ac-bc; // older account identity wins ties
+    const ag=Math.max(0,Math.floor(Number(a?.account?.goldCubits)||0)),bg=Math.max(0,Math.floor(Number(b?.account?.goldCubits)||0));
+    if(bg!==ag) return bg-ag;
+    return Number(b.iat||0)-Number(a.iat||0);
+  });
+  return choices[0]||null;
+}
+function recoveryProgressWeight(snap={}) {
+  let score=0;
+  const cards=(snap.speciesCards&&typeof snap.speciesCards==="object")?snap.speciesCards:{};
+  score += Object.values(cards).reduce((n,v)=>n+Math.min(200,Math.max(0,Math.floor(Number(v)||0))),0)*0.15;
+  const owned=(snap.ownedStarters&&typeof snap.ownedStarters==="object")?snap.ownedStarters:{};
+  score += Object.values(owned).filter(Boolean).length*18;
+  const stageRank={baby:0,adult:1,boss:2,superboss:3,bigmomma:4};
+  const stages=(snap.petStages&&typeof snap.petStages==="object")?snap.petStages:{};
+  score += Object.values(stages).reduce((n,v)=>n+(stageRank[String(v||"baby")]||0)*14,0);
+  const ups=(snap.petStatUpgrades&&typeof snap.petStatUpgrades==="object")?snap.petStatUpgrades:{};
+  for(const stats of Object.values(ups)) if(stats&&typeof stats==="object") score += Object.values(stats).reduce((n,v)=>n+Math.max(0,Math.floor(Number(v)||0))*5,0);
+  score += Object.keys((snap.achievements&&typeof snap.achievements==="object")?snap.achievements:{}).length*12;
+  score += (Array.isArray(snap.unlockedThemes)?snap.unlockedThemes.length:0)*8;
+  score += (Array.isArray(snap.craftedStarters)?snap.craftedStarters.length:0)*18;
+  score += (Array.isArray(snap.learnedSkills)?snap.learnedSkills.length:0)*18;
+  score += (Array.isArray(snap.redeemedCodes)?snap.redeemedCodes.length:0)*24;
+  score += (Array.isArray(snap.friends)?snap.friends.length:0)*4;
+  score += (Array.isArray(snap.starterPetEntitlements)?snap.starterPetEntitlements.length:0)*30;
+  score += Math.max(0,Math.floor(Number(snap.testerRank)||0))*250 + Math.max(0,Math.floor(Number(snap.ownerRank)||0))*500;
+  const mats=(snap.materials&&typeof snap.materials==="object")?snap.materials:{};
+  score += Object.values(mats).reduce((n,v)=>n+Math.min(50,Math.max(0,Math.floor(Number(v)||0))),0)*0.08;
+  return score;
+}
+function accountLooksLikeFreshReplacement(a) {
+  if(!a||typeof a!=="object") return false;
+  const snap=accountRecoverySnapshot(a);
+  const noPermanentProgress=recoveryProgressWeight(snap)<1;
+  const noCustomProfile=!cleanDisplayName(snap.username||"")&&!cleanDisplayName(snap.displayName||"");
+  // New HOSTL accounts currently begin with 500 Gold Cubits. Allow a little room for
+  // a daily reward or UI test so recovery still works after the player noticed the reset.
+  const nearFreshCurrency=Math.max(0,Math.floor(Number(snap.goldCubits)||0))<=700;
+  return noPermanentProgress && noCustomProfile && nearFreshCurrency;
+}
+function shouldRecoverOverExistingAccount(current,payload) {
+  if(!current||!payload?.account) return false;
+  const oldId=String(payload.account.userId||""),currentId=String(current.userId||"");
+  if(!oldId || oldId===currentId) return false;
+  const issued=Number(payload.iat||0),currentCreated=Date.parse(String(current.createdAt||""));
+  // The replacement account must have been created after the signed old-account backup.
+  // That is the fingerprint of "server save vanished, then a new device logged in first".
+  if(!Number.isFinite(currentCreated)||!issued||currentCreated<=issued) return false;
+  const oldScore=recoveryProgressWeight(payload.account),currentScore=recoveryProgressWeight(accountRecoverySnapshot(current));
+  const oldGold=Math.max(0,Math.floor(Number(payload.account.goldCubits)||0));
+  const currentGold=ensureGoldCubits(current);
+  return accountLooksLikeFreshReplacement(current) || oldScore>currentScore+20 || oldGold>currentGold+500;
+}
+function recoverOverExistingAccount(current,payload,googleProfile) {
+  if(!shouldRecoverOverExistingAccount(current,payload)) return null;
+  const obsoleteId=String(current.userId||"");
+  const restored=restoreAccountFromRecovery(payload,googleProfile);
+  if(obsoleteId && obsoleteId!==String(restored.userId||"") && accountDb.byId[obsoleteId]?.googleSub===googleProfile.sub) delete accountDb.byId[obsoleteId];
+  accountDb.byGoogleSub[googleProfile.sub]=restored.userId;
+  return restored;
+}
+
 function publicAccount(a) {
   return {
     userId: a.userId,
@@ -923,13 +1013,13 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 592, gameBuild: 664, rulesVersion: "664", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 593, gameBuild: 680, rulesVersion: "680", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 592, gameBuild: 664, rulesVersion: "664" });
+  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 593, gameBuild: 680, rulesVersion: "680" });
 });
 
 app.get("/auth/config", (_req, res) => {
@@ -950,16 +1040,14 @@ app.post("/auth/google", async (req, res) => {
     let account = userId ? accountDb.byId[userId] : null;
     let created = false;
     let recovered = false;
-    if (!account) {
-      const supplied = Array.isArray(req.body?.recoveryTokens) ? req.body.recoveryTokens.slice(0,8) : (req.body?.recoveryToken ? [req.body.recoveryToken] : []);
-      let bestRecovery = null;
-      for (const raw of supplied) {
-        const candidate=verifyAccountRecoveryToken(safeText(raw,180000),p.sub);
-        if(candidate && (!bestRecovery || Number(candidate.iat||0)>Number(bestRecovery.iat||0))) bestRecovery=candidate;
-      }
-      if(bestRecovery){
-        account=restoreAccountFromRecovery(bestRecovery,p); userId=account.userId; recovered=true;
-      }
+    const supplied = Array.isArray(req.body?.recoveryTokens) ? req.body.recoveryTokens.slice(0,8) : (req.body?.recoveryToken ? [req.body.recoveryToken] : []);
+    const bestRecovery = bestAccountRecoveryPayload(supplied,p.sub,account);
+    if(account && bestRecovery){
+      const rescued=recoverOverExistingAccount(account,bestRecovery,p);
+      if(rescued){ account=rescued; userId=account.userId; recovered=true; }
+    }
+    if (!account && bestRecovery) {
+      account=restoreAccountFromRecovery(bestRecovery,p); userId=account.userId; recovered=true;
     }
     if (!account) {
       created = true;
@@ -1040,6 +1128,22 @@ app.get("/api/account", requireAccount, async (req, res) => {
   // Returning the already-verified token lets the browser restore its local copy from
   // the HttpOnly cookie after a reload without asking Google to sign in again.
   res.json({ ok: true, token: req.hostlSessionToken, account: publicAccount(a) });
+});
+
+app.post("/api/account/recover", requireAccount, async (req,res)=>{
+  const current=accountDb.byId[req.hostlUserId];
+  if(!current?.googleSub) return res.status(404).json({ok:false,error:"account_missing"});
+  const supplied=Array.isArray(req.body?.recoveryTokens)?req.body.recoveryTokens.slice(0,8):[];
+  const best=bestAccountRecoveryPayload(supplied,current.googleSub,current);
+  if(!best) return res.json({ok:true,recovered:false,account:publicAccount(current),token:req.hostlSessionToken});
+  const profile={sub:current.googleSub,email:current.email||"",picture:current.picture||""};
+  const restored=recoverOverExistingAccount(current,best,profile);
+  if(!restored) return res.json({ok:true,recovered:false,account:publicAccount(current),token:req.hostlSessionToken});
+  restored.updatedAt=new Date().toISOString();
+  await saveAccounts();
+  const token=signSession(restored.userId);
+  setSessionCookie(res,token);
+  return res.json({ok:true,recovered:true,token,account:publicAccount(restored)});
 });
 
 app.post("/auth/logout", (req, res) => {

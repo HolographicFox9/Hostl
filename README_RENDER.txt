@@ -144,3 +144,10 @@ Server 591 / Game 663 / Rules 615 — Forest + Rain Forest Island test
 - Ponds reserve a clear bank before scenery generation, use filled sloped ground shelves with no outline stroke, and visually shrink on-foot players slightly as they move deeper into pond water.
 - The initial page opens without generating the full local world or showing the loading overlay. Pressing Play now opens the loading screen, performs the required offline generation or online room join/sync, then puts the player into the game.
 - World generation was reduced for this two-biome test (fewer static objects/water systems while keeping useful density) to improve Play-time loading.
+
+ACCOUNT RECOVERY / BUILD 680
+- Render Free web services use an ephemeral filesystem, so accounts.json can disappear on a deploy/restart.
+- HOSTL keeps HMAC-signed recovery snapshots in each browser as a safety backup.
+- Build 680 fixes the "new device logs in first" recovery hole: an older browser can now restore the original account even after a newer blank replacement account was created.
+- The browser session-restore flow automatically sends its signed recovery snapshots to /api/account/recover before accepting a replacement account.
+- For guaranteed server-side permanence independent of any browser backup, use the persistent-disk blueprint in render-persistent-example.yaml or move account storage to a persistent database.

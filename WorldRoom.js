@@ -620,7 +620,7 @@ class PlayerState extends Schema {
     this.id = ""; this.username = "Cube";
     this.x = WORLD_W / 2; this.y = WORLD_H / 2; this.angle = 0;
     this.health = 100; this.maxHealth = 100; this.dead = false;
-    this.color = "#3fa7ff"; this.bodyStyle = "classic"; this.tool = "Fist"; this.heldSpecial = ""; this.ridingPetId = "";
+    this.color = "#3fa7ff"; this.tool = "Fist"; this.heldSpecial = ""; this.ridingPetId = "";
     this.moveX = 0; this.moveY = 0; this.moving = false; this.animalCarryT = 0;
     this.kills = 0; this.gold = 0; this.title = ""; this.testerRank = 0; this.ownerRank = 0;
     this.skillLevel = 0; this.skillXp = 0; this.skillSpeed = 0; this.skillStrength = 0; this.skillDefense = 0; this.skillPendingMilestone = 0;
@@ -629,7 +629,7 @@ class PlayerState extends Schema {
 }
 defineTypes(PlayerState, {
   id:"string", username:"string", x:"number", y:"number", angle:"number",
-  health:"number", maxHealth:"number", dead:"boolean", color:"string", bodyStyle:"string", tool:"string", heldSpecial:"string", ridingPetId:"string",
+  health:"number", maxHealth:"number", dead:"boolean", color:"string", tool:"string", heldSpecial:"string", ridingPetId:"string",
   moveX:"number", moveY:"number", moving:"boolean", animalCarryT:"number", kills:"number", gold:"number", title:"string", testerRank:"number", ownerRank:"number",
   skillLevel:"number", skillXp:"number", skillSpeed:"number", skillStrength:"number", skillDefense:"number", skillPendingMilestone:"number", hydration:"number", bucketWater:"boolean", bucketSips:"number", saddleTier:"number"
 });
@@ -1516,8 +1516,6 @@ export class WorldRoom extends Room {
     if(username)p.username=username;
     const color=String(data?.color||"");
     if(/^#[0-9a-f]{6}$/i.test(color))p.color=color;
-    const bodyStyle=String(data?.bodyStyle||"");
-    if(["classic","round","wide","tall","cut"].includes(bodyStyle))p.bodyStyle=bodyStyle;
   }
 
   handleChat(client,data={}) {
@@ -4440,7 +4438,7 @@ export class WorldRoom extends Room {
   onJoin(client,options={}){
     const populationKey=`${this.roomId||"world"}:${client.sessionId}`;
     this.populationKeys.set(client.sessionId,populationKey);ACTIVE_CUBE_PLAYER_KEYS.add(populationKey);
-    const s=this.safeSpawn(),p=new PlayerState();this.playerCombatReadyAt.set(client.sessionId,Infinity);p.id=client.sessionId;p.username=String(options.username||"Cube").slice(0,14);p.x=s.x;p.y=s.y;p.angle=0;p.health=100;p.maxHealth=100;p.hydration=100;p.bucketWater=true;p.bucketSips=BUCKET_MAX_SIPS;p.color=typeof options.color==="string"?options.color:"#3fa7ff";p.bodyStyle=["classic","round","wide","tall","cut"].includes(String(options.bodyStyle||""))?String(options.bodyStyle):"classic";p.tool="Fist";p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;
+    const s=this.safeSpawn(),p=new PlayerState();this.playerCombatReadyAt.set(client.sessionId,Infinity);p.id=client.sessionId;p.username=String(options.username||"Cube").slice(0,14);p.x=s.x;p.y=s.y;p.angle=0;p.health=100;p.maxHealth=100;p.hydration=100;p.bucketWater=true;p.bucketSips=BUCKET_MAX_SIPS;p.color=typeof options.color==="string"?options.color:"#3fa7ff";p.tool="Fist";p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;
     let verifiedAccount=null;try{verifiedAccount=HOSTL_ACCOUNT_HOOKS.resolveSession(String(options.accountToken||""));}catch(_){verifiedAccount=null;}
     if(verifiedAccount?.userId){this.playerAccountIds.set(client.sessionId,String(verifiedAccount.userId));this.playerAccountEntitlements.set(client.sessionId,verifiedAccount);if(verifiedAccount.username)p.username=String(verifiedAccount.username).slice(0,14);p.title=String(verifiedAccount.title||"").slice(0,32);p.testerRank=Math.max(0,Math.floor(Number(verifiedAccount.testerRank)||0));p.ownerRank=Math.max(0,Math.floor(Number(verifiedAccount.ownerRank)||0));try{HOSTL_ACCOUNT_HOOKS.onPresenceJoin(String(verifiedAccount.userId),`${this.roomId||"world"}:${client.sessionId}`,this.worldId);}catch(_){}}
     let upgrades={};if(verifiedAccount?.userId)upgrades=(verifiedAccount.petStatUpgrades&&typeof verifiedAccount.petStatUpgrades==="object")?verifiedAccount.petStatUpgrades:{};else try{const parsed=JSON.parse(String(options.petStatUpgrades||"{}"));if(parsed&&typeof parsed==="object")upgrades=parsed;}catch(_){}
