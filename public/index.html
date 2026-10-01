@@ -1871,7 +1871,8 @@
     min-width:0 !important;
   }
 
-  #playerDesignOverlay{
+  #playerDesignOverlay,
+  #bodyCosmeticsShopOverlay{
     position:fixed;
     inset:0;
     display:flex;
@@ -1885,17 +1886,20 @@
     z-index:90;
   }
 
-  #playerDesignOverlay.show{
+  #playerDesignOverlay.show,
+  #bodyCosmeticsShopOverlay.show{
     opacity:1;
     visibility:visible;
     pointer-events:auto;
   }
 
-  #playerDesignOverlay:not(.show) *{
+  #playerDesignOverlay:not(.show) *,
+  #bodyCosmeticsShopOverlay:not(.show) *{
     pointer-events:none !important;
   }
 
-  #playerDesignOverlay .player-design-card{
+  #playerDesignOverlay .player-design-card,
+  #bodyCosmeticsShopOverlay .player-design-card{
     width:min(680px,94vw);
     max-height:86vh;
     padding:22px;
@@ -1917,7 +1921,8 @@
     text-align:left;
   }
 
-  #playerDesignOverlay #homePreview{
+  #playerDesignOverlay #homePreview,
+#bodyCosmeticsShopOverlay #bodyShopPreview{
     width:96px;
     height:96px;
     image-rendering:auto;
@@ -1971,7 +1976,8 @@
       gap:12px;
     }
 
-    #playerDesignOverlay #homePreview{
+    #playerDesignOverlay #homePreview,
+#bodyCosmeticsShopOverlay #bodyShopPreview{
       width:76px;
       height:76px;
     }
@@ -3428,12 +3434,15 @@
     background:color-mix(in srgb,var(--ht-panel2) 62%,transparent) !important;
     border-color:color-mix(in srgb,var(--ht-accent) 18%,transparent) !important;
   }
-  #playerDesignOverlay .player-design-preview-title{color:var(--ht-text) !important;}
-  #playerDesignOverlay #homePreview{
+  #playerDesignOverlay .player-design-preview-title,
+#bodyCosmeticsShopOverlay .player-design-preview-title{color:var(--ht-text) !important;}
+  #playerDesignOverlay #homePreview,
+#bodyCosmeticsShopOverlay #bodyShopPreview{
     background:color-mix(in srgb,var(--ht-bg) 64%,transparent) !important;
     border-color:color-mix(in srgb,var(--ht-accent) 25%,transparent) !important;
   }
-  #playerDesignOverlay .swatch.selected{
+  #playerDesignOverlay .swatch.selected,
+#bodyCosmeticsShopOverlay .swatch.selected{
     border-color:var(--ht-text) !important;
     box-shadow:0 0 0 2px var(--ht-accent) !important;
   }
@@ -5428,7 +5437,7 @@ button:focus-visible{
 /* Cosmetics body-type area is ready for the body silhouettes we add later. */
 .body-type-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:8px;}
 .body-type-option{min-height:68px;border:2px solid color-mix(in srgb,var(--ht-accent,#8fbf6a) 38%,transparent);border-radius:12px;background:color-mix(in srgb,var(--ht-panel2,#203129) 88%,black 12%);color:var(--ht-text,#f2eedc);padding:10px;text-align:left;}
-.body-type-option b,.body-type-option small{display:block}.body-type-option small{margin-top:4px;opacity:.7;font-size:9px}.body-type-option.selected{border-color:var(--ht-accent,#8fbf6a)}.body-type-option.coming{opacity:.58;}
+.body-type-option b,.body-type-option small{display:block}.body-type-option small{margin-top:4px;opacity:.7;font-size:9px}.body-type-option.selected{border-color:var(--ht-accent,#8fbf6a)}.body-type-option.coming{opacity:.58;}.body-type-option.locked{opacity:.9;}.body-type-option .body-action{margin-top:8px;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#bde9f2;}
 
 #homeUpdatesOverlay{position:fixed;inset:0;z-index:96;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(4,8,6,.72);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .16s,visibility .16s;}
 #homeUpdatesOverlay.show{opacity:1;visibility:visible;pointer-events:auto;}
@@ -5481,9 +5490,9 @@ button:focus-visible{
   border:2px solid color-mix(in srgb,var(--ht-muted,#d8c59a) 38%,transparent);
   background:color-mix(in srgb,var(--ht-panel2,#203129) 82%,black 18%);
   box-shadow:0 4px 0 rgba(8,12,9,.55),inset 0 1px 0 rgba(255,255,255,.08);
-  display:grid;place-items:center;cursor:pointer;overflow:hidden;
+  display:grid;place-items:center;cursor:default;overflow:hidden;
 }
-#home .home-inline-player-preview:hover{border-color:var(--ht-accent,#8fbf6a);filter:brightness(1.08);}
+#home .home-inline-player-preview:hover{border-color:color-mix(in srgb,var(--ht-muted,#d8c59a) 38%,transparent);filter:none;}
 #home #homeInlinePreview{width:54px;height:54px;display:block;image-rendering:auto;}
 #home .home-name-fields{min-width:0;flex:1 1 auto;display:grid;grid-template-columns:auto minmax(130px,1fr);gap:5px 9px;align-items:center;}
 #home .home-name-fields .home-field-label{grid-column:1;}
@@ -5693,8 +5702,8 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
     <button class="btn secondary modal-close" id="closePlayerDesign">Close</button>
     <div class="modal-title-clear">
       <div class="home-section-label">Your Cube</div>
-      <h1>Cosmetics</h1>
-      <p class="lead">Change your cube color here. Different player body types will also live in this menu.</p>
+      <h1>Character Design</h1>
+      <p class="lead">See the body cosmetics you already own and choose which one to use.</p>
     </div>
 
     <div class="player-design-preview-wrap player-design-preview-only">
@@ -5702,7 +5711,7 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
       <div class="player-design-preview-copy">
         <div class="player-design-label">Current Look</div>
         <div class="player-design-preview-title">Your Cube</div>
-        <div class="player-design-preview-sub">Pick your color and body style from this cosmetics menu.</div>
+        <div class="player-design-preview-sub">Choose from the body cosmetics you already unlocked.</div>
       </div>
     </div>
 
@@ -5712,11 +5721,31 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
     </div>
 
     <div class="player-design-section body-type-section">
-      <div class="player-design-label">Body Type</div>
-      <div class="body-type-grid">
-        <button class="body-type-option selected" type="button" aria-pressed="true"><b>Classic Cube</b><small>Current body</small></button>
-        <button class="body-type-option coming" type="button" disabled><b>More Body Types</b><small>Coming here next</small></button>
+      <div class="player-design-label">Owned Body Cosmetics</div>
+      <div class="body-type-grid" id="ownedBodyStyles"></div>
+    </div>
+  </div>
+</div>
+
+<div id="bodyCosmeticsShopOverlay">
+  <div class="card game-scroll player-design-card">
+    <button class="btn secondary modal-close" id="closeBodyCosmeticsShop">Close</button>
+    <div class="modal-title-clear">
+      <div class="home-section-label">Cosmetics Shop</div>
+      <h1>Body Shop</h1>
+      <p class="lead">Unlock more player bodies here. Right now every body costs 0 Gold Cubits.</p>
+    </div>
+    <div class="player-design-preview-wrap player-design-preview-only">
+      <canvas id="bodyShopPreview" width="96" height="96" title="Body shop preview"></canvas>
+      <div class="player-design-preview-copy">
+        <div class="player-design-label">Shop Preview</div>
+        <div class="player-design-preview-title">More Bodies</div>
+        <div class="player-design-preview-sub">Unlock a body here, then equip it from Character Design.</div>
       </div>
+    </div>
+    <div class="player-design-section body-type-section">
+      <div class="player-design-label">Available Body Cosmetics</div>
+      <div class="body-type-grid" id="bodyShopGrid"></div>
     </div>
   </div>
 </div>
@@ -5928,12 +5957,12 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
           <p class="sub">Choose your look, shop, and start when you want.</p>
 
           <div class="home-name-row">
-            <button class="home-inline-player-preview" id="homeInlinePreviewBtn" type="button" title="Your current look — open Cosmetics">
+            <div class="home-inline-player-preview" id="homeInlinePreviewWrap" title="Your current look">
               <canvas id="homeInlinePreview" width="64" height="64" aria-label="Current player appearance"></canvas>
-            </button>
+            </div>
             <div class="home-name-fields">
               <span class="home-field-label">Player Name</span>
-              <span class="home-look-hint">Classic Cube • color editable</span>
+              <span class="home-look-hint" id="homeLookHint">Classic Cube • selected</span>
               <input type="text" id="username" placeholder="Choose username" maxlength="14" value="">
             </div>
             <button class="btn" id="choosePlayerDesignBtn" type="button">Character Design</button>
@@ -9223,6 +9252,10 @@ function loadMeta() {
         }
       }
       if (!m.ownedStarters) m.ownedStarters = {};
+      if (!m.ownedBodyStyles || typeof m.ownedBodyStyles !== "object") m.ownedBodyStyles = { classic:true };
+      m.ownedBodyStyles.classic = true;
+      if (typeof m.selectedBodyStyle !== "string") m.selectedBodyStyle = "classic";
+      if (!m.ownedBodyStyles[m.selectedBodyStyle]) m.selectedBodyStyle = "classic";
       if (!m.petStages) m.petStages = {};
       if (!m.petStatUpgrades) m.petStatUpgrades = {};
       if (!m.achievements || typeof m.achievements !== "object") m.achievements = {};
@@ -9243,7 +9276,7 @@ function loadMeta() {
   } catch (e) {}
   return {
     servs: 5, username: "Cube", color: COLORS[0],
-    ownedStarters: {},
+    ownedStarters: {}, ownedBodyStyles: { classic:true }, selectedBodyStyle: "classic",
     speciesCards: { dog: 0, cat: 0, dragon: 0, fox: 0, wolf: 0, bear: 0, rabbit: 0 },
     petStages: {},
     petStatUpgrades: {},
@@ -9267,7 +9300,7 @@ function saveMeta() {
   try { window.__hostlAccountGoldCubitsChanged?.(Math.max(0,Math.floor(Number(meta.servs)||0))); } catch (_) {}
   try {
     window.__hostlAccountProgressChanged?.({
-      speciesCards:{...(meta.speciesCards||{})}, ownedStarters:{...(meta.ownedStarters||{})}, petStages:{...(meta.petStages||{})},
+      speciesCards:{...(meta.speciesCards||{})}, ownedStarters:{...(meta.ownedStarters||{})}, ownedBodyStyles:{...(meta.ownedBodyStyles||{})}, selectedBodyStyle:meta.selectedBodyStyle||"classic", petStages:{...(meta.petStages||{})},
       petStatUpgrades:JSON.parse(JSON.stringify(meta.petStatUpgrades||{})), starterPetType:meta.starterPetType||"", starterPetName:meta.starterPetName||"", starterPetGender:meta.starterPetGender||"Male"
     });
   } catch (_) {}
@@ -9284,7 +9317,7 @@ function cleanGuestMetaProfile(){
     petStatUpgrades[type]={health:0,defense:0,attack:0,weight:0,regen:0,speed:0};
   }
   return {
-    servs:5,username:"Cube",color:COLORS[0],ownedStarters:{},speciesCards,petStages,petStatUpgrades,
+    servs:5,username:"Cube",color:COLORS[0],ownedStarters:{},ownedBodyStyles:{classic:true},selectedBodyStyle:"classic",speciesCards,petStages,petStatUpgrades,
     achievements:{},starterPetType:"",starterPetName:"",starterPetGender:"Male",lastDaily:null
   };
 }
@@ -11765,7 +11798,7 @@ function drawRemotePlayer(v) {
     roundRect(v.x - 24, v.y - 26, 48 * hp, 4, 1);
     ctx.fill();
   }
-  ctx.restore();
+  targetCtx.restore();
 }
 function drawRemotePlayers() {
   for (const v of net.remoteVisuals.values()) drawRemotePlayer(v);
@@ -13814,8 +13847,8 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
   const headRot = turnWave * (0.24 + motion * 0.08);
   const headBob = 0;
 
-  const superbossHeadPullback = stage === "superboss" ? -r * 0.08 : 0;
-  const headRestX = left + bodyW - overlap + totalW * Number(layout.headOffsetX || 0) + superbossHeadPullback;
+  const stageHeadPullback = stage === "boss" ? -r * 0.18 : stage === "superboss" ? -r * 0.10 : 0;
+  const headRestX = left + bodyW - overlap + totalW * Number(layout.headOffsetX || 0) + stageHeadPullback;
   const headRestY = headTopBase + totalH * Number(layout.headOffsetY || 0);
   const headPivotFracX = Number(layout.headPivotFracX || 0.14);
   const headPivotFracY = Number(layout.headPivotFracY || 0.50);
@@ -14073,10 +14106,11 @@ function drawReassembledRabbitPartsSkin(a, stage, sleeping) {
   ctx.drawImage(img, body.sx, 0, body.sw, srcH, body.dx, top, body.dw, drawH);
 
   ctx.save();
-  const headPivotX = head.dx + head.dw * 0.10;
+  const headMountShift = (stage === "superboss" && sleeping) ? head.dw * 0.13 : 0;
+  const headPivotX = head.dx + head.dw * 0.10 - headMountShift;
   ctx.translate(headPivotX, headBob);
   ctx.rotate(headAngle);
-  ctx.drawImage(img, head.sx, 0, head.sw, srcH, head.dx - headPivotX, top, head.dw, drawH);
+  ctx.drawImage(img, head.sx, 0, head.sw, srcH, head.dx - headPivotX - headMountShift, top, head.dw, drawH);
   ctx.restore();
 
   ctx.imageSmoothingEnabled = oldSmooth;
@@ -25528,10 +25562,12 @@ function hostlDrawPosePiece(part, dx = 0, dy = 0, rot = 0, pivotX = null, pivotY
   if (!spr || !spr.img) return;
   const px = pivotX == null ? part.x + part.w * 0.5 : pivotX;
   const py = pivotY == null ? part.y + part.h * 0.5 : pivotY;
+  const localX = part.x - px, localY = part.y - py;
   ctx.save();
   ctx.translate(px + dx, py + dy);
   ctx.rotate(rot);
-  ctx.drawImage(spr.img, part.x - px, part.y - py, part.w, part.h);
+  ctx.drawImage(spr.img, localX, localY, part.w, part.h);
+  if (/_body$/.test(String(part.asset||""))) hostlDrawBodyStyleOverlay(localX, localY, part.w, part.h, hostlCurrentBodyStyleId(), ctx);
   ctx.restore();
 }
 function hostlPoseShoulder(part, side) {
@@ -25577,6 +25613,62 @@ function hostlDrawPlayerItemPose(iconFn, walkAmt=0){
   if(iconFn)iconFn();
   for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],0,(i%2?-armShift:armShift));
   hostlDrawPosePiece(pose.body);
+}
+function hostlDrawSwimmingBaseArms(pose, swimPhase, usePoseArms=true){
+  const arms=(usePoseArms&&pose?.arms?.length)?pose.arms:HOSTL_PLAYER_POSES.player.arms;
+  for(let i=0;i<arms.length;i++){
+    const arm=arms[i], side=i===0?-1:1, piv=hostlPoseShoulder(arm,side);
+    const wave=Math.sin(swimPhase + (i===0?0:Math.PI));
+    const dx=side*1.8 + wave*2.6;
+    const dy=4 + Math.cos(swimPhase + i*0.7)*1.7 + (i%2?-1:1)*0.6;
+    const rot=side*0.26 + wave*0.46;
+    hostlDrawPosePiece(arm,dx,dy,rot,piv.x,piv.y);
+  }
+}
+function hostlDrawSwimmingIconPose(iconFn, swimPhase){
+  const pose=HOSTL_PLAYER_POSES.player;
+  const itemRot=Math.sin(swimPhase)*0.16;
+  const itemDy=7 + Math.cos(swimPhase*1.05)*1.4;
+  if(iconFn){ ctx.save(); ctx.translate(Math.sin(swimPhase)*2.4,itemDy); ctx.rotate(itemRot); iconFn(); ctx.restore(); }
+  hostlDrawSwimmingBaseArms(pose, swimPhase, false);
+  hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
+}
+function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
+  const poseKey=hostlWeaponPoseKey(actor,holding), pose=HOSTL_PLAYER_POSES[poseKey];
+  if(!pose){
+    drawTwoHandWeapon(holding,HOSTL_LOCKED_PLAYER_COLOR,0,0,actor);
+    hostlDrawSwimmingBaseArms(HOSTL_PLAYER_POSES.player, swimPhase, false);
+    hostlDrawPosePiece(HOSTL_PLAYER_POSES.player.body,0,Math.cos(swimPhase*0.55)*0.5);
+    return;
+  }
+  const toolRot=Math.sin(swimPhase)*0.18;
+  const toolDx=Math.sin(swimPhase)*2.4;
+  const toolDy=5.5 + Math.cos(swimPhase*1.02)*1.5;
+  for(const tool of pose.tools) hostlDrawPosePiece(tool,toolDx,toolDy,toolRot,0,7);
+  hostlDrawSwimmingBaseArms(pose, swimPhase, true);
+  hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
+}
+function hostlDrawSwimmingPose(actor, holding, attackT=0){
+  const swimPhase=game.time*4.1 + (actor?.x||0)*0.01 + (actor?.y||0)*0.008 + attackT*0.4;
+  if(holding==="Bucket") return hostlDrawSwimmingIconPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
+  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit"].includes(holding)) return hostlDrawSwimmingIconPose(()=>hostlDrawBerryIcon(holding),swimPhase);
+  if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(()=>hostlDrawHoneyIcon(holding),swimPhase);
+  if(holding==="Wall"||holding==="Tower"||holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
+  if(holding==="Saddle") return hostlDrawSwimmingIconPose(hostlDrawSaddleIcon,swimPhase);
+  if(holding==="Fist"||holding==="TigerClaws"||holding==="BoxingGloves"){
+    const pose=HOSTL_PLAYER_POSES.player;
+    hostlDrawSwimmingBaseArms(pose, swimPhase, false);
+    if(holding==="TigerClaws"||holding==="BoxingGloves"){
+      for(let i=0;i<pose.arms.length;i++){
+        const a=pose.arms[i], hx=a.x+a.w*.5 + Math.sin(swimPhase + i)*2, hy=a.y+a.h+6;
+        if(holding==="TigerClaws"){ctx.strokeStyle="#f1dfad";ctx.lineWidth=2.2;for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(hx+k*3,hy-2);ctx.lineTo(hx+k*3,hy+8);ctx.stroke();}}
+        else{ctx.fillStyle="#c94b4b";ctx.strokeStyle="#54201f";ctx.lineWidth=2;ctx.beginPath();ctx.arc(hx,hy,7,0,TAU);ctx.fill();ctx.stroke();}
+      }
+    }
+    hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
+    return;
+  }
+  hostlDrawSwimmingWeaponPose(actor, holding, swimPhase);
 }
 function hostlDrawDaggers(pose, attackT, walkAmt){
   let leftRot=0,rightRot=0,leftDx=0,leftDy=walkAmt*1.0,rightDx=0,rightDy=-walkAmt*1.0;
@@ -25624,7 +25716,7 @@ function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
 }
 function hostlRenderModernPlayer(actor,opts={}){
   const holding=opts.holding||actor.heldSpecial||actor.tool||"Fist",attackT=clamp(Number(opts.attackT)||0,0,1),walkAmt=clamp(Number(opts.walkAmt)||0,-1,1),punchSide=Number(opts.punchSide)||1;
-  if(opts.swimming){hostlDrawPoseBase("player",walkAmt);return;}
+  if(opts.swimming){hostlDrawSwimmingPose(actor,holding,attackT);return;}
   if(holding==="Fist"||holding==="TigerClaws"||holding==="BoxingGloves"){
     const pose=HOSTL_PLAYER_POSES.player,q=Math.sin(attackT*Math.PI),arms=pose.arms;
     for(let i=0;i<arms.length;i++){
@@ -27745,6 +27837,101 @@ function closeCardInventory() {
   el("cardInventoryOverlay").classList.remove("show");
 }
 
+const HOSTL_BODY_STYLES = [
+  {id:"classic",name:"Classic Cube",price:0,desc:"The original HOSTL player body.",overlay:"classic"},
+  {id:"forestScout",name:"Forest Scout",price:0,desc:"Green scout gear with a belt and chest wrap.",overlay:"forestScout"},
+  {id:"riverRunner",name:"River Runner",price:0,desc:"Blue swim-ready outfit with light trim.",overlay:"riverRunner"},
+  {id:"stoneGuard",name:"Stone Guard",price:0,desc:"A heavier gray body style with chest plating.",overlay:"stoneGuard"},
+  {id:"sunChief",name:"Sun Chief",price:0,desc:"Warm orange-red trim with a bright chest band.",overlay:"sunChief"}
+];
+function hostlBodyStyleInfo(id){ return HOSTL_BODY_STYLES.find(s=>s.id===id) || HOSTL_BODY_STYLES[0]; }
+function ensureBodyCosmeticsState(){
+  if(!meta.ownedBodyStyles || typeof meta.ownedBodyStyles!=="object") meta.ownedBodyStyles={classic:true};
+  meta.ownedBodyStyles.classic = true;
+  if(!meta.selectedBodyStyle || !meta.ownedBodyStyles[meta.selectedBodyStyle]) meta.selectedBodyStyle="classic";
+}
+function hostlCurrentBodyStyleId(){ ensureBodyCosmeticsState(); return String(meta.selectedBodyStyle||"classic"); }
+function hostlSelectedBodyStyleName(){ return hostlBodyStyleInfo(hostlCurrentBodyStyleId()).name; }
+function hostlDrawBodyStyleOverlay(x,y,w,h,styleId,targetCtx=ctx){
+  const id=styleId||hostlCurrentBodyStyleId();
+  if(id==="classic") return;
+  const left=x, top=y, width=w, height=h;
+  const torsoX=left+width*0.19, torsoY=top+height*0.31, torsoW=width*0.62, torsoH=height*0.47;
+  targetCtx.save();
+  targetCtx.lineJoin="round"; targetCtx.lineCap="round";
+  function rr(rx,ry,rw,rh,rad,fill,stroke,wid=1.2){ targetCtx.fillStyle=fill; targetCtx.strokeStyle=stroke; targetCtx.lineWidth=wid; targetCtx.beginPath(); targetCtx.moveTo(rx+rad,ry); targetCtx.arcTo(rx+rw,ry,rx+rw,ry+rh,rad); targetCtx.arcTo(rx+rw,ry+rh,rx,ry+rh,rad); targetCtx.arcTo(rx,ry+rh,rx,ry,rad); targetCtx.arcTo(rx,ry,rx+rw,ry,rad); targetCtx.closePath(); targetCtx.fill(); targetCtx.stroke(); }
+  if(id==="forestScout"){
+    rr(torsoX,torsoY,torsoW,torsoH,4,"#4c8751","#1d3f24",1.3);
+    rr(torsoX+torsoW*0.16,torsoY+torsoH*0.08,torsoW*0.68,torsoH*0.22,3,"#cfd58b","#4b4a25",1.1);
+    rr(torsoX+torsoW*0.18,torsoY+torsoH*0.62,torsoW*0.64,torsoH*0.15,3,"#7b5533","#3f2312",1.1);
+  }else if(id==="riverRunner"){
+    rr(torsoX,torsoY,torsoW,torsoH,4,"#3d74be","#173456",1.3);
+    rr(torsoX+torsoW*0.08,torsoY+torsoH*0.12,torsoW*0.18,torsoH*0.72,3,"#8fd0f8","#2a5b78",1.0);
+    rr(torsoX+torsoW*0.74,torsoY+torsoH*0.12,torsoW*0.18,torsoH*0.72,3,"#8fd0f8","#2a5b78",1.0);
+    rr(torsoX+torsoW*0.32,torsoY+torsoH*0.24,torsoW*0.36,torsoH*0.16,3,"#d9eefc","#4d7290",1.0);
+  }else if(id==="stoneGuard"){
+    rr(torsoX,torsoY,torsoW,torsoH,4,"#8b98a5","#39454f",1.4);
+    rr(torsoX+torsoW*0.14,torsoY+torsoH*0.12,torsoW*0.72,torsoH*0.48,4,"#bec7cf","#56616a",1.0);
+    rr(torsoX+torsoW*0.36,torsoY+torsoH*0.02,torsoW*0.28,torsoH*0.72,3,"#67727d","#2b343b",1.0);
+  }else if(id==="sunChief"){
+    rr(torsoX,torsoY,torsoW,torsoH,4,"#ca6f44","#5d2418",1.3);
+    rr(torsoX+torsoW*0.10,torsoY+torsoH*0.14,torsoW*0.80,torsoH*0.16,3,"#f3c75e","#7a4e0a",1.1);
+    rr(torsoX+torsoW*0.24,torsoY+torsoH*0.44,torsoW*0.52,torsoH*0.16,3,"#b93a38","#531012",1.1);
+  }
+  ctx.restore();
+}
+function buildOwnedBodyStyleSelector(){
+  ensureBodyCosmeticsState();
+  const grid=el("ownedBodyStyles"); if(!grid) return;
+  grid.innerHTML="";
+  HOSTL_BODY_STYLES.filter(style=>meta.ownedBodyStyles[style.id]).forEach(style=>{
+    const selected=meta.selectedBodyStyle===style.id;
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="body-type-option"+(selected?" selected":"");
+    btn.setAttribute("aria-pressed",selected?"true":"false");
+    btn.innerHTML=`<b>${style.name}</b><small>${selected?"Equipped now":"Owned body cosmetic"}</small><div class="body-action">${selected?"Selected":"Use This Body"}</div>`;
+    btn.addEventListener("click",()=>{ meta.selectedBodyStyle=style.id; saveMeta(); drawHomePreview(); updateHomeBodyStyleLabels(); buildOwnedBodyStyleSelector(); buildBodyShop(); });
+    grid.appendChild(btn);
+  });
+}
+function buildBodyShop(){
+  ensureBodyCosmeticsState();
+  const grid=el("bodyShopGrid"); if(!grid) return;
+  grid.innerHTML="";
+  HOSTL_BODY_STYLES.forEach(style=>{
+    const owned=!!meta.ownedBodyStyles[style.id];
+    const selected=meta.selectedBodyStyle===style.id;
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="body-type-option"+(selected?" selected":"")+(owned?"":" locked");
+    btn.setAttribute("aria-pressed",selected?"true":"false");
+    btn.innerHTML=`<b>${style.name}</b><small>${style.desc}</small><div class="body-action">${owned?(selected?"Selected":"Owned"):(style.price<=0?"Unlock Free":String(style.price)+" Gold Cubits")}</div>`;
+    btn.addEventListener("click",()=>{
+      ensureBodyCosmeticsState();
+      if(!meta.ownedBodyStyles[style.id]){
+        if(style.price>0 && Number(meta.servs||0)<style.price){ showGameMessage("Not Enough Gold Cubits",`You need ${style.price} Gold Cubits for ${style.name}.`); return; }
+        if(style.price>0) meta.servs=Math.max(0,Number(meta.servs||0)-style.price);
+        meta.ownedBodyStyles[style.id]=true;
+      }
+      meta.selectedBodyStyle=style.id;
+      saveMeta();
+      drawHomePreview(); updateHomeBodyStyleLabels(); buildOwnedBodyStyleSelector(); buildBodyShop();
+    });
+    grid.appendChild(btn);
+  });
+}
+function updateHomeBodyStyleLabels(){
+  const hint=el("homeLookHint"); if(hint) hint.textContent=`${hostlSelectedBodyStyleName()} • selected`;
+}
+function openBodyCosmeticsShop(){
+  if (game.started && !game.over) return;
+  buildBodyShop();
+  drawHomePreview();
+  el("bodyCosmeticsShopOverlay").classList.add("show");
+}
+function closeBodyCosmeticsShop(){ el("bodyCosmeticsShopOverlay").classList.remove("show"); }
+
 function setHomeControlsEnabled(enabled) {
   const selectors = [
     "#home button",
@@ -27762,6 +27949,7 @@ function setHomeControlsEnabled(enabled) {
     "#chooseStarterPetOverlay button",
     "#playerDesignOverlay button",
     "#playerDesignOverlay .swatch",
+    "#bodyCosmeticsShopOverlay button",
     "#homeThemeOverlay button"
   ].join(",");
   document.querySelectorAll(selectors).forEach(node => {
@@ -27774,7 +27962,8 @@ function setHomeControlsEnabled(enabled) {
 }
 
 function drawHomePreview() {
-  const canvases=[document.getElementById("homePreview"),document.getElementById("homeInlinePreview")].filter(Boolean);
+  ensureBodyCosmeticsState();
+  const canvases=[document.getElementById("homePreview"),document.getElementById("homeInlinePreview"),document.getElementById("bodyShopPreview")].filter(Boolean);
   for(const c of canvases){
     const x=c.getContext("2d"),w=c.width||96,h=c.height||96;
     x.clearRect(0,0,w,h);
@@ -27785,8 +27974,10 @@ function drawHomePreview() {
     const spr=part?HOSTL_PLAYER_SPRITES[part.asset]:null;
     if(spr&&spr.img)x.drawImage(spr.img,-part.w/2,-part.h/2,part.w,part.h);
     else{ x.fillStyle=HOSTL_LOCKED_PLAYER_COLOR; x.fillRect(-18,-18,36,36); }
+    hostlDrawBodyStyleOverlay(-part.w/2,-part.h/2,part.w,part.h,hostlCurrentBodyStyleId(),x);
     x.restore();
   }
+  updateHomeBodyStyleLabels();
 }
 function setupHome() {
   const home = el("home");
@@ -27819,6 +28010,7 @@ function setupHome() {
     if (meta.speciesCards[k] == null) meta.speciesCards[k] = 0;
     if (!PET_CARD_STAGE_ORDER.includes(meta.petStages[k])) meta.petStages[k] = "baby";
   }
+  ensureBodyCosmeticsState();
   restoreStarterPetPreference();
   buildCardInventory();
 
@@ -27834,8 +28026,11 @@ function setupHome() {
   if (player) player.color = HOSTL_LOCKED_PLAYER_COLOR;
   const sw = el("colorSwatches");
   if (sw) {
-    sw.innerHTML = '<div style="width:100%;padding:10px 12px;border-radius:14px;background:rgba(34,51,40,.55);color:#eef7ff;font-size:12px;line-height:1.4">Body color is locked for the new player sprite set right now.</div>';
+    sw.innerHTML = '<div style="width:100%;padding:10px 12px;border-radius:14px;background:rgba(34,51,40,.55);color:#eef7ff;font-size:12px;line-height:1.4">Body color is locked for the new player sprite set right now. New body cosmetics are chosen below.</div>';
   }
+  buildOwnedBodyStyleSelector();
+  buildBodyShop();
+  updateHomeBodyStyleLabels();
 
   // starter resource shop (not pet cards — those are in Other Pets)
   const shopItems = [
@@ -28060,11 +28255,14 @@ el("chooseStarterPetOverlay").addEventListener("mousedown", (e) => {
 });
 
 el("choosePlayerDesignBtn").addEventListener("click", openPlayerDesign);
-if(el("homeInlinePreviewBtn"))el("homeInlinePreviewBtn").addEventListener("click", openPlayerDesign);
-el("homeCosmeticsBtn").addEventListener("click", openPlayerDesign);
+el("homeCosmeticsBtn").addEventListener("click", openBodyCosmeticsShop);
 el("closePlayerDesign").addEventListener("click", closePlayerDesign);
 el("playerDesignOverlay").addEventListener("mousedown", (e) => {
   if (e.target === el("playerDesignOverlay")) closePlayerDesign();
+});
+el("closeBodyCosmeticsShop").addEventListener("click", closeBodyCosmeticsShop);
+el("bodyCosmeticsShopOverlay").addEventListener("mousedown", (e) => {
+  if (e.target === el("bodyCosmeticsShopOverlay")) closeBodyCosmeticsShop();
 });
 
 function openHomeUpdates(){
@@ -30112,7 +30310,7 @@ setTimeout(()=>{
 (function setupTransparentHomeModalLock(){
   const ids=[
     'expandedShopModal','friendsModal','accountModal','accountSettingsModal',
-    'homeThemeOverlay','playerDesignOverlay','homeUpdatesOverlay','chooseStarterPetOverlay',
+    'homeThemeOverlay','playerDesignOverlay','bodyCosmeticsShopOverlay','homeUpdatesOverlay','chooseStarterPetOverlay',
     'cardInventoryOverlay','petShopOverlay','achievementOverlay','legalSupportOverlay'
   ];
   const home=document.getElementById('home');
