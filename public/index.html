@@ -17767,6 +17767,83 @@ function throwSpecialAxe(){
   projectiles.push({x:player.x+Math.cos(a)*28,y:player.y+Math.sin(a)*28,vx:Math.cos(a)*THROW_AXE_SPEED,vy:Math.sin(a)*THROW_AXE_SPEED,life:THROW_AXE_LIFE,r:9,hostile:false,kind:"throwAxe",color:"#c7b77b",dmg:t.dmg*runDamageMul(),ownerId:"local",returning:false,toolTier:tier});
   consumeHydration(.9);
 }
+
+function hostlGenericWeaponSwingTransform(poseKey, attackT){
+  const isAxe=String(poseKey||"").startsWith("axe");
+  let rot=0,dx=0,dy=0;
+  attackT=clamp(Number(attackT)||0,0,1);
+  if(isAxe){
+    if(attackT<=0){rot=0;dx=0;dy=0;}
+    else if(attackT<.20){const q=hostlAnimEase(attackT/.20);rot=.16*q;dx=q*1.5;dy=-q;}
+    else if(attackT<.68){const q=hostlAnimEase((attackT-.20)/.48);rot=.16+(-1.20-.16)*q;dx=1.5-4.5*q;dy=-1+5*q;}
+    else{const q=hostlAnimEase((attackT-.68)/.32);rot=-1.20*(1-q);dx=-3*(1-q);dy=4*(1-q);}
+  }else{
+    // The blade starts at the Ref pose, sweeps DOWN/forward across the player's
+    // face, then returns quickly along the same front-side arc. Negative canvas
+    // rotation keeps a left-pointing blade in front instead of behind the head.
+    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=-1.22*q;dx=3.5*q;dy=6*q;}
+    else{const q=hostlAnimEase((attackT-.70)/.30);rot=-1.22*(1-q);dx=3.5*(1-q);dy=6*(1-q);}
+  }
+  return {rot,dx,dy,isAxe};
+}
+function hostlRotateAroundLocal(x,y,px,py,rot,dx=0,dy=0){
+  const rx=x-px,ry=y-py,c=Math.cos(rot),s=Math.sin(rot);
+  return {x:px+dx+rx*c-ry*s,y:py+dy+rx*s+ry*c};
+}
+function hostlLocalToWorldPoint(actor,lx,ly,angleOverride=null){
+  const a=(angleOverride==null?Number(actor?.angle)||0:Number(angleOverride))-Math.PI/2,c=Math.cos(a),s=Math.sin(a);
+  return {x:(Number(actor?.x)||0)+lx*c-ly*s,y:(Number(actor?.y)||0)+lx*s+ly*c};
+}
+function hostlPrecisePoseSupported(poseKey){
+  return ["axeWood","axeStone","axeIron","axeDouble","axeThrow","axeWar","swordWood","swordStone","swordIron","longSword"].includes(String(poseKey||""));
+}
+function hostlWeaponContactShape(actor,toolName,attackT=.54,angleOverride=null){
+  const poseKey=hostlWeaponPoseKey(actor,toolName),pose=HOSTL_PLAYER_POSES?.[poseKey];
+  if(!pose||!hostlPrecisePoseSupported(poseKey)||!pose.tools?.length)return null;
+  const circles=[],segments=[];
+  if(poseKey==="axeDouble"){
+    let rot=0;
+    if(attackT>0){
+      if(attackT<.30)rot=-.38*hostlAnimEase(attackT/.30);
+      else if(attackT<.72){const q=hostlAnimEase((attackT-.30)/.42);rot=-.38+1.48*q;}
+      else{const q=hostlAnimEase((attackT-.72)/.28);rot=1.10*(1-q);}
+    }
+    const tool=pose.tools[0],py=7;
+    for(const lx of [tool.x+9,tool.x+tool.w-9]){
+      const lp=hostlRotateAroundLocal(lx,tool.y+tool.h*.5,0,py,rot,0,0),wp=hostlLocalToWorldPoint(actor,lp.x,lp.y,angleOverride);
+      circles.push({x:wp.x,y:wp.y,r:Math.max(7,Math.min(13,tool.h*.24))});
+    }
+    return {kind:"axe",poseKey,circles,segments};
+  }
+  const tr=hostlGenericWeaponSwingTransform(poseKey,attackT),tool=pose.tools[0],pivotX=0,pivotY=7;
+  if(String(poseKey).startsWith("axe")){
+    // The thick axe head is the damaging part. Most axes have the head on the
+    // left end; the throwing-axe Sep art has its head on the right end.
+    const headX=poseKey==="axeThrow"?tool.x+tool.w*.78:tool.x+Math.min(13,tool.w*.18);
+    const headY=tool.y+tool.h*.50;
+    const lp=hostlRotateAroundLocal(headX,headY,pivotX,pivotY,tr.rot,tr.dx,tr.dy),wp=hostlLocalToWorldPoint(actor,lp.x,lp.y,angleOverride);
+    circles.push({x:wp.x,y:wp.y,r:Math.max(7,Math.min(13,tool.h*.25))});
+  }else{
+    // Sword damage follows the blade itself, not the handle or a broad range cone.
+    const tip={x:tool.x+3,y:tool.y+tool.h*.50};
+    const base={x:tool.x+Math.min(tool.w-18,tool.w*.78),y:tool.y+tool.h*.50};
+    const a=hostlRotateAroundLocal(tip.x,tip.y,pivotX,pivotY,tr.rot,tr.dx,tr.dy),b=hostlRotateAroundLocal(base.x,base.y,pivotX,pivotY,tr.rot,tr.dx,tr.dy);
+    const aw=hostlLocalToWorldPoint(actor,a.x,a.y,angleOverride),bw=hostlLocalToWorldPoint(actor,b.x,b.y,angleOverride);
+    segments.push({ax:aw.x,ay:aw.y,bx:bw.x,by:bw.y,r:4.5});
+  }
+  return {kind:String(poseKey).startsWith("axe")?"axe":"sword",poseKey,circles,segments};
+}
+function hostlPointSegmentDistance(px,py,ax,ay,bx,by){
+  const vx=bx-ax,vy=by-ay,wx=px-ax,wy=py-ay,d=vx*vx+vy*vy;
+  const t=d>1e-8?clamp((wx*vx+wy*vy)/d,0,1):0,qx=ax+vx*t,qy=ay+vy*t;
+  return Math.hypot(px-qx,py-qy);
+}
+function hostlWeaponShapeTouchesCircle(shape,x,y,r=0){
+  if(!shape)return false;
+  for(const c of shape.circles||[])if(dist(c.x,c.y,x,y)<=Math.max(0,r)+(c.r||0))return true;
+  for(const s of shape.segments||[])if(hostlPointSegmentDistance(x,y,s.ax,s.ay,s.bx,s.by)<=Math.max(0,r)+(s.r||0))return true;
+  return false;
+}
 function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
   if(!a||a.dead||(a.owned&&!a.releasedWild))return;const info=PET_TYPES[a.type];let dmg=animalDamageTaken(a.type,a.stage,baseDamage);a.hp-=dmg;gainSkillXp(1,"combat-hit");a.flash=.12;markCreatureHit(a,4.2);a.sleeping=false;a.enraged=true;a.combat=8;
   if(isNeutralBeeType(a.type)||(a.type==="dronebee"&&!droneBeeShouldFlee(a))){a.desperateAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(droneBeeShouldFlee(a)){a.desperateAggro=false;a.enraged=false;a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+5.5;a.wanderA=angTo(player.x,player.y,a.x,a.y);}else if(a.stage==="baby"||info?.flee){if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.32){a.desperateAggro=true;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(!a.tameFailedAggro){a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+4;a.wanderA=angTo(player.x,player.y,a.x,a.y);}}else{a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}
@@ -17774,48 +17851,46 @@ function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
   if(a.hp<=0&&!a.dead){a.hp=0;a.dead=true;if(a.releasedWild){a.hostileTarget=null;a.combat=0;floatText(a.x,a.y-a.r-24,"DEFEATED","#efe6d2");}game.kills++;gainSkillXp(a.stage==="bigmomma"?24:a.stage==="superboss"?18:a.stage==="boss"?14:10,"kill");const drop=pickWeighted([{v:"wood",w:2},{v:"stone",w:2},{v:"gold",w:1}]);player[drop]+=drop==="gold"?1:2;floatText(a.x,a.y-20,"+"+(drop==="gold"?1:2)+" "+drop,"#efe6d2");spark(a.x,a.y,info?.color||"#e0563f",12,120);if(Math.random()<Math.min(.35,.08*runCardChanceMul())){if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[a.type]=(meta.speciesCards[a.type]||0)+1;saveMeta();floatText(a.x,a.y-38,`+1 ${info?.name||a.type} Card!`,"#c77dff");}awardPetXpContributors(a,null);}
 }
 
-function meleeAttack() {
-  if (player.heldSpecial === "HoneyComb") { return; }
-  if (player.heldSpecial === "Bucket") { useBucket(); return; }
-  if (player.heldSpecial === "Berry") {
-    if (player.attackCd > 0) return;eatBerry();return;
+function meleeAttack(preciseResolve=null) {
+  const resolvingPrecise=!!preciseResolve;
+  if(!resolvingPrecise){
+    if (player.heldSpecial === "HoneyComb") { return; }
+    if (player.heldSpecial === "Bucket") { useBucket(); return; }
+    if (player.heldSpecial === "Berry") { if (player.attackCd > 0) return;eatBerry();return; }
+    if (player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey") {
+      if(player.attackCd>0)return;eatBiomeFood(player.heldSpecial==="JungleBerry"?"jungleBerry":player.heldSpecial==="FrostBerry"?"frostBerry":player.heldSpecial==="GoodCactus"?"goodCactus":player.heldSpecial==="BadCactus"?"badCactus":player.heldSpecial==="Honey"?"honey":"stoneFruit");return;
+    }
+    if (player.heldSpecial === "Wall") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeWall(); return; }
+    if (player.heldSpecial === "Tower") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeTower(); return; }
+    if (player.heldSpecial === "Windmill") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeWindmill(); return; }
+    if (player.heldSpecial === "Saddle") return;
   }
-  if (player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey") {
-    if(player.attackCd>0)return;eatBiomeFood(player.heldSpecial==="JungleBerry"?"jungleBerry":player.heldSpecial==="FrostBerry"?"frostBerry":player.heldSpecial==="GoodCactus"?"goodCactus":player.heldSpecial==="BadCactus"?"badCactus":player.heldSpecial==="Honey"?"honey":"stoneFruit");return;
-  }
-  if (player.heldSpecial === "Wall") {
+  const attackTool=resolvingPrecise?String(preciseResolve.tool||"Fist"):String(player.tool||"Fist");
+  const t=TOOLS[attackTool]||TOOLS.Fist;
+  if(!resolvingPrecise){
     if (player.attackCd > 0) return;
-    player.attackCd = 0.24;
-    placeWall();
-    return;
+    if(attackTool==="Axe"&&t.throwing){
+      if(throwingAxeOutForActor(player))return;
+      if(!throwingAxeHasGatherTarget(t)){throwSpecialAxe();return;}
+    }
+    player.attackCd=t.cadence||t.swing;
+    if(!net.room)consumeHydration(.9);
+    player.punchSide*=-1;
+    player.punchTimer=t.swing;
+    player.swingWeapon=attackTool;
+    if(!net.room&&player.riding)mountedPetAttack();
+    const poseKey=hostlWeaponPoseKey(player,attackTool);
+    if((attackTool==="Axe"||attackTool==="Sword")&&hostlPrecisePoseSupported(poseKey)){
+      const snap={tool:attackTool,poseKey,angle:Number(player.angle)||0,attackT:.54};
+      // Resolve at the middle of the visible strike, when the axe head / blade
+      // is actually passing through the target area instead of at button-down.
+      setTimeout(()=>{if(game.started&&!game.over&&!player.dead)meleeAttack(snap);},Math.max(40,(Number(t.swing)||.3)*.54*1000));
+      return;
+    }
   }
-  if (player.heldSpecial === "Tower") {
-    if (player.attackCd > 0) return;
-    player.attackCd = 0.24;
-    placeTower();
-    return;
-  }
-  if (player.heldSpecial === "Windmill") {
-    if (player.attackCd > 0) return;
-    player.attackCd = 0.24;
-    placeWindmill();
-    return;
-  }
-  if (player.heldSpecial === "Saddle") return;
-  const t = TOOLS[player.tool];
-  if (player.attackCd > 0) return;
-  if(player.tool==="Axe"&&t.throwing){
-    if(throwingAxeOutForActor(player))return;
-    if(!throwingAxeHasGatherTarget(t)){throwSpecialAxe();return;}
-  }
-  // Fists animate quickly, but the opposite hand waits longer before it can punch.
-  player.attackCd = t.cadence || t.swing;
-  if(!net.room) consumeHydration(0.9);
-  player.punchSide *= -1;
-  player.punchTimer = t.swing;
-  player.swingWeapon = player.tool;
-  if (!net.room && player.riding) mountedPetAttack();
-
+  const preciseShape=resolvingPrecise?hostlWeaponContactShape(player,attackTool,preciseResolve.attackT,preciseResolve.angle):null;
+  if(resolvingPrecise&&!preciseShape)return;
+  if(resolvingPrecise)player._preciseMeleePacket={tool:attackTool,angle:preciseResolve.angle,attackT:preciseResolve.attackT};
   let hitSomething = false;
   let materialHit = false;
   if (net.room) {
@@ -17825,18 +17900,19 @@ function meleeAttack() {
     for (const a of animals) {
       if (a.dead || !a.netId) continue;
       const ah = animalTargetDamageHitboxes(a).find(h =>
-        dist(player.x, player.y, h.x, h.y) < t.range + h.r + 8 && isFacing(h.x, h.y, 1.15)
+        preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,h.x,h.y,h.r) :
+        (dist(player.x, player.y, h.x, h.y) < t.range + h.r + 8 && isFacing(h.x, h.y, 1.15))
       );
       if (ah) { aimedAnimalId = a.netId; break; }
     }
-    try { net.room.send("attack", { tool: player.tool || "Fist", tier: player.toolTiers?.[player.tool]||0, angle: player.angle, animalId: aimedAnimalId }); } catch (_) {}
+    try { net.room.send("attack", { tool: attackTool, tier: player.toolTiers?.[attackTool]||0, angle: resolvingPrecise?preciseResolve.angle:player.angle, animalId: aimedAnimalId, preciseWeapon:!!preciseShape, attackT:resolvingPrecise?preciseResolve.attackT:0 }); } catch (_) {}
   }
   if (!net.room) {
   for (const en of enemies) {
     if (en.dead) continue;
     const d = dist(player.x, player.y, en.x, en.y);
-    if (d < t.range + en.r && isFacing(en.x, en.y)) {
-      const splitDouble=player.tool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
+    if (preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,en.x,en.y,en.r) : (d < t.range + en.r && isFacing(en.x, en.y))) {
+      const splitDouble=attackTool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
       let dmg=t.dmg*runDamageMul()*(t.doubleHit&&!splitDouble?2:1);const crit=Math.random()<.15;if(crit)dmg*=2;
       if(splitDouble){const hit=()=>{if(game.started&&!game.over&&!net.room&&!en.dead)damageEnemy(en,dmg,crit);};setTimeout(hit,220);setTimeout(hit,385);}else damageEnemy(en,dmg,crit);
       hitSomething=true;
@@ -17845,9 +17921,9 @@ function meleeAttack() {
   for (const a of animals) {
     if (a.dead || (a.owned && !a.releasedWild)) continue;
     const info = PET_TYPES[a.type];
-    const ah = animalTargetDamageHitboxes(a).find(h => dist(player.x, player.y, h.x, h.y) < t.range + h.r && isFacing(h.x, h.y));
+    const ah = animalTargetDamageHitboxes(a).find(h => preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,h.x,h.y,h.r) : (dist(player.x, player.y, h.x, h.y) < t.range + h.r && isFacing(h.x, h.y)));
     if (ah) {
-      const splitDouble=player.tool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
+      const splitDouble=attackTool==="Axe"&&player.skillWeaponChoice==="doubleAxe";
       let rawDmg=t.dmg*runDamageMul()*(t.doubleHit&&!splitDouble?2:1);const crit=Math.random()<.12;if(crit)rawDmg*=2;
       if(splitDouble){const hit=()=>{if(game.started&&!game.over&&!net.room&&!a.dead)applyDoubleAxeSecondAnimalHitOffline(a,rawDmg,crit);};setTimeout(hit,220);setTimeout(hit,385);hitSomething=true;continue;}
       let dmg = animalDamageTaken(a.type, a.stage, rawDmg);
@@ -17920,7 +17996,7 @@ function meleeAttack() {
     if (chest.opened) continue;
     const ch = chestSolidHitbox(chest);
     const d = dist(player.x, player.y, ch.x, ch.y);
-    if (d < t.range + ch.r + 8 && isFacing(ch.x, ch.y, 1.15) && d < bestChestD) {
+    if ((preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,ch.x,ch.y,ch.r) : (d < t.range + ch.r + 8 && isFacing(ch.x, ch.y, 1.15))) && d < bestChestD) {
       bestChest = chest;
       bestChestD = d;
     }
@@ -17936,12 +18012,12 @@ function meleeAttack() {
     for (const w of walls) {
       if ((w.hp ?? 1) <= 0) continue;
       const d = dist(player.x, player.y, w.x, w.y);
-      if (d < t.range + w.r + 4 && isFacing(w.x, w.y, 1.12) && d < bestWallD) {
+      if ((preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,w.x,w.y,w.r) : (d < t.range + w.r + 4 && isFacing(w.x, w.y, 1.12))) && d < bestWallD) {
         bestWall = w; bestWallD = d;
       }
     }
     if (bestWall) {
-      const wallDmg = wallDamageForTool(player.tool || "Fist", bestWall);
+      const wallDmg = wallDamageForTool(attackTool, bestWall);
       bestWall.hp = Math.max(0, (bestWall.hp ?? bestWall.maxHp ?? 72) - wallDmg);
       bestWall.flash = 0.12;
       spark(bestWall.x, bestWall.y, bestWall.kind === "stoneSpike" ? "#d9e0e6" : "#c99a5b", 5, 65);
@@ -17963,27 +18039,27 @@ function meleeAttack() {
     let resourceHit = false;
     if (r.type === "log") {
       resourceHit = logSolidHitboxes(r).some(h =>
-        dist(player.x, player.y, h.x, h.y) < t.range + h.r + 5 &&
-        isFacing(h.x, h.y, 1.1)
+        preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,h.x,h.y,h.r) :
+        (dist(player.x, player.y, h.x, h.y) < t.range + h.r + 5 && isFacing(h.x, h.y, 1.1))
       );
     } else {
       const c = resourceSolidCenter(r);
       const d = dist(player.x, player.y, c.x, c.y);
       const hitR = r.type === "tree" ? r.solidR + 8 : r.solidR + 6;
-      resourceHit = d < t.range + hitR && isFacing(c.x, c.y, 1.1);
+      resourceHit = preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,c.x,c.y,hitR) : (d < t.range + hitR && isFacing(c.x, c.y, 1.1));
     }
     if (resourceHit) {
       if (r.type === "bush") { eatBush(r); hitSomething = true; materialHit = true; continue; }
-      gatherResource(r, t); hitSomething = true; materialHit = true;
+      gatherResource(r, t, attackTool); hitSomething = true; materialHit = true;
     }
   }
   for (const g of queryStaticNearby("gold", player.x, player.y, 260)) {
     if (!g.infinite && g.goldLeft <= 0) continue;
     const gh = goldSolidHitbox(g);
     const d = dist(player.x, player.y, gh.x, gh.y);
-    if (d < t.range + gh.r && isFacing(gh.x, gh.y, 1.0)) {
+    if (preciseShape ? hostlWeaponShapeTouchesCircle(preciseShape,gh.x,gh.y,gh.r) : (d < t.range + gh.r && isFacing(gh.x, gh.y, 1.0))) {
       if (net.room && g.netId) {
-        try { net.room.send("goldHit", { id: g.netId, tool: player.tool || "Fist", tier: player.toolTiers?.[player.tool]||0 }); } catch (e) {}
+        try { net.room.send("goldHit", { id: g.netId, tool: attackTool, tier: player.toolTiers?.[attackTool]||0, preciseWeapon:!!preciseShape, attackT:resolvingPrecise?preciseResolve.attackT:0, angle:resolvingPrecise?preciseResolve.angle:player.angle }); } catch (e) {}
         g.pulse = 1;
         spark(g.x, g.y, g.pure ? "#fff19a" : "#ffd23f", 3, 45);
         sfx.goldHit();
@@ -17994,7 +18070,7 @@ function meleeAttack() {
       gainSkillXp(1,"resource-hit");
       consumeHydration(1.05);
       let take = 0;
-      if ((player.tool || "Fist") === "Fist") {
+      if ((attackTool) === "Fist") {
         // Bare hands only chip tiny flakes off gold. About 9 punches per gold.
         g.handGatherCredit = (g.handGatherCredit || 0) + 0.12;
         if (g.handGatherCredit >= 1) {
@@ -18010,7 +18086,7 @@ function meleeAttack() {
         if (!g.infinite) g.goldLeft -= take;
         player.gold += Math.max(1, Math.round(take * runGatherMul()));
         floatText(g.x, g.y - g.r - 8, "+" + take + (g.pure ? " PURE GOLD" : " gold"), "#f2c94c");
-      } else if ((player.tool || "Fist") === "Fist") {
+      } else if ((attackTool) === "Fist") {
         floatText(g.x, g.y - g.r - 8, "tiny chip", "#d8bd65");
       }
       g.pulse = 1;
@@ -18022,12 +18098,13 @@ function meleeAttack() {
   }
   // The little fist beep is for punches in the air or against creatures.
   // Material hits use only their own wood/stone/gold/chest sound.
-  if (player.tool === "Fist") {
+  if (attackTool === "Fist") {
     if (!materialHit) sfx.hit();
   } else {
     if (hitSomething && !materialHit) sfx.hit();
     else if (!hitSomething) sfx.chop();
   }
+  if(resolvingPrecise)player._preciseMeleePacket=null;
 }
 
 function gatherResource(r, t, toolOverride=null) {
@@ -18039,7 +18116,8 @@ function gatherResource(r, t, toolOverride=null) {
 
   if (net.room && r.netId) {
     r.pulse = 1;
-    try { net.room.send("resourceHit", { id: r.netId, tool: toolName, tier: player.toolTiers?.[toolName]||0 }); } catch (e) {}
+    try { net.room.send("resourceHit", { id: r.netId, tool: toolName, tier: player.toolTiers?.[toolName]||0,
+      preciseWeapon:!!player._preciseMeleePacket, attackT:player._preciseMeleePacket?.attackT||0, angle:player._preciseMeleePacket?.angle??player.angle }); } catch (e) {}
     const biomeInfo=BIOME_RESOURCE_INFO[r.type];
     const col = biomeInfo?.color || (isWood ? "#c99a5b" : "#a9b3bd");
     spark(r.x, r.y, col, 4, 55);
@@ -18122,7 +18200,8 @@ function eatBush(r) {
   if(!net.room)gainSkillXp(1,"resource-hit");
   if (net.room && r.netId) {
     r.pulse = 1;
-    try { net.room.send("resourceHit", { id: r.netId, tool: player.tool || "Fist", tier: player.toolTiers?.[player.tool]||0 }); } catch (e) {}
+    try { net.room.send("resourceHit", { id: r.netId, tool: player._preciseMeleePacket?.tool||player.tool||"Fist", tier: player.toolTiers?.[player._preciseMeleePacket?.tool||player.tool]||0,
+      preciseWeapon:!!player._preciseMeleePacket, attackT:player._preciseMeleePacket?.attackT||0, angle:player._preciseMeleePacket?.angle??player.angle }); } catch (e) {}
     spark(r.x, r.y, "#d1315c", 5, 65);
     sfx.bushHit();
     return;
@@ -25524,36 +25603,23 @@ function hostlDrawDoubleAxe(pose,attackT,walkAmt){
   }
   for(let i=0;i<pose.arms.length;i++){
     const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*(i===0?.58:.80),piv.x,piv.y);
+    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*.82,piv.x,piv.y);
   }
   const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
 function hostlAnimEase(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
-  const isAxe=poseKey.startsWith("axe");
-  let rot=0,dx=0,dy=0;
-  if(isAxe){
-    // Small wind-up, then a smooth swing in the opposite direction, followed by
-    // a controlled return to the exact Ref-matched resting pose.
-    if(attackT<=0){rot=0;dx=0;dy=0;}
-    else if(attackT<.20){const q=hostlAnimEase(attackT/.20);rot=.16*q;dx=q*1.5;dy=q*-1;}
-    else if(attackT<.68){const q=hostlAnimEase((attackT-.20)/.48);rot=.16+(-1.20-.16)*q;dx=1.5-4.5*q;dy=-1+5*q;}
-    else if(attackT<=1){const q=hostlAnimEase((attackT-.68)/.32);rot=-1.20*(1-q);dx=-3*(1-q);dy=4*(1-q);}
-  }else{
-    // Sword swipes across the front/top of the head to the opposite side. Most
-    // of the animation is the strike; the return is quicker, but still eased.
-    if(attackT<.66){const q=hostlAnimEase(attackT/.66);rot=1.58*q;dx=5*q;dy=-5*q;}
-    else{const q=hostlAnimEase((attackT-.66)/.34);rot=1.58*(1-q);dx=5*(1-q);dy=-5*(1-q);}
-  }
-  // Arms rotate around their shoulders, so the hands stay attached to the swing.
+  const tr=hostlGenericWeaponSwingTransform(poseKey,attackT),isAxe=tr.isAxe,rot=tr.rot,dx=tr.dx,dy=tr.dy;
+  // Both hands now follow the same swing timing. The left hand used to use a
+  // smaller rotation multiplier, which made it visibly trail behind the Axe.
   for(let i=0;i<pose.arms.length;i++){
     const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    const armRot=rot*(isAxe?(i===0?.58:.82):(i===0?.72:.92));
-    hostlDrawPosePiece(arm,dx*(i===0?.55:.8),dy*(i===0?.55:.8)+(i%2?-walkAmt:walkAmt),armRot,piv.x,piv.y);
+    const armRot=rot*(isAxe?.84:.92);
+    hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),armRot,piv.x,piv.y);
   }
-  // Rotate the tool around the grip area near the hands rather than its center.
-  // That is what keeps the blade/head and the hands moving as one object.
+  // The grip sits around player-local (0,7). Rotating here keeps the hand and
+  // tool connected. Sword rotation is negative, so the blade stays in front.
   for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
