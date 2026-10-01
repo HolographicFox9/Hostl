@@ -151,3 +151,10 @@ ACCOUNT RECOVERY / BUILD 680
 - Build 680 fixes the "new device logs in first" recovery hole: an older browser can now restore the original account even after a newer blank replacement account was created.
 - The browser session-restore flow automatically sends its signed recovery snapshots to /api/account/recover before accepting a replacement account.
 - For guaranteed server-side permanence independent of any browser backup, use the persistent-disk blueprint in render-persistent-example.yaml or move account storage to a persistent database.
+
+BUG FIX / BUILD 681
+-------------------
+- Fixed OVCC/OVCC2 reward definitions: +10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, Owner title/rank.
+- Existing accounts that redeemed the older broken OVCC are repaired once automatically.
+- Repair markers prevent the missing Gold Cubits from being granted repeatedly.
+- Body cosmetics remain empty/disabled for now.

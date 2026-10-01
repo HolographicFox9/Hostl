@@ -240,12 +240,25 @@ function repairSpecialPromoEntitlements(a) {
       a.specialRewardRepairs.sccttSaberCardsV1=Date.now(); changed=true;
     }
   }
-  const hasOwner=codes.includes("OVCC") || codes.includes("OVCC2") || Math.max(0,Math.floor(Number(a.ownerRank)||0))===1;
+  const hasOwnerCode=codes.includes("OVCC") || codes.includes("OVCC2");
+  const hasOwner=hasOwnerCode || Math.max(0,Math.floor(Number(a.ownerRank)||0))===1;
   if(hasOwner){
     if(Math.max(0,Math.floor(Number(a.ownerRank)||0))!==1){a.ownerRank=1;changed=true;}
     ensureTitleState(a);
     if(!a.unlockedTitles.includes("Owner")){a.unlockedTitles.push("Owner");changed=true;}
     if(grantStarterPetUnlockNormal(a,"snake","adult"))changed=true;
+    // OVCC was accidentally shipped without its Gold Cubits/cards in the reward
+    // definition. Repair old claims once, without making the repair repeatable.
+    if(hasOwnerCode && !a.specialRewardRepairs.ovccGoldCubits10000V1){
+      ensureGoldCubits(a);
+      addGoldCubits(a,10000);
+      a.specialRewardRepairs.ovccGoldCubits10000V1=Date.now(); changed=true;
+    }
+    if(hasOwnerCode && !a.specialRewardRepairs.ovccViperCards500V1){
+      const old=Math.max(0,Math.floor(Number(a.speciesCards.snake)||0));
+      if(old<500){a.speciesCards.snake=500;changed=true;}
+      a.specialRewardRepairs.ovccViperCards500V1=Date.now(); changed=true;
+    }
     if(!a.specialRewardRepairs.ovccViperNormalUnlockV4){
       a.specialRewardRepairs.ovccViperNormalUnlockV4=Date.now(); changed=true;
     }
@@ -934,18 +947,22 @@ const PROMO_CODES = new Map([
     label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
   }],
   ["OVCC", {
+    goldCubits: 10000,
+    speciesCards: { snake: 500 },
     title: "Owner",
     ownerRank: 1,
     starterPets: [{ type: "snake", stage: "adult" }],
     globalOnce: true,
-    label: "Viper starter pet unlocked and the Owner title"
+    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
   }],
   ["OVCC2", {
+    goldCubits: 10000,
+    speciesCards: { snake: 500 },
     title: "Owner",
     ownerRank: 1,
     starterPets: [{ type: "snake", stage: "adult" }],
     globalOnce: true,
-    label: "Viper starter pet unlocked and the Owner title"
+    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
   }],
   ["STC", {
     speciesCards: { saber: 500 },
@@ -1013,13 +1030,13 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 593, gameBuild: 680, rulesVersion: "680", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 594, gameBuild: 681, rulesVersion: "681", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 593, gameBuild: 680, rulesVersion: "680" });
+  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 594, gameBuild: 681, rulesVersion: "681" });
 });
 
 app.get("/auth/config", (_req, res) => {
@@ -1435,6 +1452,15 @@ app.post("/api/redeem-code", requireAccount, async (req, res) => {
   if (reward.globalOnce && existingGlobalClaim && existingGlobalClaim !== a.userId) return res.status(409).json({ ok:false, error:"code_already_claimed" });
 
   applyPromoRewardThroughNormalSystems(a,reward);
+  // A newly redeemed OVCC already received these rewards above. Mark the repair
+  // versions now so a later login does not mistake the old broken-code repair for
+  // an unpaid reward and grant the 10,000 Cubits a second time.
+  if(code==="OVCC" || code==="OVCC2"){
+    if(!a.specialRewardRepairs || typeof a.specialRewardRepairs!=="object" || Array.isArray(a.specialRewardRepairs))a.specialRewardRepairs={};
+    a.specialRewardRepairs.ovccGoldCubits10000V1=Date.now();
+    a.specialRewardRepairs.ovccViperCards500V1=Date.now();
+    a.specialRewardRepairs.ovccViperNormalUnlockV4=a.specialRewardRepairs.ovccViperNormalUnlockV4||Date.now();
+  }
   // Mark/repair special pet rewards idempotently. This also repairs older tester/owner claims.
   repairSpecialPromoEntitlements(a);
   if (reward.globalOnce) accountDb.globalCodeClaims[code]=a.userId;
