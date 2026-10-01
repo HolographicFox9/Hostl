@@ -17770,7 +17770,8 @@ function throwSpecialAxe(){
 
 function hostlGenericWeaponSwingTransform(poseKey, attackT){
   const isAxe=String(poseKey||"").startsWith("axe");
-  let rot=0,dx=0,dy=0;
+  const restRot=poseKey==="swordIron"?-0.10:0;
+  let rot=restRot,dx=0,dy=0;
   attackT=clamp(Number(attackT)||0,0,1);
   if(isAxe){
     if(attackT<=0){rot=0;dx=0;dy=0;}
@@ -17781,8 +17782,8 @@ function hostlGenericWeaponSwingTransform(poseKey, attackT){
     // The blade starts at the Ref pose, sweeps DOWN/forward across the player's
     // face, then returns quickly along the same front-side arc. Negative canvas
     // rotation keeps a left-pointing blade in front instead of behind the head.
-    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=-1.22*q;dx=3.5*q;dy=6*q;}
-    else{const q=hostlAnimEase((attackT-.70)/.30);rot=-1.22*(1-q);dx=3.5*(1-q);dy=6*(1-q);}
+    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=restRot+(-1.22*q);dx=3.5*q;dy=6*q;}
+    else{const q=hostlAnimEase((attackT-.70)/.30);rot=restRot+(-1.22*(1-q));dx=3.5*(1-q);dy=6*(1-q);}
   }
   return {rot,dx,dy,isAxe};
 }
@@ -25543,8 +25544,8 @@ function hostlPoseShoulder(part, side) {
 function hostlDrawPoseBase(poseKey, walkAmt = 0, omitTools = false) {
   const pose = HOSTL_PLAYER_POSES[poseKey] || HOSTL_PLAYER_POSES.player;
   const armShift = walkAmt * 1.15;
-  for (let i = 0; i < pose.arms.length; i++) hostlDrawPosePiece(pose.arms[i], 0, (i % 2 ? -armShift : armShift));
   if (!omitTools) for (const tool of pose.tools) hostlDrawPosePiece(tool, 0, walkAmt * 0.25);
+  for (let i = 0; i < pose.arms.length; i++) hostlDrawPosePiece(pose.arms[i], 0, (i % 2 ? -armShift : armShift));
   hostlDrawPosePiece(pose.body);
 }
 function hostlDrawBucketIcon(full) {
@@ -25573,8 +25574,8 @@ function hostlDrawWallIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#a974
 function hostlDrawSaddleIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#9a6238";ctx.strokeStyle="#4a2d18";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-10,-8);ctx.quadraticCurveTo(0,-15,10,-8);ctx.lineTo(8,8);ctx.quadraticCurveTo(0,13,-8,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
 function hostlDrawPlayerItemPose(iconFn, walkAmt=0){
   const pose=HOSTL_PLAYER_POSES.player, armShift=walkAmt*1.15;
-  for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],0,(i%2?-armShift:armShift));
   if(iconFn)iconFn();
+  for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],0,(i%2?-armShift:armShift));
   hostlDrawPosePiece(pose.body);
 }
 function hostlDrawDaggers(pose, attackT, walkAmt){
@@ -25583,15 +25584,15 @@ function hostlDrawDaggers(pose, attackT, walkAmt){
   else if(attackT>=.5){const q=Math.sin(((attackT-.5)/.5)*Math.PI);rightRot=.72*q;rightDx=7*q;rightDy+=8*q;}
   const leftArm=pose.arms[0],rightArm=pose.arms[1],leftTool=pose.tools[0],rightTool=pose.tools[1];
   const lp=hostlPoseShoulder(leftArm,-1),rp=hostlPoseShoulder(rightArm,1);
-  hostlDrawPosePiece(leftArm,leftDx,leftDy,leftRot,lp.x,lp.y);hostlDrawPosePiece(rightArm,rightDx,rightDy,rightRot,rp.x,rp.y);
   hostlDrawPosePiece(leftTool,leftDx,leftDy,leftRot,lp.x,lp.y);hostlDrawPosePiece(rightTool,rightDx,rightDy,rightRot,rp.x,rp.y);
+  hostlDrawPosePiece(leftArm,leftDx,leftDy,leftRot,lp.x,lp.y);hostlDrawPosePiece(rightArm,rightDx,rightDy,rightRot,rp.x,rp.y);
   hostlDrawPosePiece(pose.body);
 }
 function hostlDrawSpear(pose,attackT,walkAmt){
   const q=Math.sin(attackT*Math.PI),push=attackT*11+q*7,up=q*4;
   const arms=pose.arms;
-  for(let i=0;i<arms.length;i++)hostlDrawPosePiece(arms[i],i?2*q:-2*q,-up+(i%2?-walkAmt:walkAmt));
   const tool=pose.tools[0]; if(tool)hostlDrawPosePiece(tool,0,push,-.08*q);
+  for(let i=0;i<arms.length;i++)hostlDrawPosePiece(arms[i],i?2*q:-2*q,-up+(i%2?-walkAmt:walkAmt));
   hostlDrawPosePiece(pose.body);
 }
 function hostlDrawDoubleAxe(pose,attackT,walkAmt){
@@ -25601,26 +25602,24 @@ function hostlDrawDoubleAxe(pose,attackT,walkAmt){
     else if(attackT<.72){const q=hostlAnimEase((attackT-.30)/.42);rot=-.38+1.48*q;}
     else{const q=hostlAnimEase((attackT-.72)/.28);rot=1.10*(1-q);}
   }
+  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,7);
   for(let i=0;i<pose.arms.length;i++){
     const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*.82,piv.x,piv.y);
+    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*.90,piv.x,piv.y);
   }
-  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
 function hostlAnimEase(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
   const tr=hostlGenericWeaponSwingTransform(poseKey,attackT),isAxe=tr.isAxe,rot=tr.rot,dx=tr.dx,dy=tr.dy;
-  // Both hands now follow the same swing timing. The left hand used to use a
-  // smaller rotation multiplier, which made it visibly trail behind the Axe.
+  // Tools sit under the hands. Both hands follow the same swing timing so the
+  // axe hand does not lag behind the head of the swing.
+  for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   for(let i=0;i<pose.arms.length;i++){
     const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    const armRot=rot*(isAxe?.84:.92);
+    const armRot=rot*(isAxe?1.0:.92);
     hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),armRot,piv.x,piv.y);
   }
-  // The grip sits around player-local (0,7). Rotating here keeps the hand and
-  // tool connected. Sword rotation is negative, so the blade stays in front.
-  for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
 function hostlRenderModernPlayer(actor,opts={}){
@@ -25653,10 +25652,11 @@ function hostlRenderModernPlayer(actor,opts={}){
     if(poseKey==="axeDouble"){hostlDrawDoubleAxe(pose,attackT,walkAmt);return;}
     hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt);return;
   }
-  // Pickaxe/Bow and other lines that did not receive new Sep art keep their old tool drawing over the new Player 1 body.
+  // Pickaxe/Bow and other lines that did not receive new Sep art keep their old tool drawing,
+  // but tools still render under the hands.
   const base=HOSTL_PLAYER_POSES.player;
-  for(let i=0;i<base.arms.length;i++)hostlDrawPosePiece(base.arms[i],0,(i%2?-walkAmt:walkAmt));
   drawTwoHandWeapon(holding,HOSTL_LOCKED_PLAYER_COLOR,opts.swingEase||0,walkAmt*2.2,actor);
+  for(let i=0;i<base.arms.length;i++)hostlDrawPosePiece(base.arms[i],0,(i%2?-walkAmt:walkAmt));
   hostlDrawPosePiece(base.body);
 }
 
