@@ -5721,7 +5721,7 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
     </div>
 
     <div class="player-design-section body-type-section">
-      <div class="player-design-label">Owned Body Cosmetics</div>
+      <div class="player-design-label">Owned Bodies</div>
       <div class="body-type-grid" id="ownedBodyStyles"></div>
     </div>
   </div>
@@ -5733,18 +5733,18 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
     <div class="modal-title-clear">
       <div class="home-section-label">Cosmetics Shop</div>
       <h1>Body Shop</h1>
-      <p class="lead">Unlock more player bodies here. Right now every body costs 0 Gold Cubits.</p>
+      <p class="lead">Unlock different player bodies here. These change the actual cube body shape. Right now every body costs 0 Gold Cubits.</p>
     </div>
     <div class="player-design-preview-wrap player-design-preview-only">
       <canvas id="bodyShopPreview" width="96" height="96" title="Body shop preview"></canvas>
       <div class="player-design-preview-copy">
         <div class="player-design-label">Shop Preview</div>
         <div class="player-design-preview-title">More Bodies</div>
-        <div class="player-design-preview-sub">Unlock a body here, then equip it from Character Design.</div>
+        <div class="player-design-preview-sub">Unlock a body here, then select that body from Character Design.</div>
       </div>
     </div>
     <div class="player-design-section body-type-section">
-      <div class="player-design-label">Available Body Cosmetics</div>
+      <div class="player-design-label">Available Bodies</div>
       <div class="body-type-grid" id="bodyShopGrid"></div>
     </div>
   </div>
@@ -10045,7 +10045,7 @@ function setNetStatus(text, cls = "") {
 }
 function sendNetworkProfile(){
   if(!net.room)return;
-  try{net.room.send("playerProfile",{username:String(meta.username||"Cube").trim().slice(0,14)||"Cube",color:String(meta.color||COLORS[0])});}catch(_){}
+  try{net.room.send("playerProfile",{username:String(meta.username||"Cube").trim().slice(0,14)||"Cube",color:String(meta.color||COLORS[0]),bodyStyle:hostlCurrentBodyStyleId()});}catch(_){}
 }
 
 function updateOnlineModeUI() {
@@ -11213,6 +11213,7 @@ async function connectMultiplayer(options={}) {
     joinPromise = client.joinOrCreate("world", {
       username: meta.username || "Cube",
       color: meta.color || COLORS[0],
+      bodyStyle: hostlCurrentBodyStyleId(),
       startPet: game.startPet || "",
       startPetStage: game.startPet ? starterStageFor(game.startPet) : "baby",
       startPetName: game.startPet ? starterPetNameValue() : "",
@@ -11694,6 +11695,7 @@ function updateRemotePlayers(dt) {
         username: p.username || "Cube",
         title: p.title || "", testerRank: Number(p.testerRank)||0, ownerRank: Number(p.ownerRank)||0,
         color: p.color || "#3fa7ff",
+        bodyStyle: String(p.bodyStyle || "classic"),
         health: Number.isFinite(Number(p.health)) ? Number(p.health) : 100,
         maxHealth: Number.isFinite(Number(p.maxHealth)) ? Number(p.maxHealth) : 100,
         tool: p.tool || "Fist",
@@ -11735,6 +11737,7 @@ function updateRemotePlayers(dt) {
     v.username = p.username || "Cube";
     v.title = p.title || ""; v.testerRank = Number(p.testerRank)||0; v.ownerRank = Number(p.ownerRank)||0;
     v.color = p.color || "#3fa7ff";
+    v.bodyStyle = String(p.bodyStyle || "classic");
     v.health = Number.isFinite(Number(p.health)) ? Number(p.health) : 100;
     v.maxHealth = Number.isFinite(Number(p.maxHealth)) ? Number(p.maxHealth) : 100;
     v.tool = p.tool || "Fist";
@@ -11771,7 +11774,10 @@ function drawRemotePlayer(v) {
   const remoteSwingMax = Math.max(.08,Number(v._attackVisualDuration)||((TOOLS[v.swingWeapon||holding] && TOOLS[v.swingWeapon||holding].swing) || 0.26));
   const attackT = v.attackTimer > 0 ? clamp(1 - (v.attackTimer / remoteSwingMax), 0, 1) : 0;
   const remoteSwing = v.attackTimer > 0 ? Math.sin(attackT * Math.PI) : 0;
+  const prevBodyStyleOverride=HOSTL_RENDER_BODY_STYLE_OVERRIDE;
+  HOSTL_RENDER_BODY_STYLE_OVERRIDE=String(v.bodyStyle||"classic");
   hostlRenderModernPlayer(v, { holding, attackT, swingEase: remoteSwing, walkAmt, punchSide: v.punchSide || 1, swimming });
+  HOSTL_RENDER_BODY_STYLE_OVERRIDE=prevBodyStyleOverride;
   ctx.restore();
 
   ctx.save();
@@ -11798,7 +11804,7 @@ function drawRemotePlayer(v) {
     roundRect(v.x - 24, v.y - 26, 48 * hp, 4, 1);
     ctx.fill();
   }
-  targetCtx.restore();
+  ctx.restore();
 }
 function drawRemotePlayers() {
   for (const v of net.remoteVisuals.values()) drawRemotePlayer(v);
@@ -25566,8 +25572,10 @@ function hostlDrawPosePiece(part, dx = 0, dy = 0, rot = 0, pivotX = null, pivotY
   ctx.save();
   ctx.translate(px + dx, py + dy);
   ctx.rotate(rot);
-  ctx.drawImage(spr.img, localX, localY, part.w, part.h);
-  if (/_body$/.test(String(part.asset||""))) hostlDrawBodyStyleOverlay(localX, localY, part.w, part.h, hostlCurrentBodyStyleId(), ctx);
+  const isBody=/_body$/.test(String(part.asset||""));
+  const bodyStyle=isBody?hostlRenderBodyStyleId():"classic";
+  if(!isBody || bodyStyle==="classic") ctx.drawImage(spr.img, localX, localY, part.w, part.h);
+  else hostlDrawBodyVariant(localX, localY, part.w, part.h, bodyStyle, ctx);
   ctx.restore();
 }
 function hostlPoseShoulder(part, side) {
@@ -25817,7 +25825,10 @@ function drawPlayer() {
   const swingEase = p.punchTimer > 0 ? Math.sin(attackT * Math.PI) : 0;
   const holding = p.heldSpecial || p.tool || "Fist";
 
+  const prevBodyStyleOverride=HOSTL_RENDER_BODY_STYLE_OVERRIDE;
+  HOSTL_RENDER_BODY_STYLE_OVERRIDE=hostlCurrentBodyStyleId();
   hostlRenderModernPlayer(p, { holding, attackT, swingEase, walkAmt, punchSide: p.punchSide || 1, swimming });
+  HOSTL_RENDER_BODY_STYLE_OVERRIDE=prevBodyStyleOverride;
 
   ctx.restore();
   ctx.fillStyle = "rgba(239,230,210,0.85)";
@@ -27838,47 +27849,69 @@ function closeCardInventory() {
 }
 
 const HOSTL_BODY_STYLES = [
-  {id:"classic",name:"Classic Cube",price:0,desc:"The original HOSTL player body.",overlay:"classic"},
-  {id:"forestScout",name:"Forest Scout",price:0,desc:"Green scout gear with a belt and chest wrap.",overlay:"forestScout"},
-  {id:"riverRunner",name:"River Runner",price:0,desc:"Blue swim-ready outfit with light trim.",overlay:"riverRunner"},
-  {id:"stoneGuard",name:"Stone Guard",price:0,desc:"A heavier gray body style with chest plating.",overlay:"stoneGuard"},
-  {id:"sunChief",name:"Sun Chief",price:0,desc:"Warm orange-red trim with a bright chest band.",overlay:"sunChief"}
+  {id:"classic",name:"Classic Cube",price:0,desc:"The original HOSTL cube body."},
+  {id:"round",name:"Round Cube",price:0,desc:"A softer rounded cube body with the same HOSTL face style."},
+  {id:"wide",name:"Wide Cube",price:0,desc:"A broader, shorter cube body with wider sides."},
+  {id:"tall",name:"Tall Cube",price:0,desc:"A taller, slimmer cube body."},
+  {id:"cut",name:"Cut-Corner Cube",price:0,desc:"A cube body with angled corners instead of round corners."}
 ];
 function hostlBodyStyleInfo(id){ return HOSTL_BODY_STYLES.find(s=>s.id===id) || HOSTL_BODY_STYLES[0]; }
 function ensureBodyCosmeticsState(){
   if(!meta.ownedBodyStyles || typeof meta.ownedBodyStyles!=="object") meta.ownedBodyStyles={classic:true};
+  const oldBodyMap={forestScout:"round",riverRunner:"wide",stoneGuard:"tall",sunChief:"cut"};
+  for(const [oldId,newId] of Object.entries(oldBodyMap)) if(meta.ownedBodyStyles[oldId]) meta.ownedBodyStyles[newId]=true;
+  if(oldBodyMap[meta.selectedBodyStyle]) meta.selectedBodyStyle=oldBodyMap[meta.selectedBodyStyle];
   meta.ownedBodyStyles.classic = true;
-  if(!meta.selectedBodyStyle || !meta.ownedBodyStyles[meta.selectedBodyStyle]) meta.selectedBodyStyle="classic";
+  const validIds=new Set(HOSTL_BODY_STYLES.map(s=>s.id));
+  if(!meta.selectedBodyStyle || !meta.ownedBodyStyles[meta.selectedBodyStyle] || !validIds.has(meta.selectedBodyStyle)) meta.selectedBodyStyle="classic";
 }
 function hostlCurrentBodyStyleId(){ ensureBodyCosmeticsState(); return String(meta.selectedBodyStyle||"classic"); }
 function hostlSelectedBodyStyleName(){ return hostlBodyStyleInfo(hostlCurrentBodyStyleId()).name; }
-function hostlDrawBodyStyleOverlay(x,y,w,h,styleId,targetCtx=ctx){
-  const id=styleId||hostlCurrentBodyStyleId();
-  if(id==="classic") return;
-  const left=x, top=y, width=w, height=h;
-  const torsoX=left+width*0.19, torsoY=top+height*0.31, torsoW=width*0.62, torsoH=height*0.47;
-  targetCtx.save();
-  targetCtx.lineJoin="round"; targetCtx.lineCap="round";
-  function rr(rx,ry,rw,rh,rad,fill,stroke,wid=1.2){ targetCtx.fillStyle=fill; targetCtx.strokeStyle=stroke; targetCtx.lineWidth=wid; targetCtx.beginPath(); targetCtx.moveTo(rx+rad,ry); targetCtx.arcTo(rx+rw,ry,rx+rw,ry+rh,rad); targetCtx.arcTo(rx+rw,ry+rh,rx,ry+rh,rad); targetCtx.arcTo(rx,ry+rh,rx,ry,rad); targetCtx.arcTo(rx,ry,rx+rw,ry,rad); targetCtx.closePath(); targetCtx.fill(); targetCtx.stroke(); }
-  if(id==="forestScout"){
-    rr(torsoX,torsoY,torsoW,torsoH,4,"#4c8751","#1d3f24",1.3);
-    rr(torsoX+torsoW*0.16,torsoY+torsoH*0.08,torsoW*0.68,torsoH*0.22,3,"#cfd58b","#4b4a25",1.1);
-    rr(torsoX+torsoW*0.18,torsoY+torsoH*0.62,torsoW*0.64,torsoH*0.15,3,"#7b5533","#3f2312",1.1);
-  }else if(id==="riverRunner"){
-    rr(torsoX,torsoY,torsoW,torsoH,4,"#3d74be","#173456",1.3);
-    rr(torsoX+torsoW*0.08,torsoY+torsoH*0.12,torsoW*0.18,torsoH*0.72,3,"#8fd0f8","#2a5b78",1.0);
-    rr(torsoX+torsoW*0.74,torsoY+torsoH*0.12,torsoW*0.18,torsoH*0.72,3,"#8fd0f8","#2a5b78",1.0);
-    rr(torsoX+torsoW*0.32,torsoY+torsoH*0.24,torsoW*0.36,torsoH*0.16,3,"#d9eefc","#4d7290",1.0);
-  }else if(id==="stoneGuard"){
-    rr(torsoX,torsoY,torsoW,torsoH,4,"#8b98a5","#39454f",1.4);
-    rr(torsoX+torsoW*0.14,torsoY+torsoH*0.12,torsoW*0.72,torsoH*0.48,4,"#bec7cf","#56616a",1.0);
-    rr(torsoX+torsoW*0.36,torsoY+torsoH*0.02,torsoW*0.28,torsoH*0.72,3,"#67727d","#2b343b",1.0);
-  }else if(id==="sunChief"){
-    rr(torsoX,torsoY,torsoW,torsoH,4,"#ca6f44","#5d2418",1.3);
-    rr(torsoX+torsoW*0.10,torsoY+torsoH*0.14,torsoW*0.80,torsoH*0.16,3,"#f3c75e","#7a4e0a",1.1);
-    rr(torsoX+torsoW*0.24,torsoY+torsoH*0.44,torsoW*0.52,torsoH*0.16,3,"#b93a38","#531012",1.1);
+
+let HOSTL_RENDER_BODY_STYLE_OVERRIDE="";
+function hostlRenderBodyStyleId(){ return HOSTL_RENDER_BODY_STYLE_OVERRIDE || hostlCurrentBodyStyleId(); }
+function syncBodyStyleNetwork(){ try{if(net.room)net.room.send("playerProfile",{username:String(meta.username||"Cube").trim().slice(0,14)||"Cube",color:String(meta.color||COLORS[0]),bodyStyle:hostlCurrentBodyStyleId()});}catch(_){} }
+function hostlDrawBodyVariant(x,y,w,h,styleId,targetCtx=ctx){
+  const id=String(styleId||hostlRenderBodyStyleId());
+  if(id==="classic") return false;
+  const g=targetCtx;
+  const base="#3c94e6", dark="#2175b9", edge="#155a91", shine="#69b9f2";
+  let bx=x,by=y,bw=w,bh=h;
+  if(id==="round"){bx=x+1.5;by=y+.5;bw=w-3;bh=h-1;}
+  else if(id==="wide"){bx=x;by=y+3.5;bw=w;bh=h-7;}
+  else if(id==="tall"){bx=x+4;by=y;bw=w-8;bh=h;}
+  else if(id==="cut"){bx=x+1;by=y+1;bw=w-2;bh=h-2;}
+  g.save();
+  const grad=g.createLinearGradient(bx,by,bx+bw,by+bh);
+  grad.addColorStop(0,shine);grad.addColorStop(.30,base);grad.addColorStop(1,dark);
+  g.fillStyle=grad;g.strokeStyle=edge;g.lineWidth=Math.max(.8,w*.035);g.lineJoin="round";
+  g.beginPath();
+  if(id==="cut"){
+    const c=Math.min(bw,bh)*.17;
+    g.moveTo(bx+c,by);g.lineTo(bx+bw-c,by);g.lineTo(bx+bw,by+c);g.lineTo(bx+bw,by+bh-c);
+    g.lineTo(bx+bw-c,by+bh);g.lineTo(bx+c,by+bh);g.lineTo(bx,by+bh-c);g.lineTo(bx,by+c);g.closePath();
+  }else if(id==="wide"){
+    const r=Math.min(7,bh*.22);
+    g.moveTo(bx+r,by);g.bezierCurveTo(bx+bw*.34,by-1,bx+bw*.66,by-1,bx+bw-r,by);
+    g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);g.lineTo(bx+bw,by+bh-r);g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
+    g.bezierCurveTo(bx+bw*.66,by+bh+1,bx+bw*.34,by+bh+1,bx+r,by+bh);g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);g.lineTo(bx,by+r);g.quadraticCurveTo(bx,by,bx+r,by);g.closePath();
+  }else{
+    const r=id==="round"?Math.min(10,bw*.26):Math.min(6,bw*.18);
+    g.moveTo(bx+r,by);g.lineTo(bx+bw-r,by);g.quadraticCurveTo(bx+bw,by,bx+bw,by+r);g.lineTo(bx+bw,by+bh-r);
+    g.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);g.lineTo(bx+r,by+bh);g.quadraticCurveTo(bx,by+bh,bx,by+bh-r);g.lineTo(bx,by+r);g.quadraticCurveTo(bx,by,bx+r,by);g.closePath();
   }
-  ctx.restore();
+  g.fill();g.stroke();
+  // Simple glossy upper-left highlight, matching the clean HOSTL cube art style.
+  g.globalAlpha=.28;g.fillStyle="#d7f2ff";g.beginPath();g.roundRect?.(bx+bw*.10,by+bh*.08,bw*.12,bh*.50,Math.max(1,bw*.05));
+  if(typeof g.roundRect==="function")g.fill(); else {g.fillRect(bx+bw*.10,by+bh*.08,bw*.10,bh*.48);}g.globalAlpha=1;
+  // The face is part of the body itself, not an accessory.
+  const eyeY=by+bh*.78, eyeGap=bw*.22, eyeR=Math.max(2.6,Math.min(bw,bh)*.105);
+  for(const ex of [bx+bw*.5-eyeGap,bx+bw*.5+eyeGap]){
+    g.fillStyle="#05090c";g.beginPath();g.arc(ex,eyeY,eyeR,0,Math.PI*2);g.fill();
+    g.fillStyle="#f7fbff";g.beginPath();g.arc(ex-eyeR*.18,eyeY-eyeR*.15,eyeR*.38,0,Math.PI*2);g.fill();
+  }
+  g.restore();
+  return true;
 }
 function buildOwnedBodyStyleSelector(){
   ensureBodyCosmeticsState();
@@ -27890,8 +27923,8 @@ function buildOwnedBodyStyleSelector(){
     btn.type="button";
     btn.className="body-type-option"+(selected?" selected":"");
     btn.setAttribute("aria-pressed",selected?"true":"false");
-    btn.innerHTML=`<b>${style.name}</b><small>${selected?"Equipped now":"Owned body cosmetic"}</small><div class="body-action">${selected?"Selected":"Use This Body"}</div>`;
-    btn.addEventListener("click",()=>{ meta.selectedBodyStyle=style.id; saveMeta(); drawHomePreview(); updateHomeBodyStyleLabels(); buildOwnedBodyStyleSelector(); buildBodyShop(); });
+    btn.innerHTML=`<b>${style.name}</b><small>${selected?"Equipped now":"Owned body"}</small><div class="body-action">${selected?"Selected":"Use This Body"}</div>`;
+    btn.addEventListener("click",()=>{ meta.selectedBodyStyle=style.id; saveMeta(); syncBodyStyleNetwork(); drawHomePreview(); updateHomeBodyStyleLabels(); buildOwnedBodyStyleSelector(); buildBodyShop(); });
     grid.appendChild(btn);
   });
 }
@@ -27915,7 +27948,7 @@ function buildBodyShop(){
         meta.ownedBodyStyles[style.id]=true;
       }
       meta.selectedBodyStyle=style.id;
-      saveMeta();
+      saveMeta(); syncBodyStyleNetwork();
       drawHomePreview(); updateHomeBodyStyleLabels(); buildOwnedBodyStyleSelector(); buildBodyShop();
     });
     grid.appendChild(btn);
@@ -27972,9 +28005,10 @@ function drawHomePreview() {
     x.scale(Math.min(w,h)/70, Math.min(w,h)/70);
     const part=HOSTL_PLAYER_POSES.player?.body;
     const spr=part?HOSTL_PLAYER_SPRITES[part.asset]:null;
-    if(spr&&spr.img)x.drawImage(spr.img,-part.w/2,-part.h/2,part.w,part.h);
+    const bodyStyle=hostlCurrentBodyStyleId();
+    if(bodyStyle!=="classic") hostlDrawBodyVariant(-part.w/2,-part.h/2,part.w,part.h,bodyStyle,x);
+    else if(spr&&spr.img)x.drawImage(spr.img,-part.w/2,-part.h/2,part.w,part.h);
     else{ x.fillStyle=HOSTL_LOCKED_PLAYER_COLOR; x.fillRect(-18,-18,36,36); }
-    hostlDrawBodyStyleOverlay(-part.w/2,-part.h/2,part.w,part.h,hostlCurrentBodyStyleId(),x);
     x.restore();
   }
   updateHomeBodyStyleLabels();
