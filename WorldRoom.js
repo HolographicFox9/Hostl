@@ -663,6 +663,7 @@ class AnimalState extends Schema {
     this.fleeUntil=0; this.enraged=false; this.tameFailedAggro=false; this.desperateAggro=false;
     this.releasedWild=false; this.hostileRiderMount=false; this.level=1; this.exp=0; this.petName="";
     this.gender="Male"; this.motherId=""; this.fatherId=""; this.bredChild=false;
+    this.pollenCollecting=false; this.pollenProgress=0;
   }
 }
 defineTypes(AnimalState, {
@@ -671,7 +672,7 @@ defineTypes(AnimalState, {
   sleeping:"boolean", tailPhase:"number", attackAnim:"number", flash:"number", atkCd:"number", abilityCd:"number",
   combat:"number", recentHit:"number", wanderT:"number", wanderA:"number", fleeUntil:"number", enraged:"boolean",
   tameFailedAggro:"boolean", desperateAggro:"boolean", releasedWild:"boolean", hostileRiderMount:"boolean", level:"number", exp:"number", petName:"string",
-  gender:"string", motherId:"string", fatherId:"string", bredChild:"boolean"
+  gender:"string", motherId:"string", fatherId:"string", bredChild:"boolean", pollenCollecting:"boolean", pollenProgress:"number"
 });
 
 class PetState extends Schema {
@@ -1746,7 +1747,39 @@ export class WorldRoom extends Room {
     }
     return false;
   }
-  updateWorkerBeeJob(a,dt,hive){if(a.stage==="baby")return false;const c=this.hiveResourceCenter(hive);let state=a._beeWorkState||"seek";if(state==="seek"){if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";let fid=this.nearestBeeFlowerResourceId(a,3400,a._beePreferBiome);if(!fid)fid=this.nearestBeeFlowerResourceId(a,3400,"");if(!fid){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}a._beeFlowerId=fid;a._beeWorkState="flower";state="flower";}if(state==="flower"){const f=this.state.resources.get(a._beeFlowerId||"");if(!this.isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}const d=dist(a.x,a.y,f.x,f.y),aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);if(d>Math.max(22,(f.solidR||18)+12))this.moveCreatureSwept(a,(a.speed||60)*.82,dt);else{a._beeWorkState="collect";a._beeWorkTimer=rand(1.8,3.0);a._beePollen=true;}return true;}if(state==="collect"){const f=this.state.resources.get(a._beeFlowerId||"");if(!this.isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);if(a._beeWorkTimer<=0)a._beeWorkState="home";return true;}if(state==="home"){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;if(d>stop)this.moveCreatureSwept(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;}if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen){this.growHiveFromPollen(hive);this.spreadBeeFlowerFromPollen(a);this.giveWildExp("",a,6,"pollen");}a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}a._beeWorkState="seek";return false;}
+  updateWorkerBeeJob(a,dt,hive){
+    if(a.stage==="baby"){a.pollenCollecting=false;a.pollenProgress=0;return false;}
+    const c=this.hiveResourceCenter(hive);let state=a._beeWorkState||"seek";
+    if(state==="seek"){
+      a.pollenCollecting=false;a.pollenProgress=0;a._beePollen=false;
+      if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";
+      let fid=this.nearestBeeFlowerResourceId(a,3400,a._beePreferBiome);if(!fid)fid=this.nearestBeeFlowerResourceId(a,3400,"");
+      if(!fid){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}
+      a._beeFlowerId=fid;a._beeWorkState="flower";state="flower";
+    }
+    if(state==="flower"){
+      const f=this.state.resources.get(a._beeFlowerId||"");if(!this.isBeeFlowerResource(f)){a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return true;}
+      const d=dist(a.x,a.y,f.x,f.y),aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);
+      if(d>Math.max(22,(f.solidR||18)+12))this.moveCreatureSwept(a,(a.speed||60)*.82,dt);
+      else{a._beeWorkState="collect";a._beeCollectDuration=rand(2.6,3.6);a.pollenProgress=0;a.pollenCollecting=true;a._beePollen=false;}
+      return true;
+    }
+    if(state==="collect"){
+      const f=this.state.resources.get(a._beeFlowerId||"");if(!this.isBeeFlowerResource(f)){a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return true;}
+      const duration=Math.max(.4,Number(a._beeCollectDuration)||3);a.pollenCollecting=true;a.pollenProgress=clamp((Number(a.pollenProgress)||0)+dt/duration,0,1);smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);
+      if(a.pollenProgress>=.999){a.pollenProgress=1;a.pollenCollecting=false;a._beePollen=true;a._beeWorkState="home";}
+      return true;
+    }
+    if(state==="home"){
+      a.pollenCollecting=false;const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;
+      if(d>stop)this.moveCreatureSwept(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;
+    }
+    if(state==="deposit"){
+      a.pollenCollecting=false;a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;
+      if(a._beeWorkTimer<=0){if(a._beePollen){this.growHiveFromPollen(hive);this.spreadBeeFlowerFromPollen(a);this.giveWildExp("",a,6,"pollen");}a._beePollen=false;a.pollenProgress=0;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;
+    }
+    a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return false;
+  }
   updateDroneBeeHiveLife(a,dt,hive){if(a.stage==="baby")return false;const c=this.hiveResourceCenter(hive);a._beeHoneyT=(Number.isFinite(Number(a._beeHoneyT))?Number(a._beeHoneyT):rand(16,36))-dt;if(a._beeEatingHoney){a._beeHoneyPause=(Number(a._beeHoneyPause)||0)-dt;if(a._beeHoneyPause<=0){a._beeEatingHoney=false;a._beeHoneyT=rand(18,42);}return true;}if(a._beeHoneyT<=0){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5);if(d>(hive.solidR||70)+18)this.moveCreatureSwept(a,(a.speed||60)*.72,dt);else{a._beeEatingHoney=true;a._beeHoneyPause=rand(1.2,2.8);}return true;}a._hiveOrbitDir=Number.isFinite(a._hiveOrbitDir)?a._hiveOrbitDir:(Math.random()<.5?-1:1);a._hiveOrbitA=(Number.isFinite(a._hiveOrbitA)?a._hiveOrbitA:rand(0,TAU))+dt*.90*a._hiveOrbitDir;const orbitBase=(hive.solidR||70)+48,tx=c.x+Math.cos(a._hiveOrbitA)*(orbitBase+8*Math.sin(this.state.worldTime*.8+a.x*.002)),ty=c.y+Math.sin(a._hiveOrbitA)*(orbitBase*.76+6*Math.cos(this.state.worldTime*.7+a.y*.002));smoothTurn(a,angTo(a.x,a.y,tx,ty),dt,4.4);this.moveCreatureSwept(a,(a.speed||60)*.54,dt);return true;}
   updateQueenBeeHiveLife(a,dt,hive){if(a.stage==="baby")return false;const c=this.hiveResourceCenter(hive);a._queenRoamT=(Number(a._queenRoamT)||0)-dt;if(a._queenRoamT<=0||!Number.isFinite(a._queenRoamX)||dist(a._queenRoamX,a._queenRoamY,c.x,c.y)>(hive.solidR||70)+430){const aa=rand(0,TAU),rr=rand((hive.solidR||70)+150,(hive.solidR||70)+330);a._queenRoamX=clamp(c.x+Math.cos(aa)*rr,30,WORLD_W-30);a._queenRoamY=clamp(c.y+Math.sin(aa)*rr*.78,30,WORLD_H-30);a._queenRoamT=rand(3.5,7.5);}const d=dist(a.x,a.y,a._queenRoamX,a._queenRoamY);smoothTurn(a,angTo(a.x,a.y,a._queenRoamX,a._queenRoamY),dt,3.8);if(d>28)this.moveCreatureSwept(a,(a.speed||60)*.47,dt);return true;}
   updateBeeHomeBehavior(id,a,dt){const hive=this.beeHomeResourceForAnimal(a);if(!hive)return false;if(a.stage==="baby"){if(!a.sleeping&&Math.random()<dt*.055){a.sleeping=true;return true;}const c=this.hiveResourceCenter(hive),d=dist(a.x,a.y,c.x,c.y),near=(hive.solidR||70)+80;if(d>near){const aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,4.2);this.moveCreatureSwept(a,(a.speed||60)*.50,dt);}else{a.wanderT=(a.wanderT||0)-dt;if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.8,4.0);}smoothTurn(a,a.wanderA||0,dt,3.4);this.moveCreatureSwept(a,(a.speed||60)*.22,dt);}return true;}if(a.type==="workerbee"&&this.updateWorkerBeeJob(a,dt,hive))return true;if(a.type==="dronebee"&&this.updateDroneBeeHiveLife(a,dt,hive))return true;if(a.type==="queenbee"&&this.updateQueenBeeHiveLife(a,dt,hive))return true;return false;}

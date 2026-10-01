@@ -6437,9 +6437,9 @@ const PLAYER_R = 18;
 const CUBE_SHARED_RULES_VERSION = "667";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
-  Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.42, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
+  Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
   Pickaxe: { dmg: 5.0, gather: 2.5, resourcePower: 1.15, range: 50, swing: 0.28, cadence: 0.50, cost: { wood: 6, stone: 4 }, gatherFor: "rock", woodWall: 4.0, stoneWall: 14.0 },
-  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 54, swing: 0.18, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
+  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 54, swing: 0.36, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
   Bow:     { dmg: 9.0, gather: 0.12, resourcePower: 0.18, range: 46, swing: 0.22, cadence: 0.55, cost: null, woodWall: 2.0, stoneWall: 1.5 },
   TigerClaws:{ dmg: 7.0, gather: 0.16, resourcePower: 0.20, range: 44, swing: 0.18, cadence: 0.30, cost: null, woodWall: 2.8, stoneWall: 1.6 },
   BoxingGloves:{ dmg: 6.2, gather: 0.10, resourcePower: 0.12, range: 48, swing: 0.20, cadence: 0.34, cost: null, woodWall: 2.2, stoneWall: 1.4 },
@@ -10444,6 +10444,8 @@ function updateNetAnimalVisual(v, s, id, owned = false) {
   v.hostileRiderMount = !!s.hostileRiderMount;
   v.gender = canonicalAnimalGender(v.type, s.gender || v.gender || "Male");
   v.bredChild = !!s.bredChild;
+  v.pollenCollecting = !!s.pollenCollecting;
+  v.pollenProgress = clamp(Number(s.pollenProgress)||0,0,1);
   v.motherId = s.motherId || "";
   v.fatherId = s.fatherId || "";
   v.olderBrotherId = s.olderBrotherId || "";
@@ -11082,7 +11084,9 @@ function applyPlayerActionEvent(data={}) {
   v.swingWeapon=tool;
   if(typeof data.weaponChoice==="string"&&data.weaponChoice)v.skillWeaponChoice=String(data.weaponChoice);
   if(Number.isFinite(Number(data.toolTier))){v.toolTiers=v.toolTiers||{};v.toolTiers[tool]=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
-  v.attackTimer=action==="shoot"?0.20:(tool==="Axe"&&String(data.weaponChoice||v.skillWeaponChoice||"")==="doubleAxe"?.58:.26);
+  const visualChoice=String(data.weaponChoice||v.skillWeaponChoice||"");
+  const visualDuration=tool==="Axe"?(visualChoice==="doubleAxe"?.58:visualChoice==="battleAxe"?.56:visualChoice==="throwingAxe"?.34:.50):tool==="Sword"?(visualChoice==="longSword"?.42:visualChoice==="spear"?.34:visualChoice==="daggers"?.36:.36):.26;
+  v.attackTimer=action==="shoot"?.20:visualDuration;v._attackVisualDuration=action==="shoot"?.20:visualDuration;
   if(data.throwing){v._throwAxePendingUntil=game.time+.35;v.skillWeaponChoice="throwingAxe";v.toolTiers=v.toolTiers||{};v.toolTiers.Axe=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
   v.punchSide=(v.punchSide||1)*-1;
   if(Number.isFinite(Number(data.angle))){
@@ -11731,7 +11735,7 @@ function drawRemotePlayer(v) {
   ctx.rotate((v.angle || 0) - Math.PI / 2);
 
   const holding = v.heldSpecial || v.tool || "Fist";
-  const remoteSwingMax = (TOOLS[v.swingWeapon||holding] && TOOLS[v.swingWeapon||holding].swing) || 0.26;
+  const remoteSwingMax = Math.max(.08,Number(v._attackVisualDuration)||((TOOLS[v.swingWeapon||holding] && TOOLS[v.swingWeapon||holding].swing) || 0.26));
   const attackT = v.attackTimer > 0 ? clamp(1 - (v.attackTimer / remoteSwingMax), 0, 1) : 0;
   const remoteSwing = v.attackTimer > 0 ? Math.sin(attackT * Math.PI) : 0;
   hostlRenderModernPlayer(v, { holding, attackT, swingEase: remoteSwing, walkAmt, punchSide: v.punchSide || 1, swimming });
@@ -16853,13 +16857,38 @@ function breedHiveBeesEveryTenNightsOffline(){
 function growHiveFromPollenOffline(hive){if(!hive)return;const old=Number(hive.scale)||4.2;hive.scale=Math.min(5.75,old+.035);hive.pulse=Math.max(Number(hive.pulse)||0,.35);}
 function spreadBeeFlowerOffline(a){const src=resources[a?._beeFlowerIdx];if(!isBeeFlowerResource(src))return;a._flowerSeedPollen=(Math.floor(Number(a._flowerSeedPollen)||0)+1);if(a._flowerSeedPollen<3)return;a._flowerSeedPollen=0;const total=resources.reduce((n,r)=>n+(isBeeFlowerResource(r)?1:0),0);if(total>=78)return;for(let tries=0;tries<12;tries++){const q=rand(0,TAU),d=rand(85,240),x=clamp(src.x+Math.cos(q)*d,30,WORLD_W-30),y=clamp(src.y+Math.sin(q)*d,30,WORLD_H-30);if(worldBiomeAt(x,y)!==worldBiomeAt(src.x,src.y)||solidOverlaps(x,y,18))continue;const type=src.type,info=BIOME_RESOURCE_INFO[type],flower={type,x,y,hp:9999,maxHp:9999,alive:true,scale:rand(1.0,1.32),solidR:18,canopyR:0,rot:rand(-.35,.35),pulse:0,respawnAt:0};resources.push(flower);addStaticCollider("resources",flower);spark(x,y,info?.color||"#ef8ac4",7,45);break;}}
 function updateWorkerBeeJobOffline(a,dt,hive){
-  if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);let state=a._beeWorkState||"seek";
-  if(state==="seek"){if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";let fi=offlineNearestBeeFlowerIndex(a,3400,a._beePreferBiome);if(fi<0)fi=offlineNearestBeeFlowerIndex(a,3400,"");if(fi<0){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}a._beeFlowerIdx=fi;a._beeWorkState="flower";state="flower";}
-  if(state==="flower"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}const d=dist(a.x,a.y,f.x,f.y);const aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);if(d>Math.max(22,(f.solidR||18)+12))moveFacing(a,(a.speed||60)*.82,dt);else{a._beeWorkState="collect";a._beeWorkTimer=rand(1.8,3.0);a._beePollen=true;f.pulse=Math.max(Number(f.pulse)||0,.3);}return true;}
-  if(state==="collect"){const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";return true;}a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);if(a._beeWorkTimer<=0)a._beeWorkState="home";return true;}
-  if(state==="home"){const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;if(d>stop)moveFacing(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;}
-  if(state==="deposit"){a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;if(a._beeWorkTimer<=0){if(a._beePollen){growHiveFromPollenOffline(hive);spreadBeeFlowerOffline(a);giveWildExpOffline(a,6,"pollen");}a._beePollen=false;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;}
-  a._beeWorkState="seek";return false;
+  if(a.stage==="baby"){a.pollenCollecting=false;a.pollenProgress=0;return false;}
+  const c=offlineResourceCenter(hive);let state=a._beeWorkState||"seek";
+  if(state==="seek"){
+    a.pollenCollecting=false;a.pollenProgress=0;a._beePollen=false;
+    if(!a._beePreferBiome)a._beePreferBiome=Math.random()<.38?"forest":"rainforest";
+    let fi=offlineNearestBeeFlowerIndex(a,3400,a._beePreferBiome);if(fi<0)fi=offlineNearestBeeFlowerIndex(a,3400,"");
+    if(fi<0){a._beeWorkWait=(Number(a._beeWorkWait)||0)-dt;if(a._beeWorkWait<=0){a._beeWorkWait=rand(3,7);a._beePreferBiome="";}return false;}
+    a._beeFlowerIdx=fi;a._beeWorkState="flower";state="flower";
+  }
+  if(state==="flower"){
+    const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return true;}
+    const d=dist(a.x,a.y,f.x,f.y),aim=angTo(a.x,a.y,f.x,f.y);smoothTurn(a,aim,dt,5.1);
+    if(d>Math.max(22,(f.solidR||18)+12))moveFacing(a,(a.speed||60)*.82,dt);
+    else{a._beeWorkState="collect";a._beeCollectDuration=rand(2.6,3.6);a.pollenProgress=0;a.pollenCollecting=true;a._beePollen=false;f.pulse=Math.max(Number(f.pulse)||0,.3);}
+    return true;
+  }
+  if(state==="collect"){
+    const f=resources[a._beeFlowerIdx];if(!isBeeFlowerResource(f)){a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return true;}
+    const duration=Math.max(.4,Number(a._beeCollectDuration)||3);a.pollenCollecting=true;a.pollenProgress=clamp((Number(a.pollenProgress)||0)+dt/duration,0,1);
+    f.pulse=Math.max(Number(f.pulse)||0,.28);smoothTurn(a,angTo(a.x,a.y,f.x,f.y),dt,4.5);
+    if(a.pollenProgress>=.999){a.pollenProgress=1;a.pollenCollecting=false;a._beePollen=true;a._beeWorkState="home";}
+    return true;
+  }
+  if(state==="home"){
+    a.pollenCollecting=false;const d=dist(a.x,a.y,c.x,c.y),aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,5.2);const stop=(hive.solidR||70)+Math.max(20,(a.r||18)*.7)+12;
+    if(d>stop)moveFacing(a,(a.speed||60)*.88,dt);else{a._beeWorkState="deposit";a._beeWorkTimer=rand(1.2,2.0);}return true;
+  }
+  if(state==="deposit"){
+    a.pollenCollecting=false;a._beeWorkTimer=(Number(a._beeWorkTimer)||0)-dt;
+    if(a._beeWorkTimer<=0){if(a._beePollen){growHiveFromPollenOffline(hive);spreadBeeFlowerOffline(a);giveWildExpOffline(a,6,"pollen");}a._beePollen=false;a.pollenProgress=0;a._beeWorkState="seek";a._beeWorkWait=rand(2,5);a._beePreferBiome="";}return true;
+  }
+  a._beeWorkState="seek";a.pollenCollecting=false;a.pollenProgress=0;return false;
 }
 function updateDroneBeeHiveLifeOffline(a,dt,hive){
   if(a.stage==="baby")return false;const c=offlineResourceCenter(hive);a._beeHoneyT=(Number.isFinite(Number(a._beeHoneyT))?Number(a._beeHoneyT):rand(16,36))-dt;
@@ -22746,12 +22775,12 @@ function applyToolTierStats(){
   if((t.TigerClaws||0)>=1)Object.assign(TOOLS.TigerClaws,{dmg:9.5,range:47,cadence:.26});if((t.TigerClaws||0)>=2)Object.assign(TOOLS.TigerClaws,{dmg:13,range:50,cadence:.22,doubleHit:true});
   if((t.BoxingGloves||0)>=1)Object.assign(TOOLS.BoxingGloves,{dmg:9.2,range:51,cadence:.30});if((t.BoxingGloves||0)>=2)Object.assign(TOOLS.BoxingGloves,{dmg:13.5,range:54,cadence:.28});
   const spec=String(player.skillWeaponChoice||"");
-  if(spec==="daggers")Object.assign(TOOLS.Sword,{dmg:7.2,range:44,cadence:.22,swing:.14,doubleHit:true});
-  else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:74,cadence:.50,swing:.28});
-  else if(spec==="spear")Object.assign(TOOLS.Sword,{dmg:16,range:96,cadence:.46,swing:.22});
+  if(spec==="daggers")Object.assign(TOOLS.Sword,{dmg:7.2,range:44,cadence:.36,swing:.36,doubleHit:true});
+  else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:74,cadence:.50,swing:.42});
+  else if(spec==="spear")Object.assign(TOOLS.Sword,{dmg:16,range:96,cadence:.46,swing:.34});
   else if(spec==="doubleAxe")Object.assign(TOOLS.Axe,{dmg:8.8,range:66,cadence:.72,swing:.58,gather:4.0,resourcePower:1.50,doubleHit:true});
-  else if(spec==="throwingAxe")Object.assign(TOOLS.Axe,{dmg:16,range:50,cadence:.72,swing:.24,gather:1.7,resourcePower:.72,throwing:true});
-  else if(spec==="battleAxe")Object.assign(TOOLS.Axe,{dmg:20,range:78,cadence:.68,swing:.50,gather:2.3,resourcePower:.95,woodWall:11});
+  else if(spec==="throwingAxe")Object.assign(TOOLS.Axe,{dmg:16,range:50,cadence:.72,swing:.34,gather:1.7,resourcePower:.72,throwing:true});
+  else if(spec==="battleAxe")Object.assign(TOOLS.Axe,{dmg:20,range:78,cadence:.68,swing:.56,gather:2.3,resourcePower:.95,woodWall:11});
   const cm=player.craftBonuses?.combat||1; if(cm!==1) for(const k of ["Axe","Pickaxe","Sword","Bow","TigerClaws","BoxingGloves"]) TOOLS[k].dmg*=cm;
 }
 function upgradeCraft(id){
@@ -25079,6 +25108,15 @@ function drawAnimalUnsafe(a) {
     ctx.fillStyle = ratio > 0.4 ? "#7be08a" : "#f2836a";
     ctx.fillRect(a.x - bw / 2, a.y - a.r - 14, bw * ratio, 5);
   }
+  // Worker bees visibly fill their pollen load while they stay at a giant flower.
+  // The bar starts empty, reaches full, then disappears as the bee heads home.
+  if (!a.dead && a.type === "workerbee" && a.pollenCollecting) {
+    const pollen = clamp(Number(a.pollenProgress)||0,0,1);
+    const bw = Math.max(32, a.r * 1.55), bh = 6, bx = a.x - bw/2, by = a.y + a.r + 8;
+    ctx.fillStyle = "rgba(35,28,12,.78)"; roundRect(bx-1,by-1,bw+2,bh+2,3); ctx.fill();
+    ctx.fillStyle = "rgba(245,226,139,.24)"; roundRect(bx,by,bw,bh,2); ctx.fill();
+    if(pollen>0){ctx.fillStyle = "#f2c94c"; roundRect(bx,by,Math.max(1,bw*pollen),bh,2); ctx.fill();}
+  }
   // elemental walk trail
   if (!a.sleeping && !a.dead && particles.length < PERF_PARTICLE_SOFT_CAP && (a._moved || Math.random() < (MOBILE_DEVICE_HINT ? 0.05 : 0.14))) {
     const col = ELEM_GLOW[(PET_TYPES[a.type] || {}).elem] || a.coat || "#efe6d2";
@@ -25480,21 +25518,43 @@ function hostlDrawSpear(pose,attackT,walkAmt){
 function hostlDrawDoubleAxe(pose,attackT,walkAmt){
   let rot=0;
   if(attackT>0){
-    if(attackT<.30)rot=-.38*(attackT/.30);
-    else if(attackT<.72){const q=(attackT-.30)/.42;rot=-.38+1.48*(1-Math.pow(1-q,3));}
-    else{const q=(attackT-.72)/.28;rot=1.10*(1-q);}
+    if(attackT<.30)rot=-.38*hostlAnimEase(attackT/.30);
+    else if(attackT<.72){const q=hostlAnimEase((attackT-.30)/.42);rot=-.38+1.48*q;}
+    else{const q=hostlAnimEase((attackT-.72)/.28);rot=1.10*(1-q);}
   }
-  for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],(i?1:-1)*rot*4,(i%2?-walkAmt:walkAmt));
-  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,0);
+  for(let i=0;i<pose.arms.length;i++){
+    const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
+    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*(i===0?.58:.80),piv.x,piv.y);
+  }
+  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
+function hostlAnimEase(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
-  const q=Math.sin(attackT*Math.PI),isAxe=poseKey.startsWith("axe");
-  for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],(i?1:-1)*q*2,(i%2?-walkAmt:walkAmt)+q*2);
-  for(const tool of pose.tools){
-    const pivotX=tool.x+tool.w*.5,pivotY=tool.y+tool.h*.5;
-    hostlDrawPosePiece(tool,q*(isAxe?4:3),-q*(isAxe?3:4),(isAxe?.52:.38)*q,pivotX,pivotY);
+  const isAxe=poseKey.startsWith("axe");
+  let rot=0,dx=0,dy=0;
+  if(isAxe){
+    // Small wind-up, then a smooth swing in the opposite direction, followed by
+    // a controlled return to the exact Ref-matched resting pose.
+    if(attackT<=0){rot=0;dx=0;dy=0;}
+    else if(attackT<.20){const q=hostlAnimEase(attackT/.20);rot=.16*q;dx=q*1.5;dy=q*-1;}
+    else if(attackT<.68){const q=hostlAnimEase((attackT-.20)/.48);rot=.16+(-1.20-.16)*q;dx=1.5-4.5*q;dy=-1+5*q;}
+    else if(attackT<=1){const q=hostlAnimEase((attackT-.68)/.32);rot=-1.20*(1-q);dx=-3*(1-q);dy=4*(1-q);}
+  }else{
+    // Sword swipes across the front/top of the head to the opposite side. Most
+    // of the animation is the strike; the return is quicker, but still eased.
+    if(attackT<.66){const q=hostlAnimEase(attackT/.66);rot=1.58*q;dx=5*q;dy=-5*q;}
+    else{const q=hostlAnimEase((attackT-.66)/.34);rot=1.58*(1-q);dx=5*(1-q);dy=-5*(1-q);}
   }
+  // Arms rotate around their shoulders, so the hands stay attached to the swing.
+  for(let i=0;i<pose.arms.length;i++){
+    const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
+    const armRot=rot*(isAxe?(i===0?.58:.82):(i===0?.72:.92));
+    hostlDrawPosePiece(arm,dx*(i===0?.55:.8),dy*(i===0?.55:.8)+(i%2?-walkAmt:walkAmt),armRot,piv.x,piv.y);
+  }
+  // Rotate the tool around the grip area near the hands rather than its center.
+  // That is what keeps the blade/head and the hands moving as one object.
+  for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
 function hostlRenderModernPlayer(actor,opts={}){
