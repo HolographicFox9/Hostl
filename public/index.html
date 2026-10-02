@@ -25803,9 +25803,16 @@ function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
       const side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
       hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),rot,piv.x,piv.y);
     }else{
-      // Sword hands keep the exact left/right arrangement from the Sep art.
-      // Rotate both around the same grip as the blade so they never cross/swap.
-      hostlDrawPosePiece(arm,dx,dy+(i%2?-walkAmt:walkAmt),rot,0,7);
+      // Sword hands stay on their original Sep sides. The right hand keeps its
+      // original Sep orientation instead of rolling over with the blade.
+      // It follows the grip by position only. The left hand gets only a small
+      // supporting rotation so the swing still reads naturally.
+      if(i===1){
+        hostlDrawPosePiece(arm,dx,dy-walkAmt,0);
+      }else{
+        const piv=hostlPoseShoulder(arm,-1);
+        hostlDrawPosePiece(arm,dx*.82,dy*.82+walkAmt,rot*.38,piv.x,piv.y);
+      }
     }
   }
   hostlDrawPosePiece(pose.body);
