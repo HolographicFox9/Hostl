@@ -8786,7 +8786,7 @@ function uploadedAnimalVisibleDimensions(type, stage) {
   const speciesHeight = {
     dog: 1.06, cat: 1.02, dragon: 1.00,
     fox: 1.06, wolf: 1.10, bear: 1.18, rabbit: 0.98, owl: 1.48, snake: 0.68,
-    deer: 0.98
+    deer: 0.98, fennec: 0.92
   }[type];
 
   // Non-uploaded species keep using the original radius-based collision model.
@@ -8803,7 +8803,7 @@ function uploadedAnimalVisibleDimensions(type, stage) {
   const lengthMul = {
     dog: 1.62, cat: 1.58, dragon: 1.92,
     fox: 1.70, wolf: 1.72, bear: 1.42, rabbit: 1.42, owl: 1.05, snake: 3.70,
-    deer: 1.78
+    deer: 1.78, fennec: 1.73
   }[type] || 1.55;
 
   const h = baseR * speciesHeight * stageScale;
@@ -8890,7 +8890,11 @@ function animalHitboxFit(type, stage) {
     saber:  { len: 0.88, body: 0.88, head: 0.90 },
     clouded:{ len: 0.92, body: 0.90, head: 0.93 },
     deer:   { len: 0.82, body: 0.74, head: 0.78 },
-    owl:    { len: 1.00, body: 1.02, head: 1.05 }
+    owl:    { len: 1.00, body: 1.02, head: 1.05 },
+    fennec: { len: 0.92, body: 0.88, head: 0.84 },
+    queenbee:{len:0.78, body:0.78, head:0.72},
+    workerbee:{len:0.72, body:0.72, head:0.68},
+    dronebee:{len:0.75, body:0.75, head:0.70}
   }[type] || { len: 1.02, body: 1.02, head: 1.05 };
 
   return {
@@ -8988,15 +8992,17 @@ function animalAttackCooldown(type, stage, owned = false) {
 // Physical animal melee only connects when the attacker's HEAD overlaps the target.
 // This mirrors the visible head geometry closely enough that bites feel contact-based.
 function animalHeadHitbox(a) {
-  // A bite comes from the actual front/muzzle circle of the animal silhouette.
-  // No stage multiplier or oversized invisible reach is added here.
+  // Bite contact uses only the species-sized face/muzzle area. Different animals
+  // have different head proportions; there is no shared generic bite bubble.
   const hits=animalBodyHitboxes(a);
   if(hits.length){
     const nose=hits[hits.length-1];
-    return {x:nose.x,y:nose.y,r:Math.max(4,nose.r*.92)};
+    const scale=animalHeadHitboxScale(a?.type);
+    return {x:nose.x,y:nose.y,r:Math.max(animalHitboxMinRadius(a)*.72,nose.r*scale)};
   }
-  const r=Math.max(8,Number(a?.r)||18),angle=Number(a?.angle)||0;
-  return {x:(a?.x||0)+Math.cos(angle)*r*1.28,y:(a?.y||0)+Math.sin(angle)*r*1.28,r:Math.max(4,r*.24)};
+  const r=Math.max(4,Number(a?.r)||18),angle=Number(a?.angle)||0;
+  const scale=animalHeadHitboxScale(a?.type);
+  return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
 function animalHeadTouches(a, tx, ty, tr) {
   const h = animalHeadHitbox(a);
@@ -16305,6 +16311,37 @@ function goldSolidHitbox(g) {
   const rr = g.r * (g.pure ? 0.78 : g.size === "huge" ? 0.75 : 0.72);
   return { x: g.x, y: g.y + yOff, r: rr };
 }
+const ANIMAL_RADIUS_HITBOX_PARTS = Object.freeze({
+  dog:       [[-0.62,0,0.39],[-0.36,0,0.57],[0.05,0,0.67],[0.50,0,0.53],[0.82,0,0.39],[1.08,0,0.28],[1.26,0,0.19]],
+  cat:       [[-0.54,0,0.32],[-0.30,0,0.46],[0.07,0,0.55],[0.44,0,0.43],[0.72,0,0.32],[0.94,0,0.23],[1.10,0,0.16]],
+  dragon:    [[-0.82,0,0.29],[-0.52,0,0.41],[-0.12,0,0.50],[0.34,0,0.45],[0.72,0,0.33],[0.98,0,0.23],[1.17,0,0.16]],
+  fox:       [[-0.61,0,0.33],[-0.34,0,0.47],[0.05,0,0.56],[0.45,0,0.44],[0.75,0,0.33],[0.98,0,0.23],[1.15,0,0.16]],
+  wolf:      [[-0.62,0,0.38],[-0.36,0,0.55],[0.05,0,0.63],[0.47,0,0.50],[0.78,0,0.37],[1.02,0,0.26],[1.19,0,0.17]],
+  bear:      [[-0.50,0,0.48],[-0.27,0,0.68],[0.07,0,0.78],[0.42,0,0.67],[0.68,0,0.50],[0.88,0,0.34],[1.02,0,0.22]],
+  rabbit:    [[-0.38,0,0.29],[-0.18,0,0.43],[0.08,0,0.52],[0.36,0,0.42],[0.57,0,0.30],[0.74,0,0.21],[0.87,0,0.14]],
+  owl:       [[-0.27,0,0.38],[-0.09,0,0.56],[0.13,0,0.64],[0.37,0,0.54],[0.55,0,0.39],[0.70,0,0.27],[0.82,0,0.18]],
+  snake:     [[-1.00,0,0.25],[-0.76,0,0.32],[-0.45,0,0.37],[-0.12,0,0.40],[0.22,0,0.38],[0.54,0,0.34],[0.82,0,0.29],[1.05,0,0.22],[1.22,0,0.15]],
+  deer:      [[-0.62,0,0.29],[-0.36,0,0.42],[0.04,0,0.50],[0.41,0,0.38],[0.68,0,0.27],[0.90,0,0.19],[1.05,0,0.13]],
+  boar:      [[-0.66,0,0.43],[-0.39,0,0.62],[0.04,0,0.73],[0.47,0,0.60],[0.78,0,0.43],[1.02,0,0.29],[1.20,0,0.19]],
+  saber:     [[-0.63,0,0.35],[-0.36,0,0.50],[0.05,0,0.59],[0.47,0,0.47],[0.77,0,0.34],[1.00,0,0.24],[1.17,0,0.16]],
+  clouded:   [[-0.58,0,0.33],[-0.33,0,0.47],[0.05,0,0.55],[0.43,0,0.43],[0.72,0,0.31],[0.94,0,0.22],[1.09,0,0.15]],
+  fennec:    [[-0.50,0,0.29],[-0.27,0,0.42],[0.06,0,0.51],[0.38,0,0.41],[0.61,0,0.29],[0.79,0,0.20],[0.92,0,0.13]],
+  queenbee:  [[-0.42,0,0.30],[-0.18,0,0.43],[0.10,0,0.48],[0.37,0,0.38],[0.57,0,0.25]],
+  workerbee: [[-0.38,0,0.27],[-0.16,0,0.39],[0.10,0,0.44],[0.34,0,0.34],[0.52,0,0.22]],
+  dronebee:  [[-0.40,0,0.29],[-0.17,0,0.41],[0.10,0,0.46],[0.35,0,0.36],[0.54,0,0.23]]
+});
+function animalHitboxMinRadius(a){
+  const r=Math.max(4,Number(a?.r)||18);
+  const stageMul=({baby:.11,adult:.13,boss:.12,superboss:.11,bigmomma:.10})[a?.stage]||.12;
+  return Math.max(2.0,r*stageMul);
+}
+function animalHeadHitboxScale(type){
+  return ({
+    dog:.70,cat:.66,dragon:.66,fox:.65,wolf:.63,bear:.64,rabbit:.60,owl:.66,snake:.58,
+    deer:.60,boar:.62,saber:.61,clouded:.61,fennec:.60,queenbee:.68,workerbee:.66,dronebee:.67
+  })[type]||.64;
+}
+
 function animalBodyHitboxes(a) {
   if (!a) return [];
 
@@ -16326,14 +16363,15 @@ function animalBodyHitboxes(a) {
       fox:    [[-0.37,0.17],[-0.19,0.25],[0.04,0.30],[0.27,0.26],[0.44,0.21],[0.56,0.16]],
       wolf:   [[-0.36,0.18],[-0.18,0.27],[0.05,0.32],[0.28,0.28],[0.45,0.23],[0.57,0.17]],
       bear:   [[-0.30,0.21],[-0.14,0.32],[0.07,0.38],[0.28,0.34],[0.43,0.27],[0.54,0.20]],
-      deer:   [[-0.28,0.13],[-0.09,0.20],[0.12,0.24],[0.33,0.21],[0.49,0.16],[0.61,0.11]]
+      deer:   [[-0.28,0.13],[-0.09,0.20],[0.12,0.24],[0.33,0.21],[0.49,0.16],[0.61,0.11]],
+      fennec: [[-0.31,0.14],[-0.13,0.21],[0.07,0.25],[0.27,0.21],[0.41,0.16],[0.51,0.11]]
     }[a.type];
 
     return cfg.map(([xFrac, rFrac], i) => {
       const headish = i >= cfg.length - 2;
       const noseTip = i === cfg.length - 1;
       const forward = dims.w * xFrac * (headish ? fit.head : fit.len);
-      const rr = Math.max(8, dims.h * rFrac * (headish ? fit.head : fit.body));
+      const rr = Math.max(animalHitboxMinRadius(a), dims.h * rFrac * (headish ? fit.head : fit.body));
       const headDrop = noseTip ? dims.h * 0.05 * fit.head :
                        headish ? dims.h * 0.03 * fit.head : 0;
       return {
@@ -16348,21 +16386,7 @@ function animalBodyHitboxes(a) {
   const r = a.r || 18;
   let parts;
 
-  if (a.type === "snake") {
-    parts = [[-1.00,0,0.31],[-0.76,0,0.41],[-0.24,0,0.49],[0.32,0,0.47],[0.80,0,0.41],[1.16,0,0.33],[1.42,0,0.24]];
-  } else if (a.type === "boar") {
-    parts = [[-0.74,0,0.53],[-0.48,0,0.73],[0.08,0,0.83],[0.68,0,0.68],[1.08,0,0.50],[1.42,0,0.39],[1.66,0,0.28]];
-  } else if (a.type === "saber" || a.type === "clouded") {
-    parts = [[-0.58,0,0.42],[-0.34,0,0.56],[0.08,0,0.64],[0.48,0,0.53],[0.80,0,0.40],[1.04,0,0.30],[1.22,0,0.21]];
-  } else if (a.type === "deer") {
-    parts = [[-0.68,0,0.38],[-0.40,0,0.54],[0.06,0,0.61],[0.54,0,0.46],[0.90,0,0.34],[1.18,0,0.25],[1.38,0,0.18]];
-  } else if (a.type === "rabbit") {
-    parts = [[-0.52,0,0.43],[-0.28,0,0.62],[0.25,0,0.67],[0.74,0,0.51],[1.10,0,0.40],[1.36,0,0.31],[1.55,0,0.23]];
-  } else if (a.type === "owl") {
-    parts = [[-0.42,0,0.47],[-0.18,0,0.69],[0.28,0,0.71],[0.68,0,0.55],[0.98,0,0.42],[1.24,0,0.32],[1.42,0,0.23]];
-  } else {
-    parts = [[-0.64,0,0.47],[-0.39,0,0.69],[0.10,0,0.77],[0.65,0,0.61],[1.02,0,0.45],[1.34,0,0.35],[1.56,0,0.25]];
-  }
+  parts = ANIMAL_RADIUS_HITBOX_PARTS[a.type] || ANIMAL_RADIUS_HITBOX_PARTS.dog;
 
   return parts.map(([forward, side, rad], i) => {
     const fromEnd = parts.length - 1 - i;
@@ -16375,7 +16399,7 @@ function animalBodyHitboxes(a) {
     return {
       x: a.x + ca * (forward * r * lenMul) - sa * (localSide * r),
       y: a.y + sa * (forward * r * lenMul) + ca * (localSide * r),
-      r: Math.max(8, r * rad * bodyMul)
+      r: Math.max(animalHitboxMinRadius(a), r * rad * bodyMul)
     };
   });
 }
@@ -25774,9 +25798,15 @@ function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
   // axe hand does not lag behind the head of the swing.
   for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   for(let i=0;i<pose.arms.length;i++){
-    const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    const armRot=rot*(isAxe?1.0:.92);
-    hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),armRot,piv.x,piv.y);
+    const arm=pose.arms[i];
+    if(isAxe){
+      const side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
+      hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),rot,piv.x,piv.y);
+    }else{
+      // Sword hands keep the exact left/right arrangement from the Sep art.
+      // Rotate both around the same grip as the blade so they never cross/swap.
+      hostlDrawPosePiece(arm,dx,dy+(i%2?-walkAmt:walkAmt),rot,0,7);
+    }
   }
   hostlDrawPosePiece(pose.body);
 }

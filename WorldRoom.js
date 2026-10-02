@@ -849,10 +849,10 @@ function animalRadius(type, stage) {
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
-  const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98}[type];
+  const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,fennec:.92}[type];
   if(!speciesHeight)return null;
   const stageScale={baby:1.78,adult:1.52,boss:1.43,superboss:1.40,bigmomma:1.38}[stage]||1.45;
-  const lengthMul={dog:1.62,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78}[type]||1.55;
+  const lengthMul={dog:1.62,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,fennec:1.73}[type]||1.55;
   const h=animalRadius(type,stage)*speciesHeight*stageScale;
   return{h,w:h*lengthMul};
 }
@@ -912,7 +912,11 @@ function animalHitboxFit(type,stage){
     saber:{len:.88,body:.88,head:.90},
     clouded:{len:.92,body:.90,head:.93},
     deer:{len:.82,body:.74,head:.78},
-    owl:{len:1.00,body:1.02,head:1.05}
+    owl:{len:1.00,body:1.02,head:1.05},
+    fennec:{len:.92,body:.88,head:.84},
+    queenbee:{len:.78,body:.78,head:.72},
+    workerbee:{len:.72,body:.72,head:.68},
+    dronebee:{len:.75,body:.75,head:.70}
   }[type]||{len:1.02,body:1.02,head:1.05};
 
   return{
@@ -931,6 +935,37 @@ function animalSpawnFootprint(type,stage){
   return r*m*Math.max(fit.len,fit.body,fit.head);
 }
 
+const ANIMAL_RADIUS_HITBOX_PARTS = Object.freeze({
+  dog:       [[-0.62,0,0.39],[-0.36,0,0.57],[0.05,0,0.67],[0.50,0,0.53],[0.82,0,0.39],[1.08,0,0.28],[1.26,0,0.19]],
+  cat:       [[-0.54,0,0.32],[-0.30,0,0.46],[0.07,0,0.55],[0.44,0,0.43],[0.72,0,0.32],[0.94,0,0.23],[1.10,0,0.16]],
+  dragon:    [[-0.82,0,0.29],[-0.52,0,0.41],[-0.12,0,0.50],[0.34,0,0.45],[0.72,0,0.33],[0.98,0,0.23],[1.17,0,0.16]],
+  fox:       [[-0.61,0,0.33],[-0.34,0,0.47],[0.05,0,0.56],[0.45,0,0.44],[0.75,0,0.33],[0.98,0,0.23],[1.15,0,0.16]],
+  wolf:      [[-0.62,0,0.38],[-0.36,0,0.55],[0.05,0,0.63],[0.47,0,0.50],[0.78,0,0.37],[1.02,0,0.26],[1.19,0,0.17]],
+  bear:      [[-0.50,0,0.48],[-0.27,0,0.68],[0.07,0,0.78],[0.42,0,0.67],[0.68,0,0.50],[0.88,0,0.34],[1.02,0,0.22]],
+  rabbit:    [[-0.38,0,0.29],[-0.18,0,0.43],[0.08,0,0.52],[0.36,0,0.42],[0.57,0,0.30],[0.74,0,0.21],[0.87,0,0.14]],
+  owl:       [[-0.27,0,0.38],[-0.09,0,0.56],[0.13,0,0.64],[0.37,0,0.54],[0.55,0,0.39],[0.70,0,0.27],[0.82,0,0.18]],
+  snake:     [[-1.00,0,0.25],[-0.76,0,0.32],[-0.45,0,0.37],[-0.12,0,0.40],[0.22,0,0.38],[0.54,0,0.34],[0.82,0,0.29],[1.05,0,0.22],[1.22,0,0.15]],
+  deer:      [[-0.62,0,0.29],[-0.36,0,0.42],[0.04,0,0.50],[0.41,0,0.38],[0.68,0,0.27],[0.90,0,0.19],[1.05,0,0.13]],
+  boar:      [[-0.66,0,0.43],[-0.39,0,0.62],[0.04,0,0.73],[0.47,0,0.60],[0.78,0,0.43],[1.02,0,0.29],[1.20,0,0.19]],
+  saber:     [[-0.63,0,0.35],[-0.36,0,0.50],[0.05,0,0.59],[0.47,0,0.47],[0.77,0,0.34],[1.00,0,0.24],[1.17,0,0.16]],
+  clouded:   [[-0.58,0,0.33],[-0.33,0,0.47],[0.05,0,0.55],[0.43,0,0.43],[0.72,0,0.31],[0.94,0,0.22],[1.09,0,0.15]],
+  fennec:    [[-0.50,0,0.29],[-0.27,0,0.42],[0.06,0,0.51],[0.38,0,0.41],[0.61,0,0.29],[0.79,0,0.20],[0.92,0,0.13]],
+  queenbee:  [[-0.42,0,0.30],[-0.18,0,0.43],[0.10,0,0.48],[0.37,0,0.38],[0.57,0,0.25]],
+  workerbee: [[-0.38,0,0.27],[-0.16,0,0.39],[0.10,0,0.44],[0.34,0,0.34],[0.52,0,0.22]],
+  dronebee:  [[-0.40,0,0.29],[-0.17,0,0.41],[0.10,0,0.46],[0.35,0,0.36],[0.54,0,0.23]]
+});
+function animalHitboxMinRadius(a){
+  const r=Math.max(4,Number(a?.r)||18);
+  const stageMul=({baby:.11,adult:.13,boss:.12,superboss:.11,bigmomma:.10})[a?.stage]||.12;
+  return Math.max(2.0,r*stageMul);
+}
+function animalHeadHitboxScale(type){
+  return ({
+    dog:.70,cat:.66,dragon:.66,fox:.65,wolf:.63,bear:.64,rabbit:.60,owl:.66,snake:.58,
+    deer:.60,boar:.62,saber:.61,clouded:.61,fennec:.60,queenbee:.68,workerbee:.66,dronebee:.67
+  })[type]||.64;
+}
+
 function animalHitCircles(a) {
   const ang=a?.angle||0,ca=Math.cos(ang),sa=Math.sin(ang);
   const fit=animalHitboxFit(a?.type,a?.stage);
@@ -947,14 +982,15 @@ function animalHitCircles(a) {
       fox:[[-.37,.17],[-.19,.25],[.04,.30],[.27,.26],[.44,.21],[.56,.16]],
       wolf:[[-.36,.18],[-.18,.27],[.05,.32],[.28,.28],[.45,.23],[.57,.17]],
       bear:[[-.30,.21],[-.14,.32],[.07,.38],[.28,.34],[.43,.27],[.54,.20]],
-      deer:[[-.28,.13],[-.09,.20],[.12,.24],[.33,.21],[.49,.16],[.61,.11]]
+      deer:[[-.28,.13],[-.09,.20],[.12,.24],[.33,.21],[.49,.16],[.61,.11]],
+      fennec:[[-.31,.14],[-.13,.21],[.07,.25],[.27,.21],[.41,.16],[.51,.11]]
     }[a.type];
 
     return cfg.map(([xf,rf],i)=>{
       const headish=i>=cfg.length-2;
       const noseTip=i===cfg.length-1;
       const forward=d.w*xf*(headish?fit.head:fit.len);
-      const rr=Math.max(8,d.h*rf*(headish?fit.head:fit.body));
+      const rr=Math.max(animalHitboxMinRadius(a),d.h*rf*(headish?fit.head:fit.body));
       const drop=noseTip?d.h*.05*fit.head:headish?d.h*.03*fit.head:0;
       return{x:a.x+ca*forward-sa*drop,y:a.y+sa*forward+ca*drop,r:rr};
     });
@@ -962,13 +998,7 @@ function animalHitCircles(a) {
 
   const r=a?.r||18;
   let parts;
-  if(a.type==="snake") parts=[[-1.00,0,.31],[-.76,0,.41],[-.24,0,.49],[.32,0,.47],[.80,0,.41],[1.16,0,.33],[1.42,0,.24]];
-  else if(a.type==="boar") parts=[[-.74,0,.53],[-.48,0,.73],[.08,0,.83],[.68,0,.68],[1.08,0,.50],[1.42,0,.39],[1.66,0,.28]];
-  else if(a.type==="saber"||a.type==="clouded") parts=[[-.58,0,.42],[-.34,0,.56],[.08,0,.64],[.48,0,.53],[.80,0,.40],[1.04,0,.30],[1.22,0,.21]];
-  else if(a.type==="deer") parts=[[-.68,0,.38],[-.40,0,.54],[.06,0,.61],[.54,0,.46],[.90,0,.34],[1.18,0,.25],[1.38,0,.18]];
-  else if(a.type==="rabbit") parts=[[-.52,0,.43],[-.28,0,.62],[.25,0,.67],[.74,0,.51],[1.10,0,.40],[1.36,0,.31],[1.55,0,.23]];
-  else if(a.type==="owl") parts=[[-.42,0,.47],[-.18,0,.69],[.28,0,.71],[.68,0,.55],[.98,0,.42],[1.24,0,.32],[1.42,0,.23]];
-  else parts=[[-.64,0,.47],[-.39,0,.69],[.10,0,.77],[.65,0,.61],[1.02,0,.45],[1.34,0,.35],[1.56,0,.25]];
+  parts=ANIMAL_RADIUS_HITBOX_PARTS[a.type]||ANIMAL_RADIUS_HITBOX_PARTS.dog;
 
   return parts.map(([f,side,rad],i)=>{
     const fromEnd=parts.length-1-i;
@@ -977,7 +1007,7 @@ function animalHitCircles(a) {
     const lenMul=headish?fit.head:fit.len;
     const bodyMul=headish?fit.head:fit.body;
     const localSide=(side+headDrop)*bodyMul;
-    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:Math.max(8,r*rad*bodyMul)};
+    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:Math.max(animalHitboxMinRadius(a),r*rad*bodyMul)};
   });
 }
 function animalPhysicalCircles(a){
@@ -1084,9 +1114,12 @@ function animalProjectileTouch(a,x,y,radius=0){
 }
 function animalFaceGeometry(a){
   const hits=animalHitCircles(a);
-  if(hits.length){const nose=hits[hits.length-1];return{x:nose.x,y:nose.y,r:Math.max(4,nose.r*.92)};}
-  const r=Math.max(8,Number(a?.r)||18),angle=Number(a?.angle)||0;
-  return{x:(a?.x||0)+Math.cos(angle)*r*1.28,y:(a?.y||0)+Math.sin(angle)*r*1.28,r:Math.max(4,r*.24)};
+  if(hits.length){
+    const nose=hits[hits.length-1],scale=animalHeadHitboxScale(a?.type);
+    return{x:nose.x,y:nose.y,r:Math.max(animalHitboxMinRadius(a)*.72,nose.r*scale)};
+  }
+  const r=Math.max(4,Number(a?.r)||18),angle=Number(a?.angle)||0,scale=animalHeadHitboxScale(a?.type);
+  return{x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
 function animalTargetDamageCircles(ref,target){
   if(!target)return[];
