@@ -578,17 +578,20 @@
   .craft-item.cant{opacity:0.45;}
   .craft-item b{color:var(--amber-bright);}
 
-  #skillChoiceOverlay{position:fixed;top:58px;left:50%;transform:translateX(-50%);display:none;z-index:1300;width:min(760px,94vw);pointer-events:none;}
-  #skillChoiceOverlay .card{width:100%;padding:13px 14px 14px;border-radius:16px;background:linear-gradient(180deg,rgba(48,65,52,.98),rgba(30,43,34,.98));border:3px solid #171d18;box-shadow:0 7px 0 #182019,0 14px 32px rgba(0,0,0,.34);pointer-events:auto;}
-  #skillChoiceOverlay .modal-title-clear{font-size:20px;margin:0 0 3px;text-align:center;}
-  #skillChoiceOverlay .lead{font-size:11px;margin:0;text-align:center;opacity:.86;}
-  .skill-choice-grid{display:flex;justify-content:center;align-items:stretch;flex-wrap:wrap;gap:8px;margin-top:9px;text-align:left;}
-  .skill-choice{flex:0 0 158px;max-width:158px;min-height:76px;padding:8px 9px;border:2px solid rgba(255,255,255,.72);border-radius:10px;background:rgba(255,255,255,.72);color:#172019;cursor:pointer;box-shadow:0 3px 0 rgba(17,25,20,.58),0 7px 14px rgba(0,0,0,.20);}
-  @media(max-width:620px){#skillChoiceOverlay{top:46px;width:min(96vw,560px)}.skill-choice-grid{gap:6px}.skill-choice{flex-basis:138px;max-width:138px;min-height:70px;padding:7px 8px}}
-  .skill-choice:hover{border-color:#fff;background:rgba(255,255,255,.88);transform:translateY(-1px);}
-  .skill-choice b{color:#27342a;font-size:13px;text-shadow:none;}
-  .skill-choice small{display:block;margin-top:4px;color:#344038;opacity:.92;line-height:1.28;font-size:10.5px;}
-  .skill-choice .skill-choice-icon{font-size:21px;float:left;margin-right:7px;filter:none;}
+  #skillChoiceOverlay{position:fixed;top:8px;left:50%;transform:translateX(-50%);display:none;z-index:1300;width:min(96vw,980px);pointer-events:none;}
+  /* No big panel behind skill choices. The individual choice tiles are the UI. */
+  #skillChoiceOverlay .card{width:100%;padding:0;border-radius:0;background:transparent;border:0;box-shadow:none;pointer-events:auto;overflow:visible;}
+  #skillChoiceOverlay .modal-title-clear,#skillChoiceOverlay .lead{display:none !important;}
+  .skill-choice-grid{display:flex;justify-content:flex-start;align-items:flex-start;flex-wrap:nowrap;gap:6px;width:max-content;max-width:100%;margin:0 auto;text-align:center;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:0 3px 4px;}
+  .skill-choice-grid::-webkit-scrollbar{display:none;}
+  .skill-choice{box-sizing:border-box;flex:0 0 82px;width:82px;height:82px;max-width:82px;min-height:82px;padding:5px;border:2px solid rgba(255,255,255,.78);border-radius:8px;background:rgba(255,255,255,.68);color:#172019;cursor:pointer;box-shadow:0 3px 0 rgba(17,25,20,.52),0 5px 10px rgba(0,0,0,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  @media(max-width:620px){#skillChoiceOverlay{top:5px;width:99vw}.skill-choice-grid{gap:4px}.skill-choice{flex-basis:72px;width:72px;height:72px;max-width:72px;min-height:72px;padding:4px}}
+  .skill-choice:hover{border-color:#fff;background:rgba(255,255,255,.84);transform:translateY(-1px);}
+  .skill-choice b{color:#27342a;font-size:9px;line-height:1.04;text-shadow:none;}
+  .skill-choice small{display:none;}
+  .skill-choice .skill-choice-icon{font-size:17px;float:none;margin:0 0 3px;filter:none;line-height:1;}
+  #skillChoiceTooltip{display:none;position:absolute;top:88px;left:50%;transform:translateX(-50%);max-width:min(520px,92vw);padding:6px 9px;border-radius:7px;background:rgba(18,25,20,.92);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:10px;line-height:1.25;text-align:center;box-shadow:0 5px 16px rgba(0,0,0,.3);pointer-events:none;white-space:normal;}
+  @media(max-width:620px){#skillChoiceTooltip{top:77px;font-size:9px;max-width:94vw;}}
 
   /* Gameplay menus use the same inked, flat-shaded language as the animal art. */
   #craftOverlay .card,#invOverlay .card,#runShopOverlay .card{
@@ -5513,7 +5516,7 @@ button:focus-visible{
 
 <style id="hostl-update-663-hud">
 /* 663 compact translucent bottom HUD */
-#bottomDock{bottom:6px;display:grid;grid-template-columns:28px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:7px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(98vw,720px);}
+#bottomDock{bottom:6px;display:grid;grid-template-columns:28px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:7px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(99vw,780px);}
 #resourceStrip{grid-area:resources;gap:5px;padding-left:31px;justify-content:center;overflow:visible;}
 .dock-res{font-size:10px;padding:2px 6px;border-width:2px;background:rgba(226,215,173,.76);}
 #skillHud{grid-area:skill;width:min(230px,58vw);justify-self:center;padding:0;}
@@ -5523,8 +5526,8 @@ button:focus-visible{
 #hydrationTrack{width:19px;height:45px;border-radius:7px;border-width:2px;}
 #hydrationFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .18s ease-out;background:linear-gradient(180deg,#8ce9ff 0%,#42bce4 52%,#258cc1 100%);}
 #hotbar{grid-area:hotbar;gap:6px;padding:5px 6px;border-radius:14px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
-.slot{width:60px;height:60px;border-width:2px;border-radius:11px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
-.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:30px;height:30px}.slot .key{font-size:11px}.slot .qty{font-size:11px}.slot .label{font-size:9px}.slot .cost{font-size:9px}
+.slot{width:66px;height:66px;border-width:2px;border-radius:12px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
+.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:34px;height:34px}.slot .key{font-size:12px}.slot .qty{font-size:12px}.slot .label{font-size:9px}.slot .cost{font-size:9px}
 #waterFillBtn{left:50%;bottom:104px;transform:translateX(-50%);min-width:94px;height:40px;border-color:#7edcff;background:linear-gradient(180deg,#2daee0,#1676b7);color:#effcff;box-shadow:0 5px 0 #0d5687,0 9px 18px rgba(0,0,0,.25);}
 #waterFillBtn:active{transform:translateX(-50%) translateY(2px);background:linear-gradient(180deg,#249dcc,#12669f);}
 #tameBtn{bottom:104px;}
@@ -5533,7 +5536,7 @@ body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-w
 body.mobile-performance #resourceStrip{padding-left:24px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
 body.mobile-performance #hydrationHud{width:21px;height:45px}body.mobile-performance #hydrationTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop{font-size:6px}
 body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:3px;padding:3px 4px;width:max-content;max-width:calc(100vw - 24px);justify-self:center;}
-body.mobile-performance .slot{width:50px;height:50px;border-width:2px}body.mobile-performance .slot .ico{width:25px;height:25px}body.mobile-performance .slot .key{font-size:10px}body.mobile-performance .slot .qty{font-size:10px}
+body.mobile-performance .slot{width:54px;height:54px;border-width:2px}body.mobile-performance .slot .ico{width:28px;height:28px}body.mobile-performance .slot .key{font-size:10px}body.mobile-performance .slot .qty{font-size:10px}
 body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:calc(var(--phone-bottom) + 91px);}
 </style>
 </head>
@@ -5668,6 +5671,7 @@ body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:ca
     <h1 class="modal-title-clear" id="skillChoiceTitle">Choose Your Skill</h1>
     <p class="lead" id="skillChoiceLead">Pick one. The other two stay locked for this run.</p>
     <div class="skill-choice-grid" id="skillChoiceGrid"></div>
+    <div id="skillChoiceTooltip" role="tooltip"></div>
   </div>
 </div>
 
@@ -6442,9 +6446,9 @@ if (window.visualViewport) window.visualViewport.addEventListener("resize", sche
 resize(true);
 
 // ---------- constants ----------
-const WORLD_W = 38000, WORLD_H = 28000;
+const WORLD_W = 62000, WORLD_H = 50000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "702";
+const CUBE_SHARED_RULES_VERSION = "704";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6504,10 +6508,31 @@ const BUILD_TIER_META={
     {name:"Golden Flute",cost:{wood:4,gold:4},desc:"Current strongest flute effect."}]
 };
 const SKILL_MILESTONE_CHOICES = [
-  {id:"speed",icon:"💨",name:"Move Faster",desc:"Increase movement speed."},
-  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"Increase attack power."},
-  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Reduce damage taken."}
+  {id:"speed",icon:"💨",name:"Move Faster",desc:"+8% movement speed for this run. Stacks with later Speed choices."},
+  {id:"strength",icon:"⚔️",name:"Stronger Hit",desc:"+8% attack power for this run. Stacks with later Strength choices."},
+  {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Take 8% less damage for this run. Stacks multiplicatively with later Defense choices."}
 ];
+const SPECIAL_WEAPON_HOVER_STATS={
+  daggers:"Damage 7.2 per hit • Double-hit style • Range 44 • Attack delay 0.36s",
+  longSword:"Damage 21 • Range 74 • Attack delay 0.50s",
+  spear:"Damage 16 • Range 96 • Attack delay 0.46s",
+  doubleAxe:"Damage 8.8 per hit • Double-hit style • Range 66 • Attack delay 0.72s",
+  throwingAxe:"Damage 16 • Range 50 • Attack delay 0.72s • One-handed thrown axe",
+  battleAxe:"Damage 20 • Range 78 • Attack delay 0.68s"
+};
+function formatSkillRecipeCost(cost){return Object.entries(cost||{}).map(([k,v])=>`${v} ${k}`).join(" + ");}
+function skillChoiceTooltipText(c){
+  const parts=[];if(c?.desc)parts.push(c.desc);
+  if(c?.weapon&&TOOL_BASE[c.weapon]){const s=TOOL_BASE[c.weapon];parts.push(`Damage ${s.dmg} • Range ${s.range} • Attack delay ${Number(s.cadence||s.swing||0).toFixed(2)}s`);}
+  if(SPECIAL_WEAPON_HOVER_STATS[c?.id])parts.push(SPECIAL_WEAPON_HOVER_STATS[c.id]);
+  const m=String(c?.id||"").match(/^(unlock|build)(Wall|Tower|Saddle|Windmill|Boat|Sub|Chakrams|Flute)$/);
+  if(m){const build=m[2],tier=m[1]==="unlock"?0:Math.min(2,buildUnlockTier(build)+1),meta=BUILD_TIER_META[build]?.[tier];if(meta)parts.push(`${meta.name} recipe • Cost: ${formatSkillRecipeCost(meta.cost)}`);}
+  if(c?.id==="weaponTier"){
+    const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice)||"Weapon",tier=clamp(Math.floor(Number(player.toolTiers?.[w])||0)+1,1,2);
+    const tierName=tier===1?"Stone":"Iron";parts.push(`${tierName} ${w} weapon tier`);
+  }
+  return parts.join("  •  ")||String(c?.name||"");
+}
 function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*9+Math.floor(level*level*.05));}
 function skillMilestoneKind(level){
   level=Math.floor(Number(level)||0);
@@ -15990,8 +16015,17 @@ const MOONMARK_BIOMES = {
 const MOONMARK_RADIUS = 390;
 // Expanded main island: Forest + Rain Forest + Arctic.
 // The Clouded Leopard stays in the Rain Forest; Arctic wildlife gets its own home.
+// The mainland itself is larger now, and it fills one continuous rectangular land world.
+// Ocean starts only after that mainland ends; the larger outer world supplies
+// open sea and room for reachable islands without cutting water into Arctic edges.
+const MAIN_WORLD_W = 44000, MAIN_WORLD_H = 34000;
 const ISLAND_CX = WORLD_W * 0.5, ISLAND_CY = WORLD_H * 0.5;
-const ISLAND_RADIUS = Math.min(WORLD_W, WORLD_H) * 0.415;
+const MAIN_WORLD_LEFT = ISLAND_CX - MAIN_WORLD_W * 0.5;
+const MAIN_WORLD_RIGHT = ISLAND_CX + MAIN_WORLD_W * 0.5;
+const MAIN_WORLD_TOP = ISLAND_CY - MAIN_WORLD_H * 0.5;
+const MAIN_WORLD_BOTTOM = ISLAND_CY + MAIN_WORLD_H * 0.5;
+// Kept as the biome-boundary scale so the established biome proportions remain.
+const ISLAND_RADIUS = Math.min(MAIN_WORLD_W, MAIN_WORLD_H) * 0.415;
 const ISLAND_SHORE_WIDTH = 230;
 // Outer islands are real land masses reachable across the ocean. They currently
 // use existing biome terrain; fantasy/secret biomes and new island-only animals
@@ -16006,11 +16040,11 @@ const OCEAN_DEEP_DAMAGE_FULL = 2200;
 const OCEAN_DEEP_DAMAGE_MIN = 4;
 const OCEAN_DEEP_DAMAGE_MAX = 16;
 const BIOME_ZONES = {
-  forest:{id:"forest",cx:WORLD_W*0.41,cy:WORLD_H*0.57},
-  rainforest:{id:"rainforest",cx:WORLD_W*0.65,cy:WORLD_H*0.57},
-  arctic:{id:"arctic",cx:WORLD_W*0.50,cy:WORLD_H*0.25},
-  desert:{id:"desert",cx:WORLD_W*0.50,cy:WORLD_H*0.80},
-  mountains:{id:"mountains",cx:WORLD_W*0.13,cy:WORLD_H*0.52},
+  forest:{id:"forest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*0.41,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*0.57},
+  rainforest:{id:"rainforest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*0.65,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*0.57},
+  arctic:{id:"arctic",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*0.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*0.25},
+  desert:{id:"desert",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*0.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*0.80},
+  mountains:{id:"mountains",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*0.13,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*0.52},
 };
 const BIOME_PROFILES = {
   forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"] },
@@ -16060,7 +16094,10 @@ function islandRadiusAtAngle(angle,pad=0){
   scale=Math.max(.74,Math.min(1.75,scale));
   return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
 }
-function isInsideIsland(x,y,pad=0){ const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx); return d <= islandRadiusAtAngle(angle,pad); }
+function isInsideIsland(x,y,pad=0){
+  const p=Number(pad)||0;
+  return x>=MAIN_WORLD_LEFT+p&&x<=MAIN_WORLD_RIGHT-p&&y>=MAIN_WORLD_TOP+p&&y<=MAIN_WORLD_BOTTOM-p;
+}
 function outerIslandRadiusAtAngle(spec,angle,pad=0){
   const s=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0;
   const scale=1+Math.sin(a*3.0+s)*.10+Math.sin(a*5.1-s*.7)*.05+Math.sin(a*7.3+s*1.4)*.025;
@@ -16072,7 +16109,11 @@ function isInsideOuterIsland(spec,x,y,pad=0){
 }
 function outerIslandAt(x,y,pad=0){for(const spec of OUTER_ISLANDS)if(isInsideOuterIsland(spec,x,y,pad))return spec;return null;}
 function isInsideAnyLand(x,y,pad=0){return isInsideIsland(x,y,pad)||!!outerIslandAt(x,y,pad);}
-function mainIslandSignedCoastDistance(x,y){const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-islandRadiusAtAngle(a,0);}
+function mainIslandSignedCoastDistance(x,y){
+  const dx=Math.max(MAIN_WORLD_LEFT-x,0,x-MAIN_WORLD_RIGHT),dy=Math.max(MAIN_WORLD_TOP-y,0,y-MAIN_WORLD_BOTTOM);
+  const outside=Math.hypot(dx,dy);if(outside>0)return outside;
+  return -Math.min(x-MAIN_WORLD_LEFT,MAIN_WORLD_RIGHT-x,y-MAIN_WORLD_TOP,MAIN_WORLD_BOTTOM-y);
+}
 function outerIslandSignedCoastDistance(spec,x,y){const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-outerIslandRadiusAtAngle(spec,a,0);}
 function oceanDepthAt(x,y){
   if(!Number.isFinite(x)||!Number.isFinite(y)||isInsideAnyLand(x,y,0))return 0;
@@ -16089,30 +16130,20 @@ function landDepthToCoastAt(x,y){
 function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanDepthAt(x,y)<=range:landDepthToCoastAt(x,y)<=range;}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){
-  const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx),maxR=islandRadiusAtAngle(angle,pad);
-  if(!Number.isFinite(d)||d<=maxR)return{x:clamp(x,0,WORLD_W),y:clamp(y,0,WORLD_H)};
-  const q=d>0?maxR/d:0; return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};
+  const p=Math.max(0,Number(pad)||0);
+  return {x:clamp(Number(x)||ISLAND_CX,MAIN_WORLD_LEFT+p,MAIN_WORLD_RIGHT-p),y:clamp(Number(y)||ISLAND_CY,MAIN_WORLD_TOP+p,MAIN_WORLD_BOTTOM-p)};
 }
 function keepObjectOnIsland(obj,pad=20){ if(!obj)return; const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad); obj.x=p.x;obj.y=p.y; }
 const ISLAND_PATH_CACHE = new Map();
 function cachedIslandPath(pad=0,samples=180){
   if(typeof Path2D!=="function")return null;
-  const key=`${pad}|${samples}`;
-  let path=ISLAND_PATH_CACHE.get(key);if(path)return path;
-  path=new Path2D();
-  for(let i=0;i<samples;i++){
-    const a=(i/samples)*TAU,r=islandRadiusAtAngle(a,pad),x=ISLAND_CX+Math.cos(a)*r,y=ISLAND_CY+Math.sin(a)*r;
-    if(i===0)path.moveTo(x,y);else path.lineTo(x,y);
-  }
-  path.closePath();ISLAND_PATH_CACHE.set(key,path);return path;
+  const p=Number(pad)||0,key=`rect|${p}`;let path=ISLAND_PATH_CACHE.get(key);if(path)return path;
+  const l=MAIN_WORLD_LEFT+p,r=MAIN_WORLD_RIGHT-p,t=MAIN_WORLD_TOP+p,b=MAIN_WORLD_BOTTOM-p;
+  path=new Path2D();path.rect(l,t,Math.max(1,r-l),Math.max(1,b-t));ISLAND_PATH_CACHE.set(key,path);return path;
 }
 function traceIslandPath(pad=0,samples=180){
-  ctx.beginPath();
-  for(let i=0;i<samples;i++){
-    const a=(i/samples)*TAU,r=islandRadiusAtAngle(a,pad),x=ISLAND_CX+Math.cos(a)*r,y=ISLAND_CY+Math.sin(a)*r;
-    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-  }
-  ctx.closePath();
+  const p=Number(pad)||0,l=MAIN_WORLD_LEFT+p,r=MAIN_WORLD_RIGHT-p,t=MAIN_WORLD_TOP+p,b=MAIN_WORLD_BOTTOM-p;
+  ctx.beginPath();ctx.rect(l,t,Math.max(1,r-l),Math.max(1,b-t));
 }
 const OUTER_ISLAND_PATH_CACHE=new Map();
 function cachedOuterIslandPath(spec,pad=0,samples=72){
@@ -16127,19 +16158,19 @@ function outerIslandInView(spec,pad=380){
 }
 function forestRainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CX + Math.sin(yn*Math.PI*1.25)*WORLD_W*.035 + Math.sin(yn*Math.PI*2.8+1.2)*WORLD_W*.012;
+  return ISLAND_CX + Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035 + Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;
 }
 function arcticBoundaryY(x){
   const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CY-ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.8+.45)*WORLD_H*.024 + Math.sin(xn*Math.PI*4.4-1.1)*WORLD_H*.010;
+  return ISLAND_CY-ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024 + Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;
 }
 function desertBoundaryY(x){
   const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CY+ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.55-.35)*WORLD_H*.020 + Math.sin(xn*Math.PI*3.2+1.4)*WORLD_H*.008;
+  return ISLAND_CY+ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.55-.35)*MAIN_WORLD_H*.020 + Math.sin(xn*Math.PI*3.2+1.4)*MAIN_WORLD_H*.008;
 }
 function mountainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CX-ISLAND_RADIUS*1.10 + Math.sin(yn*Math.PI*1.7+.6)*WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*WORLD_H*.004;
+  return ISLAND_CX-ISLAND_RADIUS*1.10 + Math.sin(yn*Math.PI*1.7+.6)*MAIN_WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*MAIN_WORLD_H*.004;
 }
 function worldBiomeAt(x,y){
   const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;
@@ -16166,19 +16197,9 @@ function nearestAllowedBiomeFor(type,x,y,preferred=""){
 }
 function randomPointInBiome(biomeId,pad=120){
   const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest";
-  const safePad=Math.max(0,Number(pad)||0),maxR=Math.max(180,ISLAND_RADIUS-safePad-70);
-  if(wanted==="mountains"){
-    for(let tries=0;tries<520;tries++){
-      const y=rand(ISLAND_CY-ISLAND_RADIUS*.48,ISLAND_CY+ISLAND_RADIUS*.48),edge=mountainBoundaryX(y)-safePad-25;
-      if(edge<=safePad+40)continue;
-      const x=rand(Math.max(safePad,120),edge);
-      if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};
-    }
-  }
-  for(let tries=0;tries<360;tries++){
-    const a=rand(0,TAU),rr=Math.sqrt(Math.random())*maxR;
-    const x=ISLAND_CX+Math.cos(a)*rr,y=ISLAND_CY+Math.sin(a)*rr;
-    if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};
+  const safePad=Math.max(0,Number(pad)||0),l=MAIN_WORLD_LEFT+safePad,r=MAIN_WORLD_RIGHT-safePad,t=MAIN_WORLD_TOP+safePad,b=MAIN_WORLD_BOTTOM-safePad;
+  for(let tries=0;tries<900;tries++){
+    const x=rand(l,r),y=rand(t,b);if(worldBiomeAt(x,y)===wanted)return{x,y};
   }
   const zone=BIOME_ZONES[wanted]||BIOME_ZONES.forest;return{x:zone.cx,y:zone.cy};
 }
@@ -23219,6 +23240,7 @@ function clearSkillChoiceUi(){
   const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");
   if(ov)ov.style.display="none";
   if(grid)grid.innerHTML="";
+  const tip=el("skillChoiceTooltip");if(tip){tip.style.display="none";tip.textContent="";}
 }
 function showSkillChoice(milestone){
   milestone=Math.floor(Number(milestone)||0);const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");if(!ov||!grid)return;
@@ -23237,7 +23259,8 @@ function showSkillChoice(milestone){
     else if(kind==="stat"){el("skillChoiceTitle").textContent=`Skill ${milestone} — Improve Yourself`;el("skillChoiceLead").textContent="Choose stronger attacks, better defense, or faster movement.";}
   }
   if(!choices.length){clearSkillChoiceUi();return;}
-  grid.innerHTML="";choices.forEach(c=>{const d=document.createElement("div");d.className="skill-choice";d.innerHTML=`<span class="skill-choice-icon">${c.icon}</span><b>${c.name}</b><small>${c.desc}</small>`;d.onclick=()=>chooseSkillUpgrade(milestone,c.id,c.name);grid.appendChild(d);});ov.style.display="block";
+  const tip=el("skillChoiceTooltip");if(tip){tip.style.display="none";tip.textContent="";}
+  grid.innerHTML="";choices.forEach(c=>{const d=document.createElement("div"),hoverText=skillChoiceTooltipText(c);d.className="skill-choice";d.innerHTML=`<span class="skill-choice-icon">${c.icon}</span><b>${c.name}</b>`;d.title=hoverText;d.onmouseenter=()=>{if(tip){tip.textContent=hoverText;tip.style.display="block";}};d.onmouseleave=()=>{if(tip)tip.style.display="none";};d.onclick=()=>chooseSkillUpgrade(milestone,c.id,c.name);grid.appendChild(d);});ov.style.display="block";
 }
 function chooseSkillUpgrade(milestone,id,name){
   milestone=Math.floor(Number(milestone)||0);
@@ -27314,7 +27337,7 @@ function authoritativeResourcesForRender() {
 
 let lastMinimapDrawAt = 0;
 let minimapCamX = ISLAND_CX, minimapCamY = ISLAND_CY;
-const MINIMAP_VIEW_SPAN = 18000;
+const MINIMAP_VIEW_SPAN = 48000;
 const minimapGroundCache=document.createElement("canvas");minimapGroundCache.width=140;minimapGroundCache.height=140;
 const minimapGroundCtx=minimapGroundCache.getContext("2d");
 let minimapGroundCacheX=NaN,minimapGroundCacheY=NaN,minimapGroundCacheRelief=false;
@@ -27333,14 +27356,13 @@ function rebuildMinimapGround(left,top,size,relief){
 }
 
 function drawMinimap() {
-  const size=140,half=MINIMAP_VIEW_SPAN*.5,edge=MINIMAP_VIEW_SPAN*.09;
-  // The old central island view stays still while the player is inside it. Once
-  // the player reaches an expanded edge, the map inside the square pans to follow.
+  const size=140,half=MINIMAP_VIEW_SPAN*.5;
+  // Keep the mainland centered while travelling on land or just offshore. Once
+  // the player reaches genuinely open water, the minimap camera follows them so
+  // boats/subs can navigate the expanded sea and outer islands.
   let targetX=ISLAND_CX,targetY=ISLAND_CY;
-  if(player.x<ISLAND_CX-half+edge)targetX=player.x+half-edge;
-  else if(player.x>ISLAND_CX+half-edge)targetX=player.x-half+edge;
-  if(player.y<ISLAND_CY-half+edge)targetY=player.y+half-edge;
-  else if(player.y>ISLAND_CY+half-edge)targetY=player.y-half+edge;
+  const inOcean=worldBiomeAt(player.x,player.y)==="ocean",seaDepth=inOcean?oceanDepthAt(player.x,player.y):0;
+  if(inOcean&&seaDepth>650){targetX=player.x;targetY=player.y;}
   targetX=clamp(targetX,half,WORLD_W-half);targetY=clamp(targetY,half,WORLD_H-half);
   minimapCamX+=(targetX-minimapCamX)*.18;minimapCamY+=(targetY-minimapCamY)*.18;
   const left=minimapCamX-half,top=minimapCamY-half,scale=size/MINIMAP_VIEW_SPAN;

@@ -6,15 +6,15 @@
 import { Room } from "@colyseus/core";
 import { Schema, MapSchema, defineTypes } from "@colyseus/schema";
 
-const WORLD_W = 38000;
-const WORLD_H = 28000;
+const WORLD_W = 62000;
+const WORLD_H = 50000;
 const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "702";
+const CUBE_SHARED_RULES_VERSION = "704";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -1268,7 +1268,10 @@ const MOONMARK_BIOMES={
 const MOONMARK_RADIUS=390;
 // Expanded main island: Forest + Rain Forest + Arctic.
 // Arctic wildlife now has a real home instead of spawning in the Forest.
-const ISLAND_CX=WORLD_W*.5,ISLAND_CY=WORLD_H*.5,ISLAND_RADIUS=Math.min(WORLD_W,WORLD_H)*.415,ISLAND_SHORE_WIDTH=230;
+const MAIN_WORLD_W=44000,MAIN_WORLD_H=34000;
+const ISLAND_CX=WORLD_W*.5,ISLAND_CY=WORLD_H*.5;
+const MAIN_WORLD_LEFT=ISLAND_CX-MAIN_WORLD_W*.5,MAIN_WORLD_RIGHT=ISLAND_CX+MAIN_WORLD_W*.5,MAIN_WORLD_TOP=ISLAND_CY-MAIN_WORLD_H*.5,MAIN_WORLD_BOTTOM=ISLAND_CY+MAIN_WORLD_H*.5;
+const ISLAND_RADIUS=Math.min(MAIN_WORLD_W,MAIN_WORLD_H)*.415,ISLAND_SHORE_WIDTH=230;
 const OUTER_ISLANDS=Object.freeze([
   {id:"reef_isle",cx:WORLD_W*.935,cy:WORLD_H*.30,r:1080,biome:"rainforest",seed:.73},
   {id:"sunbar_isle",cx:WORLD_W*.90,cy:WORLD_H*.91,r:920,biome:"desert",seed:1.91},
@@ -1276,11 +1279,11 @@ const OUTER_ISLANDS=Object.freeze([
 ]);
 const OCEAN_DEEP_DAMAGE_START=820,OCEAN_DEEP_DAMAGE_FULL=2200,OCEAN_DEEP_DAMAGE_MIN=4,OCEAN_DEEP_DAMAGE_MAX=16;
 const BIOME_ZONES={
-  forest:{id:"forest",cx:WORLD_W*.41,cy:WORLD_H*.57},
-  rainforest:{id:"rainforest",cx:WORLD_W*.65,cy:WORLD_H*.57},
-  arctic:{id:"arctic",cx:WORLD_W*.50,cy:WORLD_H*.25},
-  desert:{id:"desert",cx:WORLD_W*.50,cy:WORLD_H*.80},
-  mountains:{id:"mountains",cx:WORLD_W*.13,cy:WORLD_H*.52}
+  forest:{id:"forest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.41,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.57},
+  rainforest:{id:"rainforest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.65,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.57},
+  arctic:{id:"arctic",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.25},
+  desert:{id:"desert",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.80},
+  mountains:{id:"mountains",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.13,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.52}
 };
 const BIOME_ORDER=["forest","rainforest","arctic","desert","mountains"];
 const BIOME_PROFILES={
@@ -1326,29 +1329,29 @@ function islandRadiusAtAngle(angle,pad=0){
   scale=Math.max(.74,Math.min(1.75,scale));
   return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
 }
-function isInsideIsland(x,y,pad=0){const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx);return d<=islandRadiusAtAngle(angle,pad);}
+function isInsideIsland(x,y,pad=0){const p=Number(pad)||0;return x>=MAIN_WORLD_LEFT+p&&x<=MAIN_WORLD_RIGHT-p&&y>=MAIN_WORLD_TOP+p&&y<=MAIN_WORLD_BOTTOM-p;}
 function outerIslandRadiusAtAngle(spec,angle,pad=0){const ss=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0,scale=1+Math.sin(a*3.0+ss)*.10+Math.sin(a*5.1-ss*.7)*.05+Math.sin(a*7.3+ss*1.4)*.025;return Math.max(80,base*clamp(scale,.78,1.24)-(Number(pad)||0));}
 function isInsideOuterIsland(spec,x,y,pad=0){if(!spec)return false;const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d<=outerIslandRadiusAtAngle(spec,a,pad);}
 function outerIslandAt(x,y,pad=0){for(const spec of OUTER_ISLANDS)if(isInsideOuterIsland(spec,x,y,pad))return spec;return null;}
 function isInsideAnyLand(x,y,pad=0){return isInsideIsland(x,y,pad)||!!outerIslandAt(x,y,pad);}
-function mainIslandSignedCoastDistance(x,y){const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-islandRadiusAtAngle(a,0);}
+function mainIslandSignedCoastDistance(x,y){const dx=Math.max(MAIN_WORLD_LEFT-x,0,x-MAIN_WORLD_RIGHT),dy=Math.max(MAIN_WORLD_TOP-y,0,y-MAIN_WORLD_BOTTOM),outside=Math.hypot(dx,dy);if(outside>0)return outside;return -Math.min(x-MAIN_WORLD_LEFT,MAIN_WORLD_RIGHT-x,y-MAIN_WORLD_TOP,MAIN_WORLD_BOTTOM-y);}
 function outerIslandSignedCoastDistance(spec,x,y){const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-outerIslandRadiusAtAngle(spec,a,0);}
 function oceanDepthAt(x,y){if(!Number.isFinite(x)||!Number.isFinite(y)||isInsideAnyLand(x,y,0))return 0;let best=Math.max(0,mainIslandSignedCoastDistance(x,y));for(const spec of OUTER_ISLANDS)best=Math.min(best,Math.max(0,outerIslandSignedCoastDistance(spec,x,y)));return Math.max(0,best);}
 function landDepthToCoastAt(x,y){let best=Infinity;const main=-mainIslandSignedCoastDistance(x,y);if(main>=0)best=Math.min(best,main);for(const spec of OUTER_ISLANDS){const d=-outerIslandSignedCoastDistance(spec,x,y);if(d>=0)best=Math.min(best,d);}return Number.isFinite(best)?best:0;}
 function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanDepthAt(x,y)<=range:landDepthToCoastAt(x,y)<=range;}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
-function islandConstrainedPoint(x,y,pad=0){const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx),maxR=islandRadiusAtAngle(angle,pad);if(!Number.isFinite(d)||d<=maxR)return{x:clamp(x,0,WORLD_W),y:clamp(y,0,WORLD_H)};const q=d>0?maxR/d:0;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};}
+function islandConstrainedPoint(x,y,pad=0){const p=Math.max(0,Number(pad)||0);return{x:clamp(Number(x)||ISLAND_CX,MAIN_WORLD_LEFT+p,MAIN_WORLD_RIGHT-p),y:clamp(Number(y)||ISLAND_CY,MAIN_WORLD_TOP+p,MAIN_WORLD_BOTTOM-p)};}
 function keepObjectOnIsland(obj,pad=20){if(!obj)return;const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad);obj.x=p.x;obj.y=p.y;}
-function forestRainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX+Math.sin(yn*Math.PI*1.25)*WORLD_W*.035+Math.sin(yn*Math.PI*2.8+1.2)*WORLD_W*.012;}
-function arcticBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY-ISLAND_RADIUS*.22+Math.sin(xn*Math.PI*1.8+.45)*WORLD_H*.024+Math.sin(xn*Math.PI*4.4-1.1)*WORLD_H*.010;}
-function desertBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY+ISLAND_RADIUS*.22+Math.sin(xn*Math.PI*1.55-.35)*WORLD_H*.020+Math.sin(xn*Math.PI*3.2+1.4)*WORLD_H*.008;}
-function mountainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX-ISLAND_RADIUS*1.10+Math.sin(yn*Math.PI*1.7+.6)*WORLD_H*.012+Math.sin(yn*Math.PI*3.9-.9)*WORLD_H*.004;}
+function forestRainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX+Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035+Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;}
+function arcticBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY-ISLAND_RADIUS*.22+Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024+Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;}
+function desertBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY+ISLAND_RADIUS*.22+Math.sin(xn*Math.PI*1.55-.35)*MAIN_WORLD_H*.020+Math.sin(xn*Math.PI*3.2+1.4)*MAIN_WORLD_H*.008;}
+function mountainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX-ISLAND_RADIUS*1.10+Math.sin(yn*Math.PI*1.7+.6)*MAIN_WORLD_H*.012+Math.sin(yn*Math.PI*3.9-.9)*MAIN_WORLD_H*.004;}
 function worldBiomeAt(x,y){const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;if(!isInsideIsland(x,y,0))return "ocean";if(y<=arcticBoundaryY(x))return "arctic";if(y>=desertBoundaryY(x))return "desert";if(x<=mountainBoundaryX(y))return "mountains";return x<=forestRainBoundaryX(y)?"forest":"rainforest";}
 function randomBiomeZoneId(){return BIOME_ORDER[randi(0,BIOME_ORDER.length-1)]||"forest";}
 function speciesAllowedBiomes(type){const out=[];for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))out.push(id);return out.length?out:["forest"];}
 function speciesHomeBiome(type){return speciesAllowedBiomes(type)[0]||"forest";}
 function nearestAllowedBiomeFor(type,x,y,preferred=""){const allowed=speciesAllowedBiomes(type),p=biomeBaseId(preferred);if(allowed.includes(p))return p;let best=allowed[0]||"forest",bestD=Infinity;for(const id of allowed){const z=BIOME_ZONES[id]||BIOME_ZONES.forest,d=dist(x,y,z.cx,z.cy);if(d<bestD){bestD=d;best=id;}}return best;}
-function randomPointInBiome(biomeId,pad=120){const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest",safePad=Math.max(0,Number(pad)||0),maxR=Math.max(180,ISLAND_RADIUS-safePad-70);if(wanted==="mountains"){for(let tries=0;tries<520;tries++){const y=rand(ISLAND_CY-ISLAND_RADIUS*.48,ISLAND_CY+ISLAND_RADIUS*.48),edge=mountainBoundaryX(y)-safePad-25;if(edge<=safePad+40)continue;const x=rand(Math.max(safePad,120),edge);if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};}}for(let tries=0;tries<360;tries++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*maxR,x=ISLAND_CX+Math.cos(a)*rr,y=ISLAND_CY+Math.sin(a)*rr;if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};}const zone=BIOME_ZONES[wanted]||BIOME_ZONES.forest;return{x:zone.cx,y:zone.cy};}
+function randomPointInBiome(biomeId,pad=120){const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest",safePad=Math.max(0,Number(pad)||0),l=MAIN_WORLD_LEFT+safePad,r=MAIN_WORLD_RIGHT-safePad,t=MAIN_WORLD_TOP+safePad,b=MAIN_WORLD_BOTTOM-safePad;for(let tries=0;tries<900;tries++){const x=rand(l,r),y=rand(t,b);if(worldBiomeAt(x,y)===wanted)return{x,y};}const zone=BIOME_ZONES[wanted]||BIOME_ZONES.forest;return{x:zone.cx,y:zone.cy};}
 function randomLandPoint(pad=120){ return randomPointInBiome(randomBiomeZoneId(),pad); }
 function isHotDryBiome(id){return String(id||"").startsWith("desert");}
 function pondShapeFactor(r,theta){
