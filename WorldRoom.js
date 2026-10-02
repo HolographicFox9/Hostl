@@ -839,14 +839,13 @@ function shadeHex(hex, amt) {
 const ANIMAL_PLANT_EATERS=new Set(["rabbit","deer"]);
 function animalDietSizeMultiplier(type){
   if(ANIMAL_PLANT_EATERS.has(type))return .88;
-  if(type==="scorpion")return 1.32;
   return 1.14;
 }
 function animalRadius(type, stage) {
   const mul=(PET_TYPES[type]?.sizeMul)||1,dietMul=animalDietSizeMultiplier(type); let base=22;
   if(stage==="adult") base=45; else if(stage==="boss") base=68; else if(stage==="superboss") base=96; else if(stage==="bigmomma") base=140;
   let extra=1;
-  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="polarbear"||type==="walrus"||type==="camel"||type==="muskox"||type==="anaconda"||type==="tapir")?1.20:(type==="wolf"||type==="boar"||type==="jaguar"||type==="bighorn"||type==="cougar")?1.16:1.08;
+  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.16:1.08;
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){

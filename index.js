@@ -203,7 +203,7 @@ function ensureStarterPetEntitlements(a) {
     if (!ent || typeof ent !== "object") continue;
     const type = canonicalAccountPetType(ent.type);
     const stage = safeText(ent.stage,24).toLowerCase();
-    if (!type) continue;
+    if (!type || !ACCOUNT_PET_TYPES.has(type)) continue;
     const cleanStage = Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,stage) ? stage : "baby";
     const old = byType.get(type);
     if (!old || STARTER_PET_STAGE_RANK[cleanStage] > STARTER_PET_STAGE_RANK[old.stage]) byType.set(type,{type,stage:cleanStage});
@@ -220,7 +220,7 @@ function ensureStarterPetEntitlements(a) {
 function grantStarterPetEntitlement(a,type,stage="baby") {
   const t=canonicalAccountPetType(type);
   const st=safeText(stage,24).toLowerCase();
-  if(!t)return false;
+  if(!t || !ACCOUNT_PET_TYPES.has(t))return false;
   const cleanStage=Object.prototype.hasOwnProperty.call(STARTER_PET_STAGE_RANK,st)?st:"baby";
   // A promo/code pet is not a separate pet record. Merge ownership into the same
   // canonical species progression used by normal card unlocks so old cards, stage
@@ -411,12 +411,13 @@ function themeGoldPrice(id){
 function isKnownTheme(id){return THEME_GUEST_FREE.has(id)||THEME_ACCOUNT_FREE.has(id)||THEME_AD.has(id)||THEME_GOLD.has(id);}
 function accountCanUseTheme(a,id){return isKnownTheme(id) && (THEME_GUEST_FREE.has(id)||THEME_ACCOUNT_FREE.has(id)||(Array.isArray(a?.unlockedThemes)&&a.unlockedThemes.includes(id)));}
 
-const ACCOUNT_PET_TYPES=new Set(["dog","cat","dragon","rabbit","fox","owl","deer","wolf","snake","boar","bear","saber"]);
+const ACCOUNT_PET_TYPES=new Set(["dog","cat","dragon","rabbit","fox","owl","deer","wolf","snake","boar","bear","saber","clouded","fennec","queenbee","workerbee","dronebee"]);
 const ACCOUNT_FREE_STARTER_PETS=new Set(["dog","cat","dragon"]);
 const ACCOUNT_PET_UNLOCK={
   dog:{cards:0,cubits:0},cat:{cards:0,cubits:0},dragon:{cards:0,cubits:0},
   rabbit:{cards:55,cubits:600},fox:{cards:55,cubits:650},owl:{cards:60,cubits:750},deer:{cards:70,cubits:900},
-  wolf:{cards:80,cubits:1100},snake:{cards:85,cubits:1200},boar:{cards:95,cubits:1400},bear:{cards:110,cubits:1800},saber:{cards:120,cubits:2200}
+  wolf:{cards:80,cubits:1100},snake:{cards:85,cubits:1200},boar:{cards:95,cubits:1400},bear:{cards:110,cubits:1800},saber:{cards:120,cubits:2200},
+  clouded:{cards:100,cubits:1650},fennec:{cards:75,cubits:950},queenbee:{cards:90,cubits:1200},workerbee:{cards:75,cubits:1000},dronebee:{cards:60,cubits:850}
 };
 const ACCOUNT_PET_STAGE_ORDER=["baby","adult","boss","superboss"];
 const ACCOUNT_PET_STAGE_COST={adult:20,boss:50,superboss:100};
@@ -496,7 +497,7 @@ function ensurePetProgressState(a){
   const sourceCards=(a.speciesCards&&typeof a.speciesCards==="object"&&!Array.isArray(a.speciesCards))?a.speciesCards:{};
   const cards={};
   for(const [k,v] of Object.entries(sourceCards)){
-    const type=canonicalAccountPetType(k); if(!type)continue;
+    const type=canonicalAccountPetType(k); if(!type || !ACCOUNT_PET_TYPES.has(type))continue;
     const amount=Math.max(0,Math.min(1000000,Math.floor(Number(v)||0)));
     cards[type]=Math.max(cards[type]||0,amount);
   }
@@ -506,7 +507,11 @@ function ensurePetProgressState(a){
   const owned={};
   for(const [k,v] of Object.entries(sourceOwned)){
     let key=safeText(k,40);
-    if(key.startsWith("start_"))key=`start_${canonicalAccountPetType(key.slice(6))}`;
+    if(key.startsWith("start_")){
+      const type=canonicalAccountPetType(key.slice(6));
+      if(!ACCOUNT_PET_TYPES.has(type))continue;
+      key=`start_${type}`;
+    }
     if(key)owned[key]=!!v || !!owned[key];
   }
   a.ownedStarters=owned;
@@ -514,7 +519,7 @@ function ensurePetProgressState(a){
   const sourceStages=(a.petStages&&typeof a.petStages==="object"&&!Array.isArray(a.petStages))?a.petStages:{};
   const stages={};
   for(const [k,v] of Object.entries(sourceStages)){
-    const type=canonicalAccountPetType(k); if(!type)continue;
+    const type=canonicalAccountPetType(k); if(!type || !ACCOUNT_PET_TYPES.has(type))continue;
     const st=cleanStage(v),old=stages[type]||"baby";
     if(!(type in stages)||stageRank[st]>stageRank[old])stages[type]=st;
   }
@@ -523,7 +528,7 @@ function ensurePetProgressState(a){
   const sourceUpgrades=(a.petStatUpgrades&&typeof a.petStatUpgrades==="object"&&!Array.isArray(a.petStatUpgrades))?a.petStatUpgrades:{};
   const upgrades={};
   for(const [species,stats0] of Object.entries(sourceUpgrades)){
-    const type=canonicalAccountPetType(species); if(!type)continue;
+    const type=canonicalAccountPetType(species); if(!type || !ACCOUNT_PET_TYPES.has(type))continue;
     const stats=(stats0&&typeof stats0==="object"&&!Array.isArray(stats0))?stats0:{};
     const clean=upgrades[type]||{};
     for(const stat of ["health","defense","attack","weight","regen","speed"]){
@@ -533,6 +538,9 @@ function ensurePetProgressState(a){
     upgrades[type]=clean;
   }
   a.petStatUpgrades=upgrades;
+  const selected=canonicalAccountPetType(a.starterPetType);
+  if(selected && ACCOUNT_PET_TYPES.has(selected)) a.starterPetType=selected;
+  else { a.starterPetType=""; a.starterPetName=""; a.starterPetGender="Male"; }
 
   a.starterPetType=canonicalAccountPetType(a.starterPetType||"");
   a.starterPetName=safeText(a.starterPetName||"",20);
