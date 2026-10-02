@@ -5522,9 +5522,9 @@ button:focus-visible{
 #hydrationHudTop{width:100%;height:10px;justify-content:center;margin:0 0 1px;font-size:7px;line-height:8px;}#hydrationHudTop b{display:none;}
 #hydrationTrack{width:19px;height:45px;border-radius:7px;border-width:2px;}
 #hydrationFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .18s ease-out;background:linear-gradient(180deg,#8ce9ff 0%,#42bce4 52%,#258cc1 100%);}
-#hotbar{grid-area:hotbar;gap:5px;padding:4px 5px;border-radius:13px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
-.slot{width:52px;height:52px;border-width:2px;border-radius:10px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
-.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:26px;height:26px}.slot .key{font-size:10px}.slot .qty{font-size:10px}.slot .label{font-size:8px}
+#hotbar{grid-area:hotbar;gap:6px;padding:5px 6px;border-radius:14px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.slot{width:60px;height:60px;border-width:2px;border-radius:11px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
+.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:30px;height:30px}.slot .key{font-size:11px}.slot .qty{font-size:11px}.slot .label{font-size:9px}.slot .cost{font-size:9px}
 #waterFillBtn{left:50%;bottom:104px;transform:translateX(-50%);min-width:94px;height:40px;border-color:#7edcff;background:linear-gradient(180deg,#2daee0,#1676b7);color:#effcff;box-shadow:0 5px 0 #0d5687,0 9px 18px rgba(0,0,0,.25);}
 #waterFillBtn:active{transform:translateX(-50%) translateY(2px);background:linear-gradient(180deg,#249dcc,#12669f);}
 #tameBtn{bottom:104px;}
@@ -5532,8 +5532,8 @@ button:focus-visible{
 body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-width:calc(100vw - 12px);grid-template-columns:22px minmax(0,1fr);column-gap:3px;}
 body.mobile-performance #resourceStrip{padding-left:24px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
 body.mobile-performance #hydrationHud{width:21px;height:45px}body.mobile-performance #hydrationTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop{font-size:6px}
-body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:2px;padding:2px 3px;width:max-content;max-width:calc(100vw - 36px);justify-self:center;}
-body.mobile-performance .slot{width:45px;height:45px;border-width:2px}body.mobile-performance .slot .ico{width:23px;height:23px}
+body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:3px;padding:3px 4px;width:max-content;max-width:calc(100vw - 24px);justify-self:center;}
+body.mobile-performance .slot{width:50px;height:50px;border-width:2px}body.mobile-performance .slot .ico{width:25px;height:25px}body.mobile-performance .slot .key{font-size:10px}body.mobile-performance .slot .qty{font-size:10px}
 body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:calc(var(--phone-bottom) + 91px);}
 </style>
 </head>
@@ -25815,7 +25815,12 @@ function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
       // shoulder connection so it never drifts away from the torso. The right
       // arm can follow the weapon farther to sell the swing.
       if(i===0){
-        hostlDrawPosePiece(arm,0,walkAmt,rot*.72,piv.x,piv.y);
+        // The left sword arm attaches to the cube at the SMALL/narrow back end
+        // of the hand. Because this piece is horizontally mirrored, that narrow
+        // end is on the left side of its rendered bounds. Keep that exact end
+        // planted while the wider hand/forearm swings around it.
+        const leftBackPivot={x:arm.x+arm.w*.18,y:arm.y+arm.h*.16};
+        hostlDrawPosePiece(arm,0,walkAmt,rot*.72,leftBackPivot.x,leftBackPivot.y);
       }else{
         hostlDrawPosePiece(arm,dx*.80,dy*.80-walkAmt,rot*.92,piv.x,piv.y);
       }
