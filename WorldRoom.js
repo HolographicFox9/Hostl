@@ -1319,6 +1319,8 @@ function waterPlacementClear(resources,x,y,solidR,canopyR,gap=34){
   return true;
 }
 const PET_KILL_STAGE_XP={baby:3,adult:14,boss:38,superboss:86,bigmomma:155};
+const PET_ANIMAL_KILL_CARD_CHANCE=0.35;
+const TAME_SPECIES_CARD_REWARD=1;
 const PET_KILL_SPECIES_XP={rabbit:.65,dog:.85,cat:.90,fox:1.0,deer:1.05,dragon:1.15,wolf:1.25,bear:1.65,boar:1.30,snake:1.15,owl:1.10,saber:2.0,clouded:1.55};
 const PET_KILL_HOSTL_XP={Brawler:12,Swordsman:16,Rider:24,Tamer:26,Ranger:30,Chimest:34};
 function petKillXpForAnimal(a){return Math.max(1,Math.round((PET_KILL_STAGE_XP[a?.stage]??14)*(PET_KILL_SPECIES_XP[a?.type]??1)));}
@@ -2613,7 +2615,7 @@ export class WorldRoom extends Room {
         const petId=this.addPet(client.sessionId,current.type,current.stage,current.x,current.y,{hp:current.maxHp,coat:current.coat,spotCol:current.spotCol,spotsJson:current.spotsJson,petName:current.type,gender:current.gender,exp:bonusXp,level:1});
         client.send("tameResult",{success:true,type:current.type,petId,chance,usedComb,bonusXp,honeycomb:Math.max(0,inv.honeycomb||0)});
         this.addSkillXp(client.sessionId,25);
-        this.sendReward(client.sessionId,{kind:"cards",species:current.type,amount:1},{x:current.x,y:current.y,tame:true});
+        this.sendReward(client.sessionId,{kind:"cards",species:current.type,amount:TAME_SPECIES_CARD_REWARD},{x:current.x,y:current.y,tame:true,guaranteed:true});
         this.recordAccountAchievement(client.sessionId,"first_tame",{species:current.type});this.recordAccountAchievement(client.sessionId,`tame_${current.type}`,{species:current.type});
       }else{
         current.sleeping=false;current.enraged=true;current.tameFailedAggro=true;current.desperateAggro=false;current.fleeUntil=0;current.combat=9999;
@@ -3595,6 +3597,14 @@ export class WorldRoom extends Room {
     const key=`${kind}:${targetId}`,map=this.petXpContrib.get(key)||new Map();
     if(killerPetId&&this.state.pets.has(String(killerPetId))&&!map.has(String(killerPetId)))map.set(String(killerPetId),.01);
     this.petXpContrib.delete(key);if(!map.size)return;
+    // Owned pet killing blow on an animal: flat 35% chance for one card of
+    // the killer pet's species. This is separate from victim-species drops.
+    if(kind==="animal"&&killerPetId&&victim){
+      const killerPet=this.state.pets.get(String(killerPetId));
+      if(killerPet&&!killerPet.dead&&killerPet.ownerId&&PET_TYPES[killerPet.type]&&Math.random()<PET_ANIMAL_KILL_CARD_CHANCE){
+        this.sendReward(killerPet.ownerId,{kind:"cards",species:killerPet.type,amount:1},{x:victim.x,y:victim.y,petKill:true,killerPetId:String(killerPetId)});
+      }
+    }
     const base=kind==="animal"?petKillXpForAnimal(victim):petKillXpForEnemy(victim);
     const total=Math.max(.01,Array.from(map.values()).reduce((a,b)=>a+Math.max(0,Number(b)||0),0));
     for(const[petId,dealt]of map){const pet=this.state.pets.get(petId);if(!pet||pet.dead)continue;const killer=petId===String(killerPetId||"");const share=Math.max(0,Number(dealt)||0)/total;const mul=killer?1:clamp(.55+share*.35,.55,.85);this.givePetExp(petId,pet,Math.max(1,Math.round(base*mul)));}
