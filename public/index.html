@@ -6490,44 +6490,96 @@ const SKILL_MILESTONE_CHOICES = [
   {id:"defense",icon:"🛡️",name:"Better Defense",desc:"Reduce damage taken."}
 ];
 function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*9+Math.floor(level*level*.05));}
-function isSkillStatMilestone(level){level=Math.floor(Number(level)||0);return level>0&&level%10===0;}
+function skillMilestoneKind(level){
+  level=Math.floor(Number(level)||0);
+  if(level===1)return "weaponChoose";
+  if(level<2)return "";
+  return ["craftUpgrade","craftNew","weaponUpgrade","stat"][(level-2)%4];
+}
+function isSkillStatMilestone(level){return skillMilestoneKind(level)==="stat";}
 function starterWeaponFromChoice(choice){const c=STARTER_WEAPON_CHOICES.find(x=>x.id===choice);return c?c.weapon:"";}
 function primaryWeaponLabel(){return player.skillStarterWeapon||"Fist";}
 function craftedItemCount(id){return Math.max(0,Math.floor(Number(player.craftedCounts?.[id])||0));}
 function buildUnlockTier(id){return clamp(Math.floor(Number(player.buildUnlockTiers?.[id])||0),0,2);}
 function craftedBuildTier(id){return clamp(Math.floor(Number(player.craftedTiers?.[id])||0),0,2);}
+function skillMilestoneValues(){return Object.values(player.skillMilestones||{}).map(String);}
+function buildIsKnown(id){
+  if(id==="Wall")return true;
+  const vals=skillMilestoneValues();
+  if(id==="Tower")return vals.includes("unlockTower")||vals.includes("buildTower");
+  if(id==="Saddle")return vals.includes("unlockSaddle")||vals.includes("buildSaddle");
+  if(id==="Windmill")return vals.includes("unlockWindmill")||vals.includes("buildWindmill");
+  return false;
+}
+function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":"🌬️";}
 function buildSkillChoiceInfo(id){
   if(id==="weaponTier"){
     const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice)||"Weapon",t=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
-    return {id,icon:w==="Bow"?"🏹":w==="Axe"?"🪓":w==="Pickaxe"?"⛏️":w==="TigerClaws"?"🐯":w==="BoxingGloves"?"🥊":"⚔️",name:t>=1?`Master ${w}`:`Upgrade ${w}`,desc:t>=2?`${w} is already fully upgraded.`:`Only your chosen ${w} path can receive weapon upgrades.`};
+    const next=t===0?"Stone":t===1?"Iron":"Max";
+    return {id,icon:w==="Bow"?"🏹":w==="Axe"?"🪓":w==="Pickaxe"?"⛏️":w==="TigerClaws"?"🐯":w==="BoxingGloves"?"🥊":"⚔️",name:`Upgrade ${w}${next!=="Max"?` to ${next}`:""}`,desc:`Upgrade only the ${w} you chose at Skill 1.`};
+  }
+  if(/^unlock(Tower|Saddle|Windmill)$/.test(id)){
+    const build=id.slice(6),m=BUILD_TIER_META[build]?.[0];
+    return {id,icon:buildIcon(build),name:`New Craft: ${m?.name||build}`,desc:`Adds ${m?.name||build} to your Crafting menu.`};
   }
   const build=id.replace(/^build/,""),t=buildUnlockTier(build),next=Math.min(2,t+1),names=BUILD_TIER_META[build]||[];
-  return {id,icon:build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":"🌬️",name:`Unlock ${names[next]?.name||build}`,desc:`Changes the ${build} crafting recipe. Existing crafted ${build.toLowerCase()}s do not upgrade for free.`};
+  return {id,icon:buildIcon(build),name:`Upgrade Craft: ${names[next]?.name||build}`,desc:`Upgrades the ${build} recipe. Items you already crafted do not upgrade for free.`};
 }
-function toolSkillChoicesForLevel(level){
-  level=Math.max(2,Math.floor(Number(level)||2));
-  const builds=["buildWall","buildTower","buildSaddle","buildWindmill"],off=(level-2)%builds.length;
-  const out=[];const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice),wt=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
-  if(w&&wt<2)out.push(buildSkillChoiceInfo("weaponTier"));
-  for(let i=0;i<builds.length&&out.length<3;i++){const id=builds[(off+i)%builds.length];if(buildUnlockTier(id.replace("build",""))<2)out.push(buildSkillChoiceInfo(id));}
-  while(out.length<3)out.push(...SKILL_MILESTONE_CHOICES.filter(x=>!out.some(y=>y.id===x.id)).slice(0,3-out.length));
-  return out.slice(0,3);
+const WEAPON_SPECIAL_CHOICES={
+  Axe:[
+    {id:"doubleAxe",icon:"🪓",name:"Doubled edged axe",desc:"Switch your fully upgraded Axe into the doubled-edged version."},
+    {id:"throwingAxe",icon:"🪓",name:"Throwing Axe",desc:"Switch your fully upgraded Axe into the one-handed throwing version."},
+    {id:"battleAxe",icon:"🪓",name:"War Axe",desc:"Switch your fully upgraded Axe into the heavy War Axe version."}
+  ],
+  Sword:[
+    {id:"daggers",icon:"🗡️",name:"Daggers",desc:"Switch your fully upgraded Sword into the dual-dagger version."},
+    {id:"longSword",icon:"⚔️",name:"Long Sword",desc:"Switch your fully upgraded Sword into the long sword version."},
+    {id:"spear",icon:"🔱",name:"Spear",desc:"Switch your fully upgraded Sword into the spear version."}
+  ]
+};
+function weaponSpecialChoices(){const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice);return WEAPON_SPECIAL_CHOICES[w]||[];}
+function skillRewardCap(){return weaponSpecialChoices().length?12:11;}
+function nextCraftUnlockInfo(){
+  for(const id of ["Tower","Saddle","Windmill"])if(!buildIsKnown(id))return buildSkillChoiceInfo(`unlock${id}`);
+  return null;
+}
+function craftUpgradeChoicesForLevel(level){
+  let ids=BUILDABLE_IDS.filter(id=>buildIsKnown(id)&&buildUnlockTier(id)<2);
+  if(Number(level)===10){const newer=ids.filter(id=>id!=="Wall");if(newer.length)ids=newer;}
+  return ids.slice(0,3).map(id=>buildSkillChoiceInfo(`build${id}`));
+}
+function weaponUpgradeChoicesForLevel(){
+  const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice),t=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
+  if(w&&t<2)return [buildSkillChoiceInfo("weaponTier")];
+  if(t>=2)return weaponSpecialChoices();
+  return [];
+}
+function skillChoicesForLevel(level){
+  const kind=skillMilestoneKind(level);
+  if(kind==="craftUpgrade")return craftUpgradeChoicesForLevel(level);
+  if(kind==="craftNew"){const c=nextCraftUnlockInfo();return c?[c]:[];}
+  if(kind==="weaponUpgrade")return weaponUpgradeChoicesForLevel();
+  if(kind==="stat")return SKILL_MILESTONE_CHOICES;
+  return [];
 }
 function applyToolSkillMilestones(){
   player.buildUnlockTiers=player.buildUnlockTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
   const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice);
-  let weaponTier=0;const unlock={Wall:0,Tower:0,Saddle:0,Windmill:0};
-  for(const [,id] of Object.entries(player.skillMilestones||{})){
+  let weaponTier=0,special="";const unlock={Wall:0,Tower:0,Saddle:0,Windmill:0};
+  for(const [,rawId] of Object.entries(player.skillMilestones||{})){
+    const id=String(rawId||"");
     if(id==="weaponTier")weaponTier=Math.min(2,weaponTier+1);
     else if(/^build(Wall|Tower|Saddle|Windmill)$/.test(id)){const b=id.slice(5);unlock[b]=Math.min(2,(unlock[b]||0)+1);}
+    else if(["doubleAxe","throwingAxe","battleAxe","daggers","longSword","spear"].includes(id))special=id;
   }
-  if(w){player.toolTiers=player.toolTiers||{};player.toolTiers[w]=Math.max(player.toolTiers[w]||0,weaponTier);}
-  for(const b of BUILDABLE_IDS)player.buildUnlockTiers[b]=Math.max(player.buildUnlockTiers[b]||0,unlock[b]||0);
+  if(w){player.toolTiers=player.toolTiers||{};player.toolTiers[w]=weaponTier;}
+  for(const b of BUILDABLE_IDS)player.buildUnlockTiers[b]=unlock[b]||0;
+  if(special)player.skillWeaponChoice=special;
   applyToolTierStats();buildHotbar();buildCraftList();syncHud();
 }
 function currentCraftables(){
   player.craftedCounts=player.craftedCounts||{Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedTiers=player.craftedTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
-  return BUILDABLE_IDS.map(id=>{const tier=buildUnlockTier(id),m=BUILD_TIER_META[id][tier],old=craftedBuildTier(id),up=tier>old&&craftedItemCount(id)>0;return{id,name:up?`Upgrade Craft: ${m.name}`:m.name,cost:{...m.cost},tier,desc:(up?`Your current hotbar ${id.toLowerCase()} stays tier ${old+1} until you craft this upgrade. `:"")+m.desc};});
+  return BUILDABLE_IDS.filter(buildIsKnown).map(id=>{const tier=buildUnlockTier(id),m=BUILD_TIER_META[id][tier],old=craftedBuildTier(id),up=tier>old&&craftedItemCount(id)>0;return{id,name:up?`Upgrade Craft: ${m.name}`:m.name,cost:{...m.cost},tier,desc:(up?`Your current hotbar ${id.toLowerCase()} stays tier ${old+1} until you craft this upgrade. `:"")+m.desc};});
 }
 const BASE_CRAFTABLES=[];
 const CRAFTABLES=BASE_CRAFTABLES;
@@ -14244,7 +14296,8 @@ function drawReassembledWolfPartsSkin(a, stage, sleeping) {
     : Math.max(1, Math.min(headPart.w * 0.36, headGap * 0.55 + bodyPart.w * 0.08));
   const tailX = tailInset;
   const bodyX = tailPart.w + Math.max(0, tailGap * (sleeping ? 0.01 : 0.03)) - tailOverlap;
-  const headX = bodyX + bodyPart.w + Math.max(0, headGap * (sleeping ? 0.05 : 0.01)) - headOverlap - headInset;
+  const sleepingHeadForward = sleeping ? headPart.w * 0.10 : 0;
+  const headX = bodyX + bodyPart.w + Math.max(0, headGap * (sleeping ? 0.05 : 0.01)) - headOverlap - headInset + sleepingHeadForward;
 
   const naturalTop = Math.min(tailPart.y0, bodyPart.y0, headPart.y0);
   const naturalBottom = Math.max(tailPart.y1, bodyPart.y1, headPart.y1);
@@ -22865,10 +22918,11 @@ function updatePetCardCooldowns() {
 function skillNextThreshold(){ return skillXpNeededForLevel(player.skillLevel); }
 function pendingStoneSkillChoice(){return Math.max(0,Math.floor(Number(player.skillLevel)||0))>=1&&!player.skillStarterWeapon;}
 function pendingWeaponSkillChoice(){return false;}
-function skillLevelUsesWeaponChoice(level){return false;}
+function skillLevelUsesWeaponChoice(level){return skillMilestoneKind(level)==="weaponUpgrade";}
 function pendingSkillMilestone(){
   const lv=Math.max(0,Math.floor(Number(player.skillLevel)||0));player.skillMilestones=player.skillMilestones||{};
-  for(let m=1;m<=lv;m++){if(m===1){if(!player.skillStarterWeapon)return 1;continue;}if(!player.skillMilestones[m])return m;}return 0;
+  const cap=Math.min(lv,skillRewardCap());
+  for(let m=1;m<=cap;m++){if(m===1){if(!player.skillStarterWeapon)return 1;continue;}if(!player.skillMilestones[m])return m;}return 0;
 }
 function animateSkillHud(kind="gain"){
   const hud=el("skillHud"); if(!hud)return;
@@ -22922,7 +22976,12 @@ function applyStoneSkillChoice(choice,announce=false){
   if(announce)banner(`${weapon==="TigerClaws"?"Tiger's Claws":weapon==="BoxingGloves"?"Boxing Gloves":weapon} selected — Hands were replaced for this run.`);
   return true;
 }
-function applyWeaponSkillChoice(choice,announce=false){return false;}
+function applyWeaponSkillChoice(choice,announce=false){
+  const allowed=weaponSpecialChoices().map(x=>x.id);if(!allowed.includes(choice))return false;
+  player.skillWeaponChoice=choice;applyToolTierStats();buildHotbar();syncHud();
+  if(announce){const info=weaponSpecialChoices().find(x=>x.id===choice);banner(`${info?.name||choice} selected.`);}
+  return true;
+}
 function clearSkillChoiceUi(){
   const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");
   if(ov)ov.style.display="none";
@@ -22931,18 +22990,35 @@ function clearSkillChoiceUi(){
 function showSkillChoice(milestone){
   milestone=Math.floor(Number(milestone)||0);const ov=el("skillChoiceOverlay"),grid=el("skillChoiceGrid");if(!ov||!grid)return;
   if(!game.started||game.over||player.dead){clearSkillChoiceUi();return;}let choices=[];
-  if(milestone===1){if(player.skillStarterWeapon)return;el("skillChoiceTitle").textContent="Skill 1 — Replace Your Hands";el("skillChoiceLead").textContent="Choose one weapon path. The other five stay unavailable for this run.";choices=STARTER_WEAPON_CHOICES;}
-  else if(isSkillStatMilestone(milestone)){el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Your Stats`;el("skillChoiceLead").textContent="Choose Speed, Attack Power, or Defense.";choices=SKILL_MILESTONE_CHOICES;}
-  else{if(player.skillMilestones?.[milestone])return;el("skillChoiceTitle").textContent=`Skill ${milestone} — Weapon or Craft Upgrade`;el("skillChoiceLead").textContent="Weapon upgrades only affect your Skill 1 weapon. Build upgrades unlock a better crafting recipe; they do not upgrade existing items for free.";choices=toolSkillChoicesForLevel(milestone);}
+  if(milestone===1){
+    if(player.skillStarterWeapon)return;
+    el("skillChoiceTitle").textContent="Skill 1 — Choose a Weapon";
+    el("skillChoiceLead").textContent="Choose the weapon path you want for this run.";
+    choices=STARTER_WEAPON_CHOICES;
+  }else{
+    if(player.skillMilestones?.[milestone])return;
+    const kind=skillMilestoneKind(milestone);choices=skillChoicesForLevel(milestone);
+    if(kind==="craftUpgrade"){el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Crafting`;el("skillChoiceLead").textContent="Choose one crafting recipe to upgrade.";}
+    else if(kind==="craftNew"){el("skillChoiceTitle").textContent=`Skill ${milestone} — New Craft`;el("skillChoiceLead").textContent="Unlock a new thing you can make in Crafting.";}
+    else if(kind==="weaponUpgrade"){el("skillChoiceTitle").textContent=`Skill ${milestone} — Upgrade Your Weapon`;el("skillChoiceLead").textContent=choices.length>1?"Choose the next version of your weapon.":"Upgrade the weapon you chose at Skill 1.";}
+    else if(kind==="stat"){el("skillChoiceTitle").textContent=`Skill ${milestone} — Improve Yourself`;el("skillChoiceLead").textContent="Choose stronger attacks, better defense, or faster movement.";}
+  }
+  if(!choices.length){clearSkillChoiceUi();return;}
   grid.innerHTML="";choices.forEach(c=>{const d=document.createElement("div");d.className="skill-choice";d.innerHTML=`<span class="skill-choice-icon">${c.icon}</span><b>${c.name}</b><small>${c.desc}</small>`;d.onclick=()=>chooseSkillUpgrade(milestone,c.id,c.name);grid.appendChild(d);});ov.style.display="block";
 }
 function chooseSkillUpgrade(milestone,id,name){
   milestone=Math.floor(Number(milestone)||0);
   if(milestone===1){if(!starterWeaponFromChoice(id)||player.skillStarterWeapon)return;if(net.room){try{net.room.send("skillChoice",{milestone:1,choice:id});}catch(_){}clearSkillChoiceUi();return;}applyStoneSkillChoice(id,true);player.pendingSkillMilestone=pendingSkillMilestone();clearSkillChoiceUi();if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);return;}
   if(player.skillMilestones?.[milestone]||milestone>Math.max(0,Math.floor(Number(player.skillLevel)||0)))return;
-  const stat=isSkillStatMilestone(milestone),fallbackStat=["speed","strength","defense"].includes(id),valid=stat?["speed","strength","defense"]:["weaponTier","buildWall","buildTower","buildSaddle","buildWindmill","speed","strength","defense"];
-  if(!valid.includes(id))return;if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}clearSkillChoiceUi();return;}
-  player.skillMilestones=player.skillMilestones||{};player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};player.skillMilestones[milestone]=id;if(stat||fallbackStat)player.skillRanks[id]=(player.skillRanks[id]||0)+1;else applyToolSkillMilestones();player.pendingSkillMilestone=pendingSkillMilestone();clearSkillChoiceUi();banner((stat||fallbackStat)?`${name} upgraded!`:`${name} unlocked for crafting/progression.`);if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);
+  const allowed=skillChoicesForLevel(milestone).map(x=>x.id);if(!allowed.includes(id))return;
+  if(net.room){try{net.room.send("skillChoice",{milestone,choice:id});}catch(_){}clearSkillChoiceUi();return;}
+  const kind=skillMilestoneKind(milestone);player.skillMilestones=player.skillMilestones||{};player.skillRanks=player.skillRanks||{speed:0,strength:0,defense:0};player.skillMilestones[milestone]=id;
+  if(kind==="stat")player.skillRanks[id]=(player.skillRanks[id]||0)+1;
+  else if(kind==="weaponUpgrade"&&["doubleAxe","throwingAxe","battleAxe","daggers","longSword","spear"].includes(id))applyWeaponSkillChoice(id,false);
+  applyToolSkillMilestones();
+  player.pendingSkillMilestone=pendingSkillMilestone();clearSkillChoiceUi();
+  banner(kind==="stat"?`${name} upgraded!`:kind==="craftNew"?`${name} added to Crafting!`:kind==="craftUpgrade"?`${name} unlocked!`:`${name} upgraded!`);
+  if(player.pendingSkillMilestone)showSkillChoice(player.pendingSkillMilestone);
 }
 function applySkillNetworkState(data={}){
   const oldLevel=Math.floor(Number(player.skillLevel)||0);
@@ -22954,6 +23030,7 @@ function applySkillNetworkState(data={}){
     defense:Math.max(0,Math.floor(Number(data.defense)||0))
   };
   if(typeof data.stoneChoice==="string"&&data.stoneChoice)applyStoneSkillChoice(data.stoneChoice,false);
+  if(typeof data.weaponChoice==="string")player.skillWeaponChoice=String(data.weaponChoice||"");
   if(data.milestones&&typeof data.milestones==="object"){player.skillMilestones={...data.milestones};applyToolSkillMilestones();}
   
   player.pendingSkillMilestone=Math.max(0,Math.floor(Number(data.pendingMilestone)||0));

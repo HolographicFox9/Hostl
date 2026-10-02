@@ -545,19 +545,42 @@ function randomAnimalGender(){return Math.random()<.5?"Male":"Female";}
 function canonicalAnimalGender(type,requested=""){if(type==="queenbee"||type==="workerbee")return "Female";if(type==="dronebee")return "Male";return requested==="Female"?"Female":requested==="Male"?"Male":randomAnimalGender();}
 
 function skillXpNeededForLevel(level){level=Math.max(0,Math.floor(Number(level)||0));return Math.round(25+level*9+Math.floor(level*level*.05));}
-function isSkillStatMilestone(level){level=Math.floor(Number(level)||0);return level>0&&level%10===0;}
+function skillMilestoneKind(level){level=Math.floor(Number(level)||0);if(level===1)return "weaponChoose";if(level<2)return "";return ["craftUpgrade","craftNew","weaponUpgrade","stat"][(level-2)%4];}
+function isSkillStatMilestone(level){return skillMilestoneKind(level)==="stat";}
 const STARTER_WEAPON_BY_CHOICE={weaponAxe:"Axe",weaponSword:"Sword",weaponPickaxe:"Pickaxe",weaponBow:"Bow",weaponTigerClaws:"TigerClaws",weaponBoxingGloves:"BoxingGloves"};
+const WEAPON_SPECIAL_IDS={Axe:["doubleAxe","throwingAxe","battleAxe"],Sword:["daggers","longSword","spear"]};
 function starterWeaponFromSkillChoice(choice){return STARTER_WEAPON_BY_CHOICE[String(choice||"")]||"";}
 function skillChoiceCount(s,id){let n=0;for(const v of Object.values(s?.milestones||{}))if(v===id)n++;return n;}
 function weaponTierFromSkill(s){return clamp(skillChoiceCount(s,"weaponTier"),0,2);}
 function buildTierFromSkill(s,build){return clamp(skillChoiceCount(s,`build${build}`),0,2);}
+function buildKnownFromSkill(s,build){
+  if(build==="Wall")return true;
+  const vals=Object.values(s?.milestones||{}).map(String);
+  if(build==="Tower")return vals.includes("unlockTower")||vals.includes("buildTower");
+  if(build==="Saddle")return vals.includes("unlockSaddle")||vals.includes("buildSaddle");
+  if(build==="Windmill")return vals.includes("unlockWindmill")||vals.includes("buildWindmill");
+  return false;
+}
+function skillRewardCapForState(s){const w=starterWeaponFromSkillChoice(s?.stoneChoice);return (WEAPON_SPECIAL_IDS[w]||[]).length?12:11;}
+function nextCraftUnlockId(s){if(!buildKnownFromSkill(s,"Tower"))return "unlockTower";if(!buildKnownFromSkill(s,"Saddle"))return "unlockSaddle";if(!buildKnownFromSkill(s,"Windmill"))return "unlockWindmill";return "";}
 function toolSkillAllowedChoices(s,level){
   level=Math.max(2,Math.floor(Number(level)||2));
-  const out=[],weapon=starterWeaponFromSkillChoice(s?.stoneChoice),builds=["buildWall","buildTower","buildSaddle","buildWindmill"],off=(level-2)%builds.length;
-  if(weapon&&weaponTierFromSkill(s)<2)out.push("weaponTier");
-  for(let i=0;i<builds.length&&out.length<3;i++){const id=builds[(off+i)%builds.length],build=id.slice(5);if(buildTierFromSkill(s,build)<2)out.push(id);}
-  if(out.length<3)for(const id of ["speed","strength","defense"]){if(out.length>=3)break;out.push(id);}
-  return new Set(out);
+  const kind=skillMilestoneKind(level),out=[];
+  if(kind==="stat")return new Set(["speed","strength","defense"]);
+  if(kind==="craftNew"){const id=nextCraftUnlockId(s);if(id)out.push(id);return new Set(out);}
+  if(kind==="craftUpgrade"){
+    let builds=["Wall","Tower","Saddle","Windmill"].filter(b=>buildKnownFromSkill(s,b)&&buildTierFromSkill(s,b)<2);
+    if(level===10){const newer=builds.filter(b=>b!=="Wall");if(newer.length)builds=newer;}
+    for(const b of builds.slice(0,3))out.push(`build${b}`);
+    return new Set(out);
+  }
+  if(kind==="weaponUpgrade"){
+    const weapon=starterWeaponFromSkillChoice(s?.stoneChoice),tier=weaponTierFromSkill(s);
+    if(weapon&&tier<2)out.push("weaponTier");
+    else if(tier>=2)out.push(...(WEAPON_SPECIAL_IDS[weapon]||[]));
+    return new Set(out);
+  }
+  return new Set();
 }
 
 const TOOL = {
@@ -2083,7 +2106,19 @@ export class WorldRoom extends Room {
   weaponTierForOwner(ownerId){return weaponTierFromSkill(this.skillState(ownerId));}
   buildTierForOwner(ownerId,build){return buildTierFromSkill(this.skillState(ownerId),build);}
   toolStats(name,tier=0){const base=TOOL[this.validTool(name)],t={...base};tier=clamp(Math.floor(Number(tier)||0),0,2);if(name==="Axe"&&tier>=1)Object.assign(t,{dmg:8,gather:3.6,resourcePower:1.35,woodWall:14,cadence:.52});if(name==="Axe"&&tier>=2)Object.assign(t,{dmg:11,gather:4.6,resourcePower:1.65,woodWall:18,cadence:.48});if(name==="Sword"&&tier>=1)Object.assign(t,{dmg:13,range:56,cadence:.37});if(name==="Sword"&&tier>=2)Object.assign(t,{dmg:18,range:58,cadence:.34});if(name==="Pickaxe"&&tier>=1)Object.assign(t,{dmg:7,gather:3.4,resourcePower:1.45,stoneWall:18});if(name==="Pickaxe"&&tier>=2)Object.assign(t,{dmg:9,gather:4.5,resourcePower:1.8,stoneWall:23});if(name==="Bow"&&tier>=1)Object.assign(t,{dmg:13,cadence:.46});if(name==="Bow"&&tier>=2)Object.assign(t,{dmg:17,cadence:.40});if(name==="TigerClaws"&&tier>=1)Object.assign(t,{dmg:9.5,range:47,cadence:.26});if(name==="TigerClaws"&&tier>=2)Object.assign(t,{dmg:13,range:50,cadence:.22,doubleHit:true});if(name==="BoxingGloves"&&tier>=1)Object.assign(t,{dmg:9.2,range:51,cadence:.30});if(name==="BoxingGloves"&&tier>=2)Object.assign(t,{dmg:13.5,range:54,cadence:.28});return t;}
-  specializedToolStats(ownerId,name,tier=0){return this.toolStats(name,this.weaponTierForOwner(ownerId));}
+  specializedToolStats(ownerId,name,tier=0){
+    const t=this.toolStats(name,this.weaponTierForOwner(ownerId)),spec=String(this.skillState(ownerId).weaponChoice||"");
+    if(name==="Sword"){
+      if(spec==="daggers")Object.assign(t,{dmg:7.2,range:44,cadence:.36,doubleHit:true});
+      else if(spec==="longSword")Object.assign(t,{dmg:21,range:74,cadence:.50});
+      else if(spec==="spear")Object.assign(t,{dmg:16,range:96,cadence:.46});
+    }else if(name==="Axe"){
+      if(spec==="doubleAxe")Object.assign(t,{dmg:8.8,range:66,cadence:.72,gather:4.0,resourcePower:1.50,doubleHit:true});
+      else if(spec==="throwingAxe")Object.assign(t,{dmg:16,range:50,cadence:.72,gather:1.7,resourcePower:.72,throwing:true});
+      else if(spec==="battleAxe")Object.assign(t,{dmg:20,range:78,cadence:.68,gather:2.3,resourcePower:.95,woodWall:11});
+    }
+    return t;
+  }
   playerCanReach(client,x,y,extra=0){const p=this.state.players.get(client.sessionId);return !!p&&!p.dead&&dist(p.x,p.y,x,y)<=105+extra;}
   clientById(id){return this.clients.find(c=>c.sessionId===id)||null;}
   recordAccountAchievement(ownerId,id,context={}){
@@ -2533,7 +2568,8 @@ export class WorldRoom extends Room {
   pendingSkillMilestone(s){
     const level=Math.max(0,Math.floor(Number(s?.level)||0));
     if(!s.milestones||typeof s.milestones!=="object")s.milestones={};
-    for(let m=1;m<=level;m++){
+    const cap=Math.min(level,skillRewardCapForState(s));
+    for(let m=1;m<=cap;m++){
       if(m===1){if(!starterWeaponFromSkillChoice(s.stoneChoice))return 1;continue;}
       if(!s.milestones[m])return m;
     }
@@ -2542,7 +2578,7 @@ export class WorldRoom extends Room {
   skillSnapshot(ownerId){
     const s=this.skillState(ownerId),pending=this.pendingSkillMilestone(s),p=this.state.players.get(ownerId);
     if(p){p.skillLevel=s.level;p.skillXp=s.xp;p.skillSpeed=s.speed;p.skillStrength=s.strength;p.skillDefense=s.defense;p.skillPendingMilestone=pending;}
-    return {level:s.level,xp:s.xp,next:skillXpNeededForLevel(s.level),speed:s.speed,strength:s.strength,defense:s.defense,stoneChoice:String(s.stoneChoice||""),weaponChoice:"",pendingStoneChoice:s.level>=1&&!starterWeaponFromSkillChoice(s.stoneChoice),pendingWeaponChoice:false,pendingMilestone:pending,milestones:{...s.milestones}};
+    return {level:s.level,xp:s.xp,next:skillXpNeededForLevel(s.level),speed:s.speed,strength:s.strength,defense:s.defense,stoneChoice:String(s.stoneChoice||""),weaponChoice:String(s.weaponChoice||""),pendingStoneChoice:s.level>=1&&!starterWeaponFromSkillChoice(s.stoneChoice),pendingWeaponChoice:false,pendingMilestone:pending,milestones:{...s.milestones}};
   }
   sendSkillState(ownerId){
     const c=this.clientById(ownerId);if(c)c.send("skillState",this.skillSnapshot(ownerId));else this.skillSnapshot(ownerId);
@@ -2572,12 +2608,11 @@ export class WorldRoom extends Room {
       if(starterWeaponFromSkillChoice(s.stoneChoice)||!starterWeaponFromSkillChoice(choice)){this.sendSkillState(client.sessionId);return;}
       s.stoneChoice=choice;s.weaponChoice="";const p=this.state.players.get(client.sessionId);if(p)p.tool=starterWeaponFromSkillChoice(choice);this.sendSkillState(client.sessionId);return;
     }
-    if(isSkillStatMilestone(milestone)){
-      if(!["speed","strength","defense"].includes(choice)){this.sendSkillState(client.sessionId);return;}
-      s.milestones[milestone]=choice;s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;this.sendSkillState(client.sessionId);return;
-    }
-    const allowed=toolSkillAllowedChoices(s,milestone);if(!allowed.has(choice)){this.sendSkillState(client.sessionId);return;}
-    s.milestones[milestone]=choice;if(["speed","strength","defense"].includes(choice))s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;this.sendSkillState(client.sessionId);
+    const kind=skillMilestoneKind(milestone),allowed=toolSkillAllowedChoices(s,milestone);if(!allowed.has(choice)){this.sendSkillState(client.sessionId);return;}
+    s.milestones[milestone]=choice;
+    if(kind==="stat")s[choice]=Math.max(0,Math.floor(Number(s[choice])||0))+1;
+    if(kind==="weaponUpgrade"&&["doubleAxe","throwingAxe","battleAxe","daggers","longSword","spear"].includes(choice))s.weaponChoice=choice;
+    this.sendSkillState(client.sessionId);
   }
 
   runShopState(ownerId){
