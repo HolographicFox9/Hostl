@@ -582,13 +582,13 @@
   #skillChoiceOverlay .card{width:100%;padding:13px 14px 14px;border-radius:16px;background:linear-gradient(180deg,rgba(48,65,52,.98),rgba(30,43,34,.98));border:3px solid #171d18;box-shadow:0 7px 0 #182019,0 14px 32px rgba(0,0,0,.34);pointer-events:auto;}
   #skillChoiceOverlay .modal-title-clear{font-size:20px;margin:0 0 3px;text-align:center;}
   #skillChoiceOverlay .lead{font-size:11px;margin:0;text-align:center;opacity:.86;}
-  .skill-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:10px;text-align:left;}
-  .skill-choice{padding:11px 12px;border:3px solid #18231b;border-radius:13px;background:linear-gradient(180deg,#3c4e3e,#29382d);cursor:pointer;box-shadow:0 4px 0 #172019,0 8px 16px rgba(0,0,0,.28);}
-  @media(max-width:620px){#skillChoiceOverlay{top:46px;width:min(96vw,560px)}.skill-choice-grid{grid-template-columns:1fr}.skill-choice{padding:9px 10px}}
-  .skill-choice:hover{border-color:#d6b058;background:linear-gradient(180deg,#4a5e49,#314233);transform:translateY(-2px);}
-  .skill-choice b{color:#f5d47d;font-size:15px;text-shadow:0 2px #30210d;}
-  .skill-choice small{display:block;margin-top:6px;color:#e8e2cc;opacity:.92;line-height:1.4;}
-  .skill-choice .skill-choice-icon{font-size:26px;float:left;margin-right:10px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4));}
+  .skill-choice-grid{display:flex;justify-content:center;align-items:stretch;flex-wrap:wrap;gap:8px;margin-top:9px;text-align:left;}
+  .skill-choice{flex:0 0 158px;max-width:158px;min-height:76px;padding:8px 9px;border:2px solid rgba(255,255,255,.72);border-radius:10px;background:rgba(255,255,255,.72);color:#172019;cursor:pointer;box-shadow:0 3px 0 rgba(17,25,20,.58),0 7px 14px rgba(0,0,0,.20);}
+  @media(max-width:620px){#skillChoiceOverlay{top:46px;width:min(96vw,560px)}.skill-choice-grid{gap:6px}.skill-choice{flex-basis:138px;max-width:138px;min-height:70px;padding:7px 8px}}
+  .skill-choice:hover{border-color:#fff;background:rgba(255,255,255,.88);transform:translateY(-1px);}
+  .skill-choice b{color:#27342a;font-size:13px;text-shadow:none;}
+  .skill-choice small{display:block;margin-top:4px;color:#344038;opacity:.92;line-height:1.28;font-size:10.5px;}
+  .skill-choice .skill-choice-icon{font-size:21px;float:left;margin-right:7px;filter:none;}
 
   /* Gameplay menus use the same inked, flat-shaded language as the animal art. */
   #craftOverlay .card,#invOverlay .card,#runShopOverlay .card{
@@ -6444,7 +6444,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 38000, WORLD_H = 28000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "667";
+const CUBE_SHARED_RULES_VERSION = "702";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6456,7 +6456,10 @@ const TOOL_BASE = {
 };
 const TOOLS = JSON.parse(JSON.stringify(TOOL_BASE));
 const WALL_COST = { wood: 6 };
-const BUILDABLE_IDS = ["Wall","Tower","Saddle","Windmill"];
+const BUILDABLE_IDS = ["Wall","Tower","Saddle","Windmill","Boat","Sub","Chakrams","Flute"];
+const STARTING_CRAFT_IDS = ["Wall","Tower","Saddle","Windmill"];
+const NEW_CRAFT_IDS = ["Boat","Sub","Chakrams","Flute"];
+const HOTBAR_CRAFT_IDS = ["Wall","Tower","Saddle","Windmill","Boat","Sub","Chakrams","Flute"];
 const STARTER_WEAPON_IDS = ["Axe","Sword","Pickaxe","Bow","TigerClaws","BoxingGloves"];
 const STARTER_WEAPON_CHOICES = [
   {id:"weaponAxe",weapon:"Axe",icon:"🪓",name:"Axe",desc:"Strong chopping and solid close-range damage."},
@@ -6482,7 +6485,23 @@ const BUILD_TIER_META={
   Windmill:[
     {name:"Wood Windmill",cost:{wood:16},desc:"Crafts exactly 1 placeable windmill."},
     {name:"Stone Windmill",cost:{wood:5,stone:11},desc:"Crafts 1 stronger windmill."},
-    {name:"Iron Windmill",cost:{stone:12,gold:4},desc:"Crafts 1 heavy windmill."}]
+    {name:"Iron Windmill",cost:{stone:12,gold:4},desc:"Crafts 1 heavy windmill."}],
+  Boat:[
+    {name:"Wood Boat",cost:{wood:24},desc:"Crafts a reusable Boat for safe surface travel across the ocean."},
+    {name:"Reinforced Boat",cost:{wood:12,stone:10},desc:"Upgrades the Boat recipe."},
+    {name:"Ironclad Boat",cost:{wood:8,stone:12,gold:5},desc:"Upgrades the Boat recipe to its current top tier."}],
+  Sub:[
+    {name:"Basic Sub",cost:{wood:8,stone:18,gold:5},desc:"Crafts a reusable Sub for safe underwater ocean travel."},
+    {name:"Reinforced Sub",cost:{stone:22,gold:8},desc:"Upgrades the Sub recipe."},
+    {name:"Deep Sub",cost:{stone:16,gold:12},desc:"Upgrades the Sub recipe to its current top tier."}],
+  Chakrams:[
+    {name:"Stone Chakrams",cost:{wood:2,stone:8},desc:"Throw alternating chakrams. Each throw uses 1 Stone."},
+    {name:"Reinforced Chakrams",cost:{stone:10,gold:2},desc:"Stronger thrown chakrams; each throw still uses 1 Stone."},
+    {name:"Iron Chakrams",cost:{stone:8,gold:5},desc:"Current strongest chakram recipe."}],
+  Flute:[
+    {name:"Wood Flute",cost:{wood:8},desc:"Puts nearby animals to sleep; nearby snakes become calm instead."},
+    {name:"Carved Flute",cost:{wood:5,stone:5},desc:"Longer-range, longer-lasting flute effect."},
+    {name:"Golden Flute",cost:{wood:4,gold:4},desc:"Current strongest flute effect."}]
 };
 const SKILL_MILESTONE_CHOICES = [
   {id:"speed",icon:"💨",name:"Move Faster",desc:"Increase movement speed."},
@@ -6504,21 +6523,19 @@ function buildUnlockTier(id){return clamp(Math.floor(Number(player.buildUnlockTi
 function craftedBuildTier(id){return clamp(Math.floor(Number(player.craftedTiers?.[id])||0),0,2);}
 function skillMilestoneValues(){return Object.values(player.skillMilestones||{}).map(String);}
 function buildIsKnown(id){
-  if(id==="Wall")return true;
+  if(STARTING_CRAFT_IDS.includes(id))return true;
+  if(!NEW_CRAFT_IDS.includes(id))return false;
   const vals=skillMilestoneValues();
-  if(id==="Tower")return vals.includes("unlockTower")||vals.includes("buildTower");
-  if(id==="Saddle")return vals.includes("unlockSaddle")||vals.includes("buildSaddle");
-  if(id==="Windmill")return vals.includes("unlockWindmill")||vals.includes("buildWindmill");
-  return false;
+  return vals.includes(`unlock${id}`)||vals.includes(`build${id}`);
 }
-function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":"🌬️";}
+function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":build==="Windmill"?"🌬️":build==="Boat"?"🛶":build==="Sub"?"🚤":build==="Chakrams"?"⭕":"🎵";}
 function buildSkillChoiceInfo(id){
   if(id==="weaponTier"){
     const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice)||"Weapon",t=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
     const next=t===0?"Stone":t===1?"Iron":"Max";
     return {id,icon:w==="Bow"?"🏹":w==="Axe"?"🪓":w==="Pickaxe"?"⛏️":w==="TigerClaws"?"🐯":w==="BoxingGloves"?"🥊":"⚔️",name:`Upgrade ${w}${next!=="Max"?` to ${next}`:""}`,desc:`Upgrade only the ${w} you chose at Skill 1.`};
   }
-  if(/^unlock(Tower|Saddle|Windmill)$/.test(id)){
+  if(/^unlock(Boat|Sub|Chakrams|Flute)$/.test(id)){
     const build=id.slice(6),m=BUILD_TIER_META[build]?.[0];
     return {id,icon:buildIcon(build),name:`New Craft: ${m?.name||build}`,desc:`Adds ${m?.name||build} to your Crafting menu.`};
   }
@@ -6539,14 +6556,11 @@ const WEAPON_SPECIAL_CHOICES={
 };
 function weaponSpecialChoices(){const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice);return WEAPON_SPECIAL_CHOICES[w]||[];}
 function skillRewardCap(){return weaponSpecialChoices().length?12:11;}
-function nextCraftUnlockInfo(){
-  for(const id of ["Tower","Saddle","Windmill"])if(!buildIsKnown(id))return buildSkillChoiceInfo(`unlock${id}`);
-  return null;
-}
+function craftNewChoices(){return NEW_CRAFT_IDS.filter(id=>!buildIsKnown(id)).map(id=>buildSkillChoiceInfo(`unlock${id}`));}
 function craftUpgradeChoicesForLevel(level){
   let ids=BUILDABLE_IDS.filter(id=>buildIsKnown(id)&&buildUnlockTier(id)<2);
-  if(Number(level)===10){const newer=ids.filter(id=>id!=="Wall");if(newer.length)ids=newer;}
-  return ids.slice(0,3).map(id=>buildSkillChoiceInfo(`build${id}`));
+  if(Number(level)>=10){const newer=ids.filter(id=>NEW_CRAFT_IDS.includes(id));if(newer.length)ids=newer;}
+  return ids.map(id=>buildSkillChoiceInfo(`build${id}`));
 }
 function weaponUpgradeChoicesForLevel(){
   const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice),t=clamp(Math.floor(Number(player.toolTiers?.[w])||0),0,2);
@@ -6557,19 +6571,19 @@ function weaponUpgradeChoicesForLevel(){
 function skillChoicesForLevel(level){
   const kind=skillMilestoneKind(level);
   if(kind==="craftUpgrade")return craftUpgradeChoicesForLevel(level);
-  if(kind==="craftNew"){const c=nextCraftUnlockInfo();return c?[c]:[];}
+  if(kind==="craftNew")return craftNewChoices();
   if(kind==="weaponUpgrade")return weaponUpgradeChoicesForLevel();
   if(kind==="stat")return SKILL_MILESTONE_CHOICES;
   return [];
 }
 function applyToolSkillMilestones(){
-  player.buildUnlockTiers=player.buildUnlockTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
+  player.buildUnlockTiers=player.buildUnlockTiers||Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0]));
   const w=player.skillStarterWeapon||starterWeaponFromChoice(player.skillStoneChoice);
-  let weaponTier=0,special="";const unlock={Wall:0,Tower:0,Saddle:0,Windmill:0};
+  let weaponTier=0,special="";const unlock=Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0]));
   for(const [,rawId] of Object.entries(player.skillMilestones||{})){
     const id=String(rawId||"");
     if(id==="weaponTier")weaponTier=Math.min(2,weaponTier+1);
-    else if(/^build(Wall|Tower|Saddle|Windmill)$/.test(id)){const b=id.slice(5);unlock[b]=Math.min(2,(unlock[b]||0)+1);}
+    else if(/^build(Wall|Tower|Saddle|Windmill|Boat|Sub|Chakrams|Flute)$/.test(id)){const b=id.slice(5);unlock[b]=Math.min(2,(unlock[b]||0)+1);}
     else if(["doubleAxe","throwingAxe","battleAxe","daggers","longSword","spear"].includes(id))special=id;
   }
   if(w){player.toolTiers=player.toolTiers||{};player.toolTiers[w]=weaponTier;}
@@ -6578,8 +6592,8 @@ function applyToolSkillMilestones(){
   applyToolTierStats();buildHotbar();buildCraftList();syncHud();
 }
 function currentCraftables(){
-  player.craftedCounts=player.craftedCounts||{Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedTiers=player.craftedTiers||{Wall:0,Tower:0,Saddle:0,Windmill:0};
-  return BUILDABLE_IDS.filter(buildIsKnown).map(id=>{const tier=buildUnlockTier(id),m=BUILD_TIER_META[id][tier],old=craftedBuildTier(id),up=tier>old&&craftedItemCount(id)>0;return{id,name:up?`Upgrade Craft: ${m.name}`:m.name,cost:{...m.cost},tier,desc:(up?`Your current hotbar ${id.toLowerCase()} stays tier ${old+1} until you craft this upgrade. `:"")+m.desc};});
+  player.craftedCounts=player.craftedCounts||Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0]));player.craftedTiers=player.craftedTiers||Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0]));
+  return BUILDABLE_IDS.filter(buildIsKnown).map(id=>{const tier=buildUnlockTier(id),m=BUILD_TIER_META[id][tier],old=craftedBuildTier(id),up=tier>old&&craftedItemCount(id)>0;return{id,name:up?`Upgrade Craft: ${m.name}`:m.name,cost:{...m.cost},tier,desc:(up?`Your current ${id.toLowerCase()} stays tier ${old+1} until you craft this upgrade. `:"")+m.desc};});
 }
 const BASE_CRAFTABLES=[];
 const CRAFTABLES=BASE_CRAFTABLES;
@@ -9079,7 +9093,7 @@ function animalHeadTouchesTarget(a, target, extraGrace = 0) {
   if (!a || !target) return false;
   const h = animalHeadHitbox(a);
   for (const th of animalTargetDamageHitboxes(target)) {
-    if (dist(h.x, h.y, th.x, th.y) <= h.r + th.r + 1 + Math.max(0, extraGrace || 0)) return true;
+    if (dist(h.x, h.y, th.x, th.y) <= h.r + th.r + 2 + Math.max(0, extraGrace || 0)) return true;
   }
   return false;
 }
@@ -10868,6 +10882,10 @@ function syncNetworkFullWorld(force = false) {
     if(Number.isFinite(Number(own.bucketSips)))player.bucketSips=clamp(Math.floor(Number(own.bucketSips)),0,BUCKET_MAX_SIPS);
     else if(own.bucketWater&&!(player.bucketSips>0))player.bucketSips=BUCKET_MAX_SIPS;
     player.bucketWater=(player.bucketSips||0)>0||!!own.bucketWater;updateHydrationHud();
+    if(typeof own.vehicleType==="string"&&performance.now()-(Number(player._vehicleRequestedAt)||0)>700){
+      const serverVehicle=["Boat","Sub"].includes(own.vehicleType)?own.vehicleType:"";
+      if(player.vehicleType!==serverVehicle){player.vehicleType=serverVehicle;if(!serverVehicle)player._underwaterBlend=0;syncHotbar();syncMobilePrimaryButton();}
+    }
     const schemaSkillLevel=Math.max(0,Math.floor(Number(own.skillLevel)||0));
     const schemaSkillXp=Math.max(0,Number(own.skillXp)||0);
     const schemaSkillSpeed=Math.max(0,Math.floor(Number(own.skillSpeed)||0));
@@ -11285,7 +11303,8 @@ async function connectMultiplayer(options={}) {
       updateHydrationHud();syncHotbar();syncMobilePrimaryButton();
       if(data?.message)banner(String(data.message),data.ok===false);
     });
-    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||"");if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit")player._stoneFruitUntil=game.time+20;if(food==="honey"){player._honeyRushUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(data?.message)banner(String(data.message));restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||"");if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit"){if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);if(Number.isFinite(Number(data?.stoneStacks))){const n=Math.max(0,Math.floor(Number(data.stoneStacks)));while(player._stoneFruitStacks.length>n)player._stoneFruitStacks.shift();while(player._stoneFruitStacks.length<n)player._stoneFruitStacks.push(game.time+20);}}if(food==="honey"){player._honeyRushUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(data?.message)banner(String(data.message));restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("fluteResult", data=>{const n=Math.max(0,Math.floor(Number(data?.affected)||0));banner(n?`Flute affected ${n} nearby animal${n===1?"":"s"}`:"No animals close enough");});
     room.onMessage("revived", (data={}) => { finishRewardedRevive(data); });
     room.onMessage("reviveDenied", () => { game.revivePending=false; updateReviveDeathUi("The server could not authorize that revive."); });
     room.onMessage("resourceReward", applyNetworkHarvestReward);
@@ -11434,11 +11453,9 @@ async function connectMultiplayer(options={}) {
         const ex = sx - player.x, ey = sy - player.y;
         player.x = clamp(player.x + ex * pushBlend, PLAYER_R, WORLD_W - PLAYER_R);
         player.y = clamp(player.y + ey * pushBlend, PLAYER_R, WORLD_H - PLAYER_R);
-        keepObjectOnIsland(player,PLAYER_R+10);
       } else if (Number.isFinite(dx) && Number.isFinite(dy)) {
         player.x = clamp(player.x + dx * pushBlend, PLAYER_R, WORLD_W - PLAYER_R);
         player.y = clamp(player.y + dy * pushBlend, PLAYER_R, WORLD_H - PLAYER_R);
-        keepObjectOnIsland(player,PLAYER_R+10);
       }
     });
     room.onMessage("petGrew", d => banner(`${PET_TYPES[d.type]?.name||"Pet"} became ${stageDisplayName(d.stage)}!`));
@@ -11601,7 +11618,7 @@ function sendNetworkInput(dt) {
   net.sendAccum += dt;
   const mv = currentMoveVector();
   const moving = Math.hypot(mv.x, mv.y) > 0.05;
-  const active = moving || !!mouse.down || !!player.heldSpecial || !!player.riding;
+  const active = moving || !!mouse.down || !!player.heldSpecial || !!player.riding || !!player.vehicleType;
   const step = active ? 1 / 30 : 1 / 10;
   if (net.sendAccum < step) return;
   net.sendAccum %= step;
@@ -11623,6 +11640,7 @@ function sendNetworkInput(dt) {
       tool: player.tool || "Fist",
       heldSpecial: player.heldSpecial || "",
       ridingPetId: player.riding && player.riding.netId ? player.riding.netId : "",
+      vehicleType: player.vehicleType || "",
       saddleTier: Math.max(0,Math.min(2,Math.floor(Number(player.saddleTier)||0))),
       // Keep authoritative mount collision geometry aligned with the locally
       // predicted mount during fast turns. The server validates/clamps this angle.
@@ -11656,6 +11674,7 @@ function updateRemotePlayers(dt) {
         dead: !!p.dead,
         moving: !!p.moving,
         ridingPetId: String(p.ridingPetId || ""),
+        vehicleType: String(p.vehicleType || ""),
         walkPhase: Math.random() * TAU,
         attackTimer: 0,
         swingWeapon: p.tool || "Fist",
@@ -11698,6 +11717,7 @@ function updateRemotePlayers(dt) {
     v.dead = !!p.dead;
     v.moving = !!p.moving;
     v.ridingPetId = String(p.ridingPetId || "");
+    v.vehicleType = String(p.vehicleType || "");
     v.attackTimer = Math.max(0, (Number(v.attackTimer) || 0) - dt);
     if (v.moving) v.walkPhase = (v.walkPhase || 0) + dt * 12.0;
   });
@@ -11710,7 +11730,7 @@ function drawRemotePlayer(v) {
   if (!v || v.dead || (Number(v.health) || 0) <= 0 || !inView(v.x, v.y, 90)) return;
 
   const moving = !!v.moving;
-  const swimming = !v.ridingPetId && pointInsideWater(v.x,v.y);
+  const swimming = !v.ridingPetId && !v.vehicleType && pointInsideWater(v.x,v.y);
   const phase = moving ? (v.walkPhase || game.time * (swimming?7.5:12)) : game.time*(swimming?7.5:0);
   const bob = swimming ? Math.sin(game.time*6.2)*1.45 : (moving ? Math.sin(phase) * 2.0 : 0);
   const walkAmt = swimming ? 0 : (moving ? Math.sin(phase) : 0);
@@ -11727,7 +11747,8 @@ function drawRemotePlayer(v) {
   const remoteSwingMax = Math.max(.08,Number(v._attackVisualDuration)||((TOOLS[v.swingWeapon||holding] && TOOLS[v.swingWeapon||holding].swing) || 0.26));
   const attackT = v.attackTimer > 0 ? clamp(1 - (v.attackTimer / remoteSwingMax), 0, 1) : 0;
   const remoteSwing = v.attackTimer > 0 ? Math.sin(attackT * Math.PI) : 0;
-  hostlRenderModernPlayer(v, { holding, attackT, swingEase: remoteSwing, walkAmt, punchSide: v.punchSide || 1, swimming });
+  if(v.vehicleType) drawVehicleLocal(v.vehicleType, v, v.vehicleType==="Sub" && oceanDepthAt(v.x,v.y)>150);
+  else hostlRenderModernPlayer(v, { holding, attackT, swingEase: remoteSwing, walkAmt, punchSide: v.punchSide || 1, swimming });
   ctx.restore();
 
   ctx.save();
@@ -11848,7 +11869,7 @@ canvas.addEventListener("mousedown", e => {
       e.preventDefault();
       return;
     }
-    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill") {
+    if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill" || player.heldSpecial === "Chakrams" || player.heldSpecial === "Flute") {
       mouse.down = false;
       meleeAttack();
     } else {
@@ -11895,10 +11916,10 @@ function updateWaterFillButton(){
 if(waterFillBtn)waterFillBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();fillBucketFromWater();},{passive:false});
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
-  const special = player?.heldSpecial || "";
-  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?"DRINK":"EMPTY") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "PLACE" : special === "Saddle" ? "USE" : "ATK";
+  const special = player?.vehicleType || player?.heldSpecial || "";
+  const label = special === "HoneyComb" ? "HOLD" : special === "Bucket" ? ((player.bucketSips||0)>0?"DRINK":"EMPTY") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "EAT" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "PLACE" : special === "Chakrams" ? "THROW" : special === "Flute" ? "PLAY" : special === "Boat" || special === "Sub" ? "EXIT" : special === "Saddle" ? "USE" : "ATK";
   mobileAttackBtn.textContent = label;
-  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Bucket empty — use the Fill button near water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "Place item" : special === "Saddle" ? "Tap a pet to ride" : "Attack";
+  const actionText = special === "HoneyComb" ? "Hold Honey Comb for a better bee tame chance" : special === "Bucket" ? ((player.bucketSips||0)>0?`Drink water — ${player.bucketSips} sips left`:"Bucket empty — use the Fill button near water") : (special === "Berry"||special === "JungleBerry"||special === "FrostBerry"||special === "GoodCactus"||special === "BadCactus"||special === "StoneFruit"||special === "Honey") ? "Eat food" : (special === "Wall" || special === "Tower" || special === "Windmill") ? "Place item" : special === "Chakrams" ? "Throw a chakram (uses 1 Stone)" : special === "Flute" ? "Play flute" : special === "Boat" || special === "Sub" ? `Exit ${special}` : special === "Saddle" ? "Tap a pet to ride" : "Attack";
   mobileAttackBtn.setAttribute("aria-label", actionText);
   mobileAttackBtn.title = actionText;
 }
@@ -11965,7 +11986,7 @@ mobileAttackBtn.addEventListener("pointerdown", e => {
   if (!mobileMode || attackPointerId != null) return;
   e.preventDefault();
   attackPointerId = e.pointerId;
-  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill") {
+  if (player.heldSpecial === "Bucket" || player.heldSpecial === "Berry" || player.heldSpecial === "JungleBerry" || player.heldSpecial === "FrostBerry" || player.heldSpecial === "GoodCactus" || player.heldSpecial === "BadCactus" || player.heldSpecial === "StoneFruit" || player.heldSpecial === "Honey" || player.heldSpecial === "HoneyComb" || player.heldSpecial === "Wall" || player.heldSpecial === "Tower" || player.heldSpecial === "Windmill" || player.heldSpecial === "Chakrams" || player.heldSpecial === "Flute") {
     mouse.down = false;
     meleeAttack();
   } else if (player.heldSpecial === "Saddle") {
@@ -14296,7 +14317,7 @@ function drawReassembledWolfPartsSkin(a, stage, sleeping) {
     : Math.max(1, Math.min(headPart.w * 0.36, headGap * 0.55 + bodyPart.w * 0.08));
   const tailX = tailInset;
   const bodyX = tailPart.w + Math.max(0, tailGap * (sleeping ? 0.01 : 0.03)) - tailOverlap;
-  const sleepingHeadForward = sleeping ? headPart.w * 0.10 : 0;
+  const sleepingHeadForward = sleeping ? headPart.w * 0.17 : 0;
   const headX = bodyX + bodyPart.w + Math.max(0, headGap * (sleeping ? 0.05 : 0.01)) - headOverlap - headInset + sleepingHeadForward;
 
   const naturalTop = Math.min(tailPart.y0, bodyPart.y0, headPart.y0);
@@ -15928,10 +15949,18 @@ function skillRank(type){return Math.max(0,Math.floor(Number(player.skillRanks?.
 function skillMoveMul(){return 1 + skillRank("speed") * 0.08;}
 function skillStrengthMul(){return 1 + skillRank("strength") * 0.08;}
 function skillDefenseMul(){return Math.pow(0.92, skillRank("defense"));}
+function activeStoneFruitStacks(){
+  if(!player)return 0;
+  if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];
+  const now=Number(game?.time)||0;
+  player._stoneFruitStacks=player._stoneFruitStacks.filter(t=>Number(t)>now);
+  return player._stoneFruitStacks.length;
+}
+function stoneFruitMoveMul(){return Math.max(.50,1-activeStoneFruitStacks()*.10);}
 function runDamageMul(){
   const hatMul = runShop.hat==="warriorHelm"?1.18:1;
   const starterMul = meta?.ownedStarters?.hunterWrap ? 1.10 : 1;
-  const stoneFruitMul=(Number(player?._stoneFruitUntil)||0)>game.time?1.20:1;
+  const stoneFruitMul=1+activeStoneFruitStacks()*.20;
   return hatMul * starterMul * skillStrengthMul() * stoneFruitMul;
 }
 function runTameBonus(){return runShop.cape==="tamerCape"?0.10:0;}
@@ -15964,6 +15993,18 @@ const MOONMARK_RADIUS = 390;
 const ISLAND_CX = WORLD_W * 0.5, ISLAND_CY = WORLD_H * 0.5;
 const ISLAND_RADIUS = Math.min(WORLD_W, WORLD_H) * 0.415;
 const ISLAND_SHORE_WIDTH = 230;
+// Outer islands are real land masses reachable across the ocean. They currently
+// use existing biome terrain; fantasy/secret biomes and new island-only animals
+// are intentionally left for the later content pass instead of being invented here.
+const OUTER_ISLANDS = Object.freeze([
+  {id:"reef_isle",cx:WORLD_W*.935,cy:WORLD_H*.30,r:1080,biome:"rainforest",seed:.73},
+  {id:"sunbar_isle",cx:WORLD_W*.90,cy:WORLD_H*.91,r:920,biome:"desert",seed:1.91},
+  {id:"frost_isle",cx:WORLD_W*.55,cy:WORLD_H*.052,r:720,biome:"arctic",seed:3.17}
+]);
+const OCEAN_DEEP_DAMAGE_START = 820;
+const OCEAN_DEEP_DAMAGE_FULL = 2200;
+const OCEAN_DEEP_DAMAGE_MIN = 4;
+const OCEAN_DEEP_DAMAGE_MAX = 16;
 const BIOME_ZONES = {
   forest:{id:"forest",cx:WORLD_W*0.41,cy:WORLD_H*0.57},
   rainforest:{id:"rainforest",cx:WORLD_W*0.65,cy:WORLD_H*0.57},
@@ -15973,7 +16014,7 @@ const BIOME_ZONES = {
 };
 const BIOME_PROFILES = {
   forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"] },
-  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["snake","dragon","clouded","queenbee","workerbee","dronebee"] },
+  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["snake","dragon","clouded","saber","queenbee","workerbee","dronebee"] },
   arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["rabbit"] },
   desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","snake","dragon"] },
   mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["dog","wolf","saber","queenbee","workerbee","dronebee"] },
@@ -16020,6 +16061,33 @@ function islandRadiusAtAngle(angle,pad=0){
   return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
 }
 function isInsideIsland(x,y,pad=0){ const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx); return d <= islandRadiusAtAngle(angle,pad); }
+function outerIslandRadiusAtAngle(spec,angle,pad=0){
+  const s=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0;
+  const scale=1+Math.sin(a*3.0+s)*.10+Math.sin(a*5.1-s*.7)*.05+Math.sin(a*7.3+s*1.4)*.025;
+  return Math.max(80,base*clamp(scale,.78,1.24)-(Number(pad)||0));
+}
+function isInsideOuterIsland(spec,x,y,pad=0){
+  if(!spec)return false;const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);
+  return d<=outerIslandRadiusAtAngle(spec,a,pad);
+}
+function outerIslandAt(x,y,pad=0){for(const spec of OUTER_ISLANDS)if(isInsideOuterIsland(spec,x,y,pad))return spec;return null;}
+function isInsideAnyLand(x,y,pad=0){return isInsideIsland(x,y,pad)||!!outerIslandAt(x,y,pad);}
+function mainIslandSignedCoastDistance(x,y){const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-islandRadiusAtAngle(a,0);}
+function outerIslandSignedCoastDistance(spec,x,y){const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-outerIslandRadiusAtAngle(spec,a,0);}
+function oceanDepthAt(x,y){
+  if(!Number.isFinite(x)||!Number.isFinite(y)||isInsideAnyLand(x,y,0))return 0;
+  let best=Math.max(0,mainIslandSignedCoastDistance(x,y));
+  for(const spec of OUTER_ISLANDS)best=Math.min(best,Math.max(0,outerIslandSignedCoastDistance(spec,x,y)));
+  return Math.max(0,best);
+}
+function landDepthToCoastAt(x,y){
+  let best=Infinity;
+  const main=-mainIslandSignedCoastDistance(x,y);if(main>=0)best=Math.min(best,main);
+  for(const spec of OUTER_ISLANDS){const d=-outerIslandSignedCoastDistance(spec,x,y);if(d>=0)best=Math.min(best,d);}
+  return Number.isFinite(best)?best:0;
+}
+function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanDepthAt(x,y)<=range:landDepthToCoastAt(x,y)<=range;}
+function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){
   const dx=x-ISLAND_CX,dy=y-ISLAND_CY,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx),maxR=islandRadiusAtAngle(angle,pad);
   if(!Number.isFinite(d)||d<=maxR)return{x:clamp(x,0,WORLD_W),y:clamp(y,0,WORLD_H)};
@@ -16046,6 +16114,17 @@ function traceIslandPath(pad=0,samples=180){
   }
   ctx.closePath();
 }
+const OUTER_ISLAND_PATH_CACHE=new Map();
+function cachedOuterIslandPath(spec,pad=0,samples=72){
+  if(typeof Path2D!=="function"||!spec)return null;const key=`${spec.id}|${pad}|${samples}`;let path=OUTER_ISLAND_PATH_CACHE.get(key);if(path)return path;
+  path=new Path2D();for(let i=0;i<samples;i++){const a=(i/samples)*TAU,r=outerIslandRadiusAtAngle(spec,a,pad),x=spec.cx+Math.cos(a)*r,y=spec.cy+Math.sin(a)*r;if(i===0)path.moveTo(x,y);else path.lineTo(x,y);}path.closePath();OUTER_ISLAND_PATH_CACHE.set(key,path);return path;
+}
+function traceOuterIslandPath(spec,pad=0,samples=72){
+  ctx.beginPath();for(let i=0;i<samples;i++){const a=(i/samples)*TAU,r=outerIslandRadiusAtAngle(spec,a,pad),x=spec.cx+Math.cos(a)*r,y=spec.cy+Math.sin(a)*r;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();
+}
+function outerIslandInView(spec,pad=380){
+  const r=(Number(spec?.r)||700)+pad;return spec.cx+r>=game.camX&&spec.cx-r<=game.camX+W&&spec.cy+r>=game.camY&&spec.cy-r<=game.camY+H;
+}
 function forestRainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
   return ISLAND_CX + Math.sin(yn*Math.PI*1.25)*WORLD_W*.035 + Math.sin(yn*Math.PI*2.8+1.2)*WORLD_W*.012;
@@ -16063,6 +16142,7 @@ function mountainBoundaryX(y){
   return ISLAND_CX-ISLAND_RADIUS*1.10 + Math.sin(yn*Math.PI*1.7+.6)*WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*WORLD_H*.004;
 }
 function worldBiomeAt(x,y){
+  const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;
   if(!isInsideIsland(x,y,0))return "ocean";
   if(y<=arcticBoundaryY(x))return "arctic";
   if(y>=desertBoundaryY(x))return "desert";
@@ -16157,6 +16237,7 @@ function generatedWaterPlacementClear(x,y,solidR,canopyR,gap=34){
 }
 function pointInsideWater(x,y){
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+  if(worldBiomeAt(x,y)==="ocean")return true;
   for(const r of queryStaticNearby("resources",x,y,560)){
     if(!r||!r.alive||(r.type!=="pond"&&r.type!=="river"))continue;
     if(waterNearPoint(r,x,y,0))return true;
@@ -16280,9 +16361,10 @@ const player = {
   skillLevel: 0, skillXp: 0, skillMilestones: {}, pendingSkillMilestone: 0, skillStoneChoice:"", skillWeaponChoice:"", skillStarterWeapon:"",
   skillRanks: {speed:0,strength:0,defense:0},
   toolTiers: {Axe:0,Pickaxe:0,Sword:0,Bow:0,TigerClaws:0,BoxingGloves:0}, wallTier:0, towerTier:0, saddleTier:0, windmillTier:0,
-  buildUnlockTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftedTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftedCounts:{Wall:0,Tower:0,Saddle:0,Windmill:0}, craftBonuses:{gather:1,buildCost:1,combat:1},
+  buildUnlockTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0}, craftedTiers:{Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0}, craftedCounts:{Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0}, craftBonuses:{gather:1,buildCost:1,combat:1},
   pets: [], // max 4
   riding: null,
+  vehicleType: "", _underwaterBlend:0, _oceanDamageWarnAt:0,
 };
 
 let game = {
@@ -16484,7 +16566,7 @@ function deepestAnimalCircleOverlap(a, x, y, radius=0) {
   return best;
 }
 
-function animalPhysicalHitboxes(a) {
+function animalPhysicalHitboxesBase(a) {
   // Hostl Riders use a Wolf-sized/shaped MOVEMENT hitbox regardless of the animal
   // they are visually riding. Combat/damage geometry stays on the real animal.
   const riderWolfCollision = !!(a?.enemyRider || a?.hostileRiderMount);
@@ -16610,6 +16692,23 @@ function animalPhysicalHitboxes(a) {
     }
     return out;
   });
+}
+
+function animalPhysicalHitboxes(a){
+  const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
+  if(!a||!hits.length)return hits;
+  const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
+  const face=animalHeadHitbox(collisionAnimal);
+  if(face){
+    const ang=Number(collisionAnimal.angle)||0;
+    // Use almost the full real head circle for physical contact. Pull it back
+    // only a tiny amount so the visual snout can lead by a few pixels, but the
+    // player must stop before getting underneath the animal's whole head.
+    const back=Math.max(.8,face.r*.08);
+    const mountedMul=(typeof player!=="undefined"&&player?.riding===a)?.92:1;
+    hits.push({x:face.x-Math.cos(ang)*back,y:face.y-Math.sin(ang)*back,r:Math.max(3,face.r*.94*mountedMul)});
+  }
+  return hits;
 }
 
 function deepestAnimalPhysicalOverlap(a, x, y, radius=0) {
@@ -17092,7 +17191,7 @@ function updateQueenBeeHiveLifeOffline(a,dt,hive){
 }
 function updateBeeHomeBehaviorOffline(a,dt){
   const hive=offlineBeeHomeResource(a);if(!hive)return false;
-  if(a.stage==="baby"){if(!a.sleeping&&Math.random()<dt*.055){a.sleeping=true;return true;}const c=offlineResourceCenter(hive),d=dist(a.x,a.y,c.x,c.y),near=(hive.solidR||70)+80;if(d>near){const aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,4.2);moveFacing(a,(a.speed||60)*.50,dt);}else{a.wanderT=(a.wanderT||0)-dt;if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.8,4.0);}smoothTurn(a,a.wanderA||0,dt,3.4);moveFacing(a,(a.speed||60)*.22,dt);}return true;}
+  if(a.stage==="baby"){if(!a.sleeping&&wildCanSleepNow(a)&&Math.random()<dt*.055){a.sleeping=true;return true;}const c=offlineResourceCenter(hive),d=dist(a.x,a.y,c.x,c.y),near=(hive.solidR||70)+80;if(d>near){const aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,4.2);moveFacing(a,(a.speed||60)*.50,dt);}else{a.wanderT=(a.wanderT||0)-dt;if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.8,4.0);}smoothTurn(a,a.wanderA||0,dt,3.4);moveFacing(a,(a.speed||60)*.22,dt);}return true;}
   if(a.type==="workerbee"&&updateWorkerBeeJobOffline(a,dt,hive))return true;if(a.type==="dronebee"&&updateDroneBeeHiveLifeOffline(a,dt,hive))return true;if(a.type==="queenbee"&&updateQueenBeeHiveLifeOffline(a,dt,hive))return true;return false;
 }
 
@@ -17287,6 +17386,20 @@ function infoAbilityCd(type) {
 function markCreatureHit(creature, recent = 3.6) {
   if (!creature) return;
   creature.recentHit = Math.max(creature.recentHit || 0, recent);
+  if(typeof game!=="undefined")creature._stayAwakeUntil=Math.max(Number(creature._stayAwakeUntil)||0,(Number(game.time)||0)+recent+2.5);
+}
+function wildCanSleepNow(a){
+  if(!a||a.dead)return false;
+  if(combatTargetAlive(a.hostileTarget))return false;
+  if((Number(a.recentHit)||0)>0||a.enraged||a.tameFailedAggro||a.desperateAggro||(Number(a.combat)||0)>0)return false;
+  if(a.fleeUntil&&game.time<a.fleeUntil)return false;
+  if((Number(a._stayAwakeUntil)||0)>game.time)return false;
+  return true;
+}
+function snakeFluteCalmActive(a){
+  if(!a||a.type!=="snake")return false;
+  if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.25){a._fluteCalmUntil=0;return false;}
+  return (Number(a._fluteCalmUntil)||0)>game.time;
 }
 function updateCreatureRecovery(creature, dt, regenRate) {
   if (!creature || creature.dead) return;
@@ -17704,6 +17817,26 @@ function dismountRide(showBanner=true) {
   if (showBanner) banner("Dismounted");
   return true;
 }
+function leaveVehicle(showBanner=true){
+  if(!player.vehicleType)return false;
+  const old=player.vehicleType;player.vehicleType="";player._vehicleRequestedAt=performance.now();player._underwaterBlend=0;
+  if(showBanner)banner(`Left ${old}`);
+  syncHotbar();syncMobilePrimaryButton();
+  return true;
+}
+function selectVehicle(type){
+  type=type==="Sub"?"Sub":"Boat";
+  if(craftedItemCount(type)<=0){banner(`Craft a ${type} first`,true);return false;}
+  if(player.vehicleType===type){leaveVehicle();return true;}
+  if(player.riding)dismountRide(false);
+  const biome=worldBiomeAt(player.x,player.y);
+  if(biome!=="ocean"&&!nearOceanShore(player.x,player.y,220)){
+    banner(`Move near the ocean shore to board the ${type}`,true);return false;
+  }
+  player.vehicleType=type;player._vehicleRequestedAt=performance.now();player.heldSpecial=null;
+  banner(type==="Sub"?"Sub boarded — head into deeper ocean to dive":"Boat boarded — ready for ocean travel");
+  syncHotbar();syncMobilePrimaryButton();return true;
+}
 
 function petUnderWorldPoint(wx, wy) {
   let best=null,bestD=Infinity;
@@ -17773,6 +17906,9 @@ function handleHotkey(key) {
     selectWall();
   } else if (item.label === "Tower" || item.special === "Tower") {selectTower();
   } else if (item.label === "Windmill" || item.special === "Windmill") {selectWindmill();
+  } else if(item.special==="Chakrams"||item.label==="Chakrams"){selectCraftTool("Chakrams");
+  } else if(item.special==="Flute"||item.label==="Flute"){selectCraftTool("Flute");
+  } else if(item.special==="Boat"||item.special==="Sub"){selectVehicle(item.special);
   }
   syncHotbar();
   syncMobilePrimaryButton();
@@ -17794,6 +17930,41 @@ function selectTower() {
 }
 
 function consumeCraftedItem(id){player.craftedCounts=player.craftedCounts||{};const n=craftedItemCount(id);if(n<=0)return false;player.craftedCounts[id]=n-1;if(id==="Saddle")player.hasSaddle=player.craftedCounts[id]>0;if(player.craftedCounts[id]<=0){player.hotbarOrder=(player.hotbarOrder||[]).filter(x=>x!==id);player.inventoryOrder=(player.inventoryOrder||[]).filter(x=>x!==id);if(specialHotbarLabel(player.heldSpecial)===id){player.heldSpecial=null;player.tool=primaryWeaponLabel();player.lastWeaponTool=primaryWeaponLabel();}}buildHotbar();syncHotbar();return true;}
+function selectCraftTool(id){
+  if(!["Chakrams","Flute"].includes(id)||craftedItemCount(id)<1)return;
+  if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;
+  player.heldSpecial=id;
+  banner(id==="Chakrams"?"Chakrams ready — each throw uses 1 Stone":"Flute ready — play it to affect nearby animals");
+  syncHotbar();syncMobilePrimaryButton();
+}
+function throwChakram(){
+  if(player.attackCd>0||craftedItemCount("Chakrams")<1)return;
+  if((player.stone||0)<1){banner("You need 1 Stone to throw a chakram",true);return;}
+  player.stone=Math.max(0,(player.stone||0)-1);player.attackCd=.34;player.punchTimer=.18;player.swingWeapon="Fist";
+  player._chakramSide=(Number(player._chakramSide)||1)*-1;
+  const side=player._chakramSide,a=player.angle,px=-Math.sin(a)*side*8,py=Math.cos(a)*side*8,tier=craftedBuildTier("Chakrams"),dmg=[7,10,14][tier]*runDamageMul();
+  if(net.room){try{net.room.send("throwChakram",{angle:a,tier,side});}catch(_){}}
+  else projectiles.push({x:player.x+Math.cos(a)*25+px,y:player.y+Math.sin(a)*25+py,vx:Math.cos(a)*610,vy:Math.sin(a)*610,life:1.15,r:7,hostile:false,kind:"chakram",color:"#d9dde0",dmg,ownerId:"local"});
+  sfx.shoot();syncHud();
+}
+function playFlute(){
+  if(player.attackCd>0||craftedItemCount("Flute")<1)return;
+  const tier=craftedBuildTier("Flute"),range=[260,340,430][tier],duration=[7,9,11][tier];player.attackCd=1.05;
+  if(net.room){try{net.room.send("playFlute",{tier});}catch(_){};return;}
+  let affected=0;
+  for(const a of animals){
+    if(!a||a.dead||a.owned||dist(player.x,player.y,a.x,a.y)>range)continue;
+    affected++;
+    if(a.type==="snake"){
+      a._fluteCalmUntil=game.time+duration;a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.combat=0;
+      floatText(a.x,a.y-a.r-12,"calm","#a0e0ff");
+    }else{
+      a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;a.recentHit=0;a._stayAwakeUntil=0;a.sleeping=true;
+      floatText(a.x,a.y-a.r-12,"zzz","#a0e0ff");
+    }
+  }
+  banner(affected?`Flute affected ${affected} nearby animal${affected===1?"":"s"}`:"No animals close enough");
+}
 function selectWindmill(){if(craftedItemCount("Windmill")<1)return;player.heldSpecial="Windmill";if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;banner("Windmill in hand — click to place it");syncHotbar();syncMobilePrimaryButton();}
 function placeWall() {
   if(craftedItemCount("Wall")<1){banner("Craft a Wall first",true);return false;}const tier=craftedBuildTier("Wall"),a=player.angle;
@@ -18038,13 +18209,15 @@ function hostlWeaponShapeTouchesCircle(shape,x,y,r=0){
 }
 function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
   if(!a||a.dead||(a.owned&&!a.releasedWild))return;const info=PET_TYPES[a.type];let dmg=animalDamageTaken(a.type,a.stage,baseDamage);a.hp-=dmg;gainSkillXp(1,"combat-hit");a.flash=.12;markCreatureHit(a,4.2);a.sleeping=false;a.enraged=true;a.combat=8;
-  if(isNeutralBeeType(a.type)||(a.type==="dronebee"&&!droneBeeShouldFlee(a))){a.desperateAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(droneBeeShouldFlee(a)){a.desperateAggro=false;a.enraged=false;a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+5.5;a.wanderA=angTo(player.x,player.y,a.x,a.y);}else if(a.stage==="baby"||info?.flee){if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.32){a.desperateAggro=true;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(!a.tameFailedAggro){a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+4;a.wanderA=angTo(player.x,player.y,a.x,a.y);}}else{a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}
+  if(snakeFluteCalmActive(a)){a.enraged=false;a.desperateAggro=false;a.tameFailedAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=null;a.combat=0;}
+  else if(isNeutralBeeType(a.type)||(a.type==="dronebee"&&!droneBeeShouldFlee(a))){a.desperateAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(droneBeeShouldFlee(a)){a.desperateAggro=false;a.enraged=false;a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+5.5;a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,a.fleeUntil+2.5);a.wanderA=angTo(player.x,player.y,a.x,a.y);}else if(a.stage==="baby"||info?.flee){if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.32){a.desperateAggro=true;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(!a.tameFailedAggro){a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+4;a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,a.fleeUntil+2.5);a.wanderA=angTo(player.x,player.y,a.x,a.y);}}else{a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}
   spark(a.x,a.y,crit?"#ffe08a":"#e0563f",6,90);floatText(a.x,a.y-a.r-8,(crit?"CRIT ":"")+Math.round(dmg),crit?"#ffe08a":"#f2836a");
   if(a.hp<=0&&!a.dead){a.hp=0;a.dead=true;if(a.releasedWild){a.hostileTarget=null;a.combat=0;floatText(a.x,a.y-a.r-24,"DEFEATED","#efe6d2");}game.kills++;gainSkillXp(a.stage==="bigmomma"?24:a.stage==="superboss"?18:a.stage==="boss"?14:10,"kill");const drop=pickWeighted([{v:"wood",w:2},{v:"stone",w:2},{v:"gold",w:1}]);player[drop]+=drop==="gold"?1:2;floatText(a.x,a.y-20,"+"+(drop==="gold"?1:2)+" "+drop,"#efe6d2");spark(a.x,a.y,info?.color||"#e0563f",12,120);if(Math.random()<Math.min(.35,.08*runCardChanceMul())){if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[a.type]=(meta.speciesCards[a.type]||0)+1;saveMeta();floatText(a.x,a.y-38,`+1 ${info?.name||a.type} Card!`,"#c77dff");}awardPetXpContributors(a,null);}
 }
 
 function meleeAttack(preciseResolve=null) {
   const resolvingPrecise=!!preciseResolve;
+  if(!resolvingPrecise&&player.vehicleType){leaveVehicle();return;}
   if(!resolvingPrecise){
     if (player.heldSpecial === "HoneyComb") { return; }
     if (player.heldSpecial === "Bucket") { useBucket(); return; }
@@ -18056,6 +18229,8 @@ function meleeAttack(preciseResolve=null) {
     if (player.heldSpecial === "Tower") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeTower(); return; }
     if (player.heldSpecial === "Windmill") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeWindmill(); return; }
     if (player.heldSpecial === "Saddle") return;
+    if (player.heldSpecial === "Chakrams") { throwChakram(); return; }
+    if (player.heldSpecial === "Flute") { playFlute(); return; }
   }
   const attackTool=resolvingPrecise?String(preciseResolve.tool||"Fist"):String(player.tool||"Fist");
   const t=TOOLS[attackTool]||TOOLS.Fist;
@@ -18130,7 +18305,9 @@ function meleeAttack(preciseResolve=null) {
       const lowDroneFlee = droneBeeShouldFlee(a);
       const shouldFleeFirst = !neutralBee && (lowDroneFlee || !!(a.stage === "baby" || info.flee));
       const lowHealthFight = !lowDroneFlee && shouldFleeFirst && a.hp > 0 && a.hp / a.maxHp <= 0.32;
-      if (neutralBee || (a.type === "dronebee" && !lowDroneFlee)) {
+      if(snakeFluteCalmActive(a)){
+        a.enraged=false;a.desperateAggro=false;a.tameFailedAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=null;a.combat=0;
+      } else if (neutralBee || (a.type === "dronebee" && !lowDroneFlee)) {
         // Workers and Queens are peaceful until hit; Drones stand their ground until badly hurt.
         a.desperateAggro = false;
         a.fleeUntil = 0;
@@ -18146,7 +18323,7 @@ function meleeAttack(preciseResolve=null) {
         a.enraged = a.type !== "dronebee";
         a.hostileTarget = null;
         a.fleeFrom = player;
-        a.fleeUntil = game.time + (lowDroneFlee ? 5.5 : 4);
+        a.fleeUntil = game.time + (lowDroneFlee ? 5.5 : 4);a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,a.fleeUntil+2.5);
         a.wanderA = angTo(player.x, player.y, a.x, a.y);
       } else {
         a.fleeUntil = 0;
@@ -18474,7 +18651,7 @@ function selectBiomeFood(food){
   if(count<1){banner(`No ${names[material]||"food"}!`,true);return;}
   if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;
   player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":material==="badCactus"?"BadCactus":material==="honey"?"Honey":"StoneFruit";
-  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — strength at a hydration cost":material==="honey"?"Honey equipped — heals and boosts speed":"Cactus equipped — eat to find out");
+  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — stacks +20% strength and -10% speed for 20s":material==="honey"?"Honey equipped — heals and boosts speed":"Cactus equipped — eat to find out");
   syncHotbar();syncMobilePrimaryButton();
 }
 function eatBiomeFood(food){
@@ -18488,12 +18665,13 @@ function eatBiomeFood(food){
   else if(food==="frostBerry"){player.health=clamp(player.health+14,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)+18,0,100);banner("Frost Berry — +14 HP, +18 hydration");updateHydrationHud();}
   else if(food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;banner("This cactus was good — healing and hydrating over time");}
   else if(food==="badCactus"){player.health=clamp(player.health-8,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)-14,0,100);player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;banner("This cactus was bad — it hurts and dehydrates you",true);updateHydrationHud();}
-  else if(food==="stoneFruit"){player.hydration=clamp((Number(player.hydration)||0)-20,0,100);player._stoneFruitUntil=game.time+20;banner("Stone Fruit — +20% strength for 20s, -20 hydration");updateHydrationHud();}
+  else if(food==="stoneFruit"){player.hydration=clamp((Number(player.hydration)||0)-20,0,100);if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);const n=activeStoneFruitStacks();banner(`Stone Fruit ×${n} — +${n*20}% strength, -${n*10}% speed; this stack lasts 20s`);updateHydrationHud();}
   else if(food==="honey"){player.health=clamp(player.health+20,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)+12,0,100);player._honeyRushUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;banner("Honey — +20 HP, healing over time, and faster movement");updateHydrationHud();}
   sfx.eat();restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();
 }
 
 function fireBow() {
+  if (player.vehicleType) return;
   if (game.over || !game.started || player.heldSpecial || player.tool !== "Bow" || player.shootCd > 0 || player.wood < 1) return;
   player.wood -= 1; player.shootCd = 0.45;
   player.punchTimer = 0.18; player.swingWeapon = "Bow";
@@ -18962,7 +19140,9 @@ function wildlifeHitByPet(target, pet, dealt = 0) {
   const lowDroneFlee = droneBeeShouldFlee(target);
   const shouldFleeFirst = !neutralBee && (lowDroneFlee || !!(target.stage === "baby" || (info && info.flee)));
   const lowHealthFight = !lowDroneFlee && shouldFleeFirst && target.hp > 0 && target.hp / target.maxHp <= 0.32;
-  if (neutralBee || (target.type === "dronebee" && !lowDroneFlee)) {
+  if(snakeFluteCalmActive(target)){
+    target.enraged=false;target.desperateAggro=false;target.tameFailedAggro=false;target.fleeUntil=0;target.fleeFrom=null;target.hostileTarget=null;target.combat=0;
+  } else if (neutralBee || (target.type === "dronebee" && !lowDroneFlee)) {
     target.desperateAggro = false;
     target.fleeUntil = 0;
     target.fleeFrom = null;
@@ -18975,7 +19155,7 @@ function wildlifeHitByPet(target, pet, dealt = 0) {
   } else if (shouldFleeFirst && !target.tameFailedAggro && !target.desperateAggro) {
     target.hostileTarget = null;
     target.fleeFrom = pet;
-    target.fleeUntil = game.time + (lowDroneFlee ? 5.5 : 4);
+    target.fleeUntil = game.time + (lowDroneFlee ? 5.5 : 4);target._stayAwakeUntil=Math.max(Number(target._stayAwakeUntil)||0,target.fleeUntil+2.5);
   } else {
     target.fleeUntil = 0;
     target.fleeFrom = null;
@@ -18995,8 +19175,10 @@ function damageCreatureFromEnemy(creature, enemy, dmg) {
   } else {
     creature.sleeping = false;
     creature.combat = Math.max(creature.combat || 0, 8);
-    if(droneBeeShouldFlee(creature)){
-      creature.enraged=false;creature.desperateAggro=false;creature.hostileTarget=null;creature.fleeFrom=enemy;creature.fleeUntil=game.time+5.5;
+    if(snakeFluteCalmActive(creature)){
+      creature.enraged=false;creature.desperateAggro=false;creature.hostileTarget=null;creature.fleeFrom=null;creature.fleeUntil=0;creature.combat=0;
+    }else if(droneBeeShouldFlee(creature)){
+      creature.enraged=false;creature.desperateAggro=false;creature.hostileTarget=null;creature.fleeFrom=enemy;creature.fleeUntil=game.time+5.5;creature._stayAwakeUntil=Math.max(Number(creature._stayAwakeUntil)||0,creature.fleeUntil+2.5);
     }else{
       creature.enraged = true; creature.fleeUntil = 0; creature.fleeFrom=null; creature.hostileTarget = enemy;
     }
@@ -19459,7 +19641,7 @@ function updatePetBlasts(dt) {
         if(b.knock){const a=Math.atan2(b.vy,b.vx);en.x+=Math.cos(a)*b.knock;en.y+=Math.sin(a)*b.knock;resolveEnemyWorld(en);}
       }else if(best.type==="wild"){
         const wa=best.obj,dealt=animalDamageTaken(wa.type,wa.stage,b.dmg);wa.hp-=dealt;wa.flash=.12;
-        if(b.sourcePet&&!b.sourcePet.dead)wildlifeHitByPet(wa,b.sourcePet,dealt);else{markCreatureHit(wa,4);wa.sleeping=false;wa.enraged=true;}
+        if(b.sourcePet&&!b.sourcePet.dead)wildlifeHitByPet(wa,b.sourcePet,dealt);else{markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else wa.enraged=true;}
         if(b.stun)applyOfflineAbilityStun(wa,b.stun);
         if(b.kind==="tornado")abilityFx.push({type:"tornadoTrap",x:wa.x,y:wa.y,life:2.2,maxLife:2.2,r:Math.max(30,(wa.r||18)+18),phase:0});
         if(b.dotTime&&b.sourcePet)applyOfflinePoison(wa,true,b.sourcePet,b.dmg);
@@ -19517,7 +19699,7 @@ function updateProjectiles(dt) {
       else if(best.type==="wild"){
         const wa=best.obj;
         if(p.hostile) damageCreatureFromEnemy(wa,p.source,p.dmg||8);
-        else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;wa.enraged=true;wa.hostileTarget=player;if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
+        else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else{wa.enraged=true;wa.hostileTarget=player;}if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
       }
       // A thrown axe is still an axe: it harvests the resource it physically strikes,
       // then starts its automatic return. Do this only offline; multiplayer is server-authoritative.
@@ -19525,7 +19707,7 @@ function updateProjectiles(dt) {
         gatherResource(best.obj,TOOLS.Axe,"Axe");
       }
       if(p.kind==="tornado"&&(best.type==="player"||best.type==="pet"||best.type==="enemy"||best.type==="wild")){applyOfflineAbilityStun(best.obj,2.2);abilityFx.push({type:"tornadoTrap",x:best.obj.x,y:best.obj.y,life:2.2,maxLife:2.2,r:Math.max(30,(best.obj.r||PLAYER_R)+18),phase:0});}
-      spark(p.x,p.y,p.kind==="arcaneBolt"?"#c77dff":p.kind==="throwAxe"?"#e6d7a6":p.kind==="tornado"?"#d9f6ff":p.kind==="spit"?"#d8efa3":"#9fdfff",5,65);
+      spark(p.x,p.y,p.kind==="arcaneBolt"?"#c77dff":p.kind==="throwAxe"?"#e6d7a6":p.kind==="chakram"?"#d9dde0":p.kind==="tornado"?"#d9f6ff":p.kind==="spit"?"#d8efa3":"#9fdfff",5,65);
       if(p.kind==="throwAxe"){p.returning=true;p.life=Math.max(p.life,.72);}else p.dead=true;
     }
     if(p.x<0||p.x>WORLD_W||p.y<0||p.y>WORLD_H)p.dead=true;
@@ -19994,7 +20176,7 @@ function findBlockingResourceForAnimal(a, targetX = null, targetY = null) {
   return best;
 }
 function petAttackStuckResource(pet, targetX = null, targetY = null, contactOnly = false) {
-  if (!pet || pet.dead || net.room) return false;
+  if (!pet || pet.dead || pet.sleeping || net.room) return false;
   // Following stays the movement goal. A physically stuck pet can bite the
   // blocker while it keeps trying to route around it, but the resource never
   // replaces the owner as a movement/combat target.
@@ -20064,7 +20246,7 @@ function movePetChaseWithRecovery(pet, target, speed, dt) {
 }
 
 function wildAttackBlockingResource(a) {
-  if (!a || a.dead || net.room) return false;
+  if (!a || a.dead || a.sleeping || net.room) return false;
 
   // Threats and normal chase behavior outrank resources. If this animal was hit,
   // is fleeing an attacker, already has a combat target, or is a natural chasing
@@ -20080,7 +20262,7 @@ function wildAttackBlockingResource(a) {
   const info = PET_TYPES[a.type] || {};
   const naturalChaser = a.stage !== "baby" && !info.friendly;
   const chaseRange = wildPlayerAggroRange(a);
-  if (naturalChaser && !player.dead && dist(a.x, a.y, player.x, player.y) < chaseRange) {
+  if (naturalChaser && !snakeFluteCalmActive(a) && !player.dead && dist(a.x, a.y, player.x, player.y) < chaseRange) {
     a.hostileTarget = player;
     a.sleeping = false;
     a.enraged = true;
@@ -20542,7 +20724,9 @@ function resolveAnimalWorld(a) {
       a.y += Math.sin(ang) * hit.overlap;
     }
   }
-  keepObjectOnIsland(a, Math.max(22,(Number(a.r)||18)*.78));
+  // Wild land animals stay on the main island. Owned pets may follow their
+  // player into the ocean and all the way to the outer islands.
+  if(!a.owned)keepObjectOnIsland(a, Math.max(22,(Number(a.r)||18)*.78));
 }
 
 
@@ -20828,6 +21012,9 @@ function carryPlayerWithOfflineWildMovement(a, oldX, oldY) {
   return;
 }
 
+function wrongBiomeGraceForStage(stage){
+  return ({baby:4,adult:8,boss:12,superboss:17,bigmomma:24})[String(stage||"adult")]||8;
+}
 function keepWildInHomeBiomeOffline(a, dt) {
   if (!a || a.dead || a.owned || a.enemyOwner) return false;
   const allowed=speciesAllowedBiomes(a.type);
@@ -20852,15 +21039,16 @@ function keepWildInHomeBiomeOffline(a, dt) {
   }
   if(here==="ocean")return false;
 
+  a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
+  // Animals can explore a neighboring biome safely for a stage-based grace
+  // period. Older animals know how to stay away from home longer.
+  if(a._wrongBiomeTime < wrongBiomeGraceForStage(a.stage)) return false;
+
+  // Grace is truly safe. Once it expires the animal simply decides it has
+  // wandered far enough and heads home; being in the neighboring biome itself
+  // does not damage it.
   a.sleeping=false;a.hostileTarget=null;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;
   a.fleeUntil=0;a.fleeFrom=null;a.mateTarget=null;a.combat=0;
-  a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
-
-  const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;
-  a.hp=Math.max(0,(Number(a.hp)||0)-loss);
-  a._biomeDamageFxT=(Number(a._biomeDamageFxT)||0)-dt;
-  if(a._biomeDamageFxT<=0){a._biomeDamageFxT=.48;a.flash=Math.max(Number(a.flash)||0,.11);}
-  if(a.hp<=0){a.hp=0;spawnQueenBroodFromBossOffline(a,null);a.dead=true;a.hostileTarget=null;a.fleeFrom=null;return true;}
 
   const preferred=allowed.includes(biomeBaseId(a.biome))?biomeBaseId(a.biome):"";
   const home=nearestAllowedBiomeFor(a.type,a.x,a.y,preferred);
@@ -21019,7 +21207,7 @@ function updateAnimals(dt) {
     // Wildlife can start fights with nearby wildlife or hostile cubes instead
     // of only retaliating after something damages it first.
     a.wildFightScan = (a.wildFightScan || 0) - dt;
-    if (!a.hostileTarget && a.wildFightScan <= 0) {
+    if (!a.hostileTarget && !snakeFluteCalmActive(a) && a.wildFightScan <= 0) {
       a.wildFightScan = rand(0.30, 0.65);
       const wildFoe = chooseWildlifeFightTarget(a);
       if (wildFoe) {
@@ -21077,11 +21265,16 @@ function updateAnimals(dt) {
     if (isBossTier(a.stage) && a.enraged && dPlayer > wildAggroForgetRange(a)) {
       a.enraged = false;
       a.combat = 0;
+      a.recentHit = 0;
+      a._stayAwakeUntil = 0;
       a.sleeping = true;
       a.hp = Math.min(a.maxHp, a.hp + 15);
       floatText(a.x, a.y - a.r - 10, "zzz", "#efe6d2");
     }
 
+    // Sleeping is never allowed to override an active fight/flee state. Any
+    // fresh hit, live aggro, or post-flee wake timer immediately wakes the animal.
+    if (a.sleeping && !wildCanSleepNow(a)) a.sleeping=false;
     if (a.sleeping) { resolveAnimalWorld(a); continue; }
 
     // fleeing after being attacked (cats, foxes, dragons…). Failed tames and
@@ -21123,7 +21316,9 @@ function updateAnimals(dt) {
 
     // enraged / hostile chase
     const neutralBeeCalm = isNeutralBeeType(a.type) && !a.enraged && !a.tameFailedAggro && !a.desperateAggro && !a.hostileTarget;
-    const isHostile = !neutralBeeCalm && (a.enraged || (!isFriendly && !babyAlwaysFlees) ||
+    const fluteSnakeCalm=snakeFluteCalmActive(a);
+    if(fluteSnakeCalm){a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.combat=0;}
+    const isHostile = !fluteSnakeCalm && !neutralBeeCalm && (a.enraged || (!isFriendly && !babyAlwaysFlees) ||
       (isBossTier(a.stage) && !skittishType && !babyAlwaysFlees && a.type !== "fox" && !isNeutralBeeType(a.type)));
     const aggroRange = wildPlayerAggroRange(a);
     const forgetRange = wildAggroForgetRange(a);
@@ -21201,7 +21396,7 @@ function updateAnimals(dt) {
       if (a.wanderT <= 0) {
         a.wanderA = rand(0, TAU);
         a.wanderT = rand(1.2, 3.2);
-        if (Math.random() < beeNapChance(a.type, a.stage, !!a.enraged)) a.sleeping = true;
+        if (wildCanSleepNow(a) && Math.random() < beeNapChance(a.type, a.stage, !!a.enraged)) a.sleeping = true;
       }
       smoothTurn(a, a.wanderA, dt, 3.6);
       moveFacing(a, a.speed * 0.5, dt);
@@ -21740,7 +21935,6 @@ function resolveSolidCollisions() {
   };
   resolveList(animals);
   resolveList(player.pets);
-  keepObjectOnIsland(player, PLAYER_R + 10);
 
 }
 
@@ -22054,6 +22248,31 @@ function useBucket(){
   player.bucketSips=Math.max(0,sips-1);player.bucketWater=player.bucketSips>0;player.hydration=Math.min(100,(Number(player.hydration)||0)+BUCKET_SIP_HYDRATION);
   banner(player.bucketSips>0?`Sip taken — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Last sip — bucket empty");updateHydrationHud();syncHotbar();syncMobilePrimaryButton();updateWaterFillButton();
 }
+function killPlayerFromDeepOcean(){
+  if(player.dead||game.over)return;
+  player.health=0;player.dead=true;player.splitT=0;player.vehicleType="";player._underwaterBlend=0;
+  clearSkillChoiceUi();unlockAchievement("first_death");game.firstLightReady=false;
+  setKilledBy(player,null);beginDeathCamera(null);sfx.die();
+}
+function updateOceanTravelState(dt){
+  const biome=worldBiomeAt(player.x,player.y),depth=biome==="ocean"?oceanDepthAt(player.x,player.y):0;
+  if(player.vehicleType&&biome!=="ocean"&&landDepthToCoastAt(player.x,player.y)>260)leaveVehicle(false);
+  const subTarget=player.vehicleType==="Sub"&&biome==="ocean"?clamp((depth-120)/340,0,1):0;
+  player._underwaterBlend+=(subTarget-(Number(player._underwaterBlend)||0))*Math.min(1,dt*3.2);
+  if(!net.room&&!player.dead&&!player.vehicleType&&biome==="ocean"){
+    const rate=oceanDepthDamageRateAt(player.x,player.y);
+    if(rate>0){
+      player.health=Math.max(0,player.health-rate*dt*runDefenseMul());
+      player._oceanDamageFxCd=Math.max(0,(Number(player._oceanDamageFxCd)||0)-dt);
+      if(player._oceanDamageFxCd<=0){
+        player._oceanDamageFxCd=.72;player.hurtFlash=.18;game.shake=Math.max(game.shake||0,3.2);
+        floatText(player.x,player.y-34,`-${Math.max(1,Math.round(rate*.72))} DEEP WATER`,"#8edbff");
+        const now=performance.now();if(now-(Number(player._oceanDamageWarnAt)||0)>3200){player._oceanDamageWarnAt=now;banner("The ocean is too deep — use a Boat or Sub!",true);}
+      }
+      if(player.health<=0)killPlayerFromDeepOcean();
+    }
+  }
+}
 
 // ---------- player update ----------
 function updatePlayer(dt) {
@@ -22074,6 +22293,9 @@ function updatePlayer(dt) {
     return;
   }
 
+  updateOceanTravelState(dt);
+  if(player.dead)return;
+
   const wx = mouse.sx + game.camX, wy = mouse.sy + game.camY;
   if (mobileMode) {
     player.angle = mobileFacingAngle;
@@ -22093,8 +22315,9 @@ function updatePlayer(dt) {
       mobileFacingAngle = Math.atan2(dy, dx);
       player.angle = mobileFacingAngle;
     }
-    const swimmingBeforeMove = pointInsideWater(player.x, player.y);
-    let speed = 148 * starterMoveMul() * hydrationMoveMul() * (((Number(player._honeyRushUntil)||0)>game.time)?(Number(player._honeyHasteMul)||1.2):1);
+    const swimmingBeforeMove = !player.vehicleType && pointInsideWater(player.x, player.y);
+    let speed = 148 * starterMoveMul() * hydrationMoveMul() * stoneFruitMoveMul() * (((Number(player._honeyRushUntil)||0)>game.time)?(Number(player._honeyHasteMul)||1.2):1);
+    if(player.vehicleType) speed*=player.vehicleType==="Boat"?1.55:1.38;
     if (player.riding && !player.riding.dead) {
       const mount = player.riding;
       const desired = Math.atan2(dy, dx);
@@ -22106,7 +22329,7 @@ function updatePlayer(dt) {
       // forward momentum during a turn instead of sliding sideways.
       dx = Math.cos(mount.angle); dy = Math.sin(mount.angle);
     }
-    if (!player.riding && swimmingBeforeMove) speed *= 0.68;
+    if (!player.riding && !player.vehicleType && swimmingBeforeMove) speed *= 0.68;
     if (player.heldSpecial === "Wall") speed *= 0.64;
     movePlayerSwept((dx / Math.max(0.001, Math.hypot(dx,dy))) * speed * dt, (dy / Math.max(0.001, Math.hypot(dx,dy))) * speed * dt);
   } else {
@@ -22135,7 +22358,7 @@ function updatePlayer(dt) {
     if (mountSpeed > 0.3) player.riding._visualMoveAt = performance.now();
   }
 
-  player.swimming = !player.riding && pointInsideWater(player.x, player.y);
+  player.swimming = !player.riding && !player.vehicleType && pointInsideWater(player.x, player.y);
   if(!net.room&&!(player._cactusSpineCd>0)){
     for(const r of resources){if(!r||!r.alive||(r.type!=="desertCactusGood"&&r.type!=="desertCactusBad"))continue;const c=resourceSolidCenter(r);if(dist(player.x,player.y,c.x,c.y)<(r.solidR||12)+12){player._cactusSpineCd=.7;damagePlayer(3);banner("Cactus spines hurt!",true);break;}}
   }
@@ -22294,7 +22517,7 @@ function ensureHotbarAcquisitionOrder() {
   registerHotbarItem(primaryWeaponLabel());
   registerHotbarItem("Bucket");
   for (const t of STARTER_WEAPON_IDS) if (player.owned[t]) registerHotbarItem(t);
-  for(const b of BUILDABLE_IDS)if(craftedItemCount(b)>0)registerHotbarItem(b);
+  for(const b of HOTBAR_CRAFT_IDS)if(craftedItemCount(b)>0)registerHotbarItem(b);
   if ((player.berries||0)>0) registerHotbarItem("Berry");
   if((player.biomeMaterials?.jungleBerry||0)>0)registerHotbarItem("Jungle Fruit");
   if((player.biomeMaterials?.frostBerry||0)>0)registerHotbarItem("Frost Berry");
@@ -22308,13 +22531,13 @@ function ensureHotbarAcquisitionOrder() {
 function hotbarLabelAvailable(label){
   if(label==="Bucket")return true;if(label==="Fist")return !player.skillStarterWeapon;
   if(STARTER_WEAPON_IDS.includes(label))return !!player.owned[label]&&label===primaryWeaponLabel();
-  if(BUILDABLE_IDS.includes(label))return craftedItemCount(label)>0;
+  if(HOTBAR_CRAFT_IDS.includes(label))return craftedItemCount(label)>0;
   if(label==="Berry")return (player.berries||0)>0;
   const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey"}[label];
   if(mat)return (player.biomeMaterials?.[mat]||0)>0;
   return false;
 }
-function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill"})[special]||"";}
+function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill",Boat:"Boat",Sub:"Sub",Chakrams:"Chakrams",Flute:"Flute"})[special]||"";}
 function swapInventoryIntoHotbar(inLabel,outLabel){
   ensureHotbarInventoryState();
   const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel===primaryWeaponLabel()||!player.inventoryOrder.includes(inLabel))return false;
@@ -22346,6 +22569,10 @@ function getHotbarItems() {
     else if (label === "Wall" && craftedItemCount("Wall")>0) entry={tool:null,label:"Wall",special:"Wall",qty:craftedItemCount("Wall")};
     else if (label === "Tower" && craftedItemCount("Tower")>0) entry={tool:null,label:"Tower",special:"Tower",qty:craftedItemCount("Tower")};
     else if (label === "Windmill" && craftedItemCount("Windmill")>0) entry={tool:null,label:"Windmill",special:"Windmill",qty:craftedItemCount("Windmill")};
+    else if (label === "Boat" && craftedItemCount("Boat")>0) entry={tool:null,label:"Boat",special:"Boat",qty:""};
+    else if (label === "Sub" && craftedItemCount("Sub")>0) entry={tool:null,label:"Sub",special:"Sub",qty:""};
+    else if (label === "Chakrams" && craftedItemCount("Chakrams")>0) entry={tool:null,label:"Chakrams",special:"Chakrams",qty:""};
+    else if (label === "Flute" && craftedItemCount("Flute")>0) entry={tool:null,label:"Flute",special:"Flute",qty:""};
     if(entry) out.push({key:hotkeys[out.length],...entry});
   }
   return out;
@@ -22383,7 +22610,11 @@ function iconSvg(name) {
     Wall: `<rect x="3" y="3" width="20" height="20" rx="2" fill="${buildPal.mid}" stroke="${buildPal.dark}" stroke-width="2"/><line x1="3" y1="13" x2="23" y2="13" stroke="${buildPal.dark}" stroke-width="1.5"/><line x1="13" y1="3" x2="13" y2="13" stroke="${buildPal.dark}" stroke-width="1.5"/>`,
     Tower: `<rect x="7" y="6" width="12" height="16" rx="2" fill="${buildPal.base}"/><rect x="4" y="4" width="18" height="6" fill="${buildPal.mid}"/><circle cx="13" cy="14" r="3" fill="${buildTier>=2?'#e2d16b':'#c94b4b'}"/>`,
     Windmill: `<rect x="11" y="9" width="6" height="15" fill="${buildPal.base}"/><circle cx="14" cy="9" r="2.5" fill="${buildPal.light}"/><path d="M14 9 L14 1 M14 9 L26 9 M14 9 L14 17 M14 9 L2 9" stroke="${buildPal.light}" stroke-width="3"/>`,
+    Boat: `<path d="M3 14 H23 L19 21 H7 Z" fill="${buildPal.base}" stroke="${buildPal.dark}" stroke-width="1.5"/><path d="M7 12 H19" stroke="${buildPal.light}" stroke-width="2"/><path d="M13 4 V13 M13 5 L20 10 H13 Z" fill="${buildPal.light}" stroke="${buildPal.dark}" stroke-width="1"/>`,
+    Sub: `<g><ellipse cx="13" cy="15" rx="10" ry="6" fill="${buildPal.mid}" stroke="${buildPal.dark}" stroke-width="1.5"/><circle cx="10" cy="14" r="2.6" fill="#8edbff" stroke="${buildPal.dark}" stroke-width="1"/><circle cx="16" cy="14" r="2.6" fill="#8edbff" stroke="${buildPal.dark}" stroke-width="1"/><path d="M13 9 V5 H18" fill="none" stroke="${buildPal.dark}" stroke-width="2"/><path d="M3 15 L0 11 V19 Z M23 15 L26 11 V19 Z" fill="${buildPal.base}" stroke="${buildPal.dark}" stroke-width="1"/></g>`,
     Saddle: `<path d="M5 9 Q13 4 21 9 L19 17 Q13 20 7 17 Z" fill="${buildPal.base}" stroke="${buildPal.dark}" stroke-width="2"/><path d="M8 10 Q13 7 18 10" fill="none" stroke="${buildPal.light}" stroke-width="2"/><path d="M9 17 L7 23 M17 17 L19 23" stroke="${buildPal.dark}" stroke-width="2.2" stroke-linecap="round"/>`,
+    Chakrams: `<g fill="none" stroke="${buildPal.light}" stroke-width="3"><circle cx="9" cy="13" r="6"/><circle cx="18" cy="13" r="6"/></g><g fill="none" stroke="${buildPal.dark}" stroke-width="1"><circle cx="9" cy="13" r="6"/><circle cx="18" cy="13" r="6"/></g>`,
+    Flute: `<g transform="rotate(-28 13 13)"><rect x="4" y="11" width="19" height="5" rx="2" fill="${buildPal.base}" stroke="${buildPal.dark}" stroke-width="1.4"/><circle cx="10" cy="13.5" r="1" fill="${buildPal.light}"/><circle cx="15" cy="13.5" r="1" fill="${buildPal.light}"/><circle cx="20" cy="13.5" r="1" fill="${buildPal.light}"/></g>`,
     Bucket: '<path d="M6 8 H20 L18 23 H8 Z" fill="#8c98a0" stroke="#252a2d" stroke-width="2"/><path d="M8 8 Q8 2 13 2 Q18 2 18 8" fill="none" stroke="#444b50" stroke-width="2"/><path class="bucket-water" d="M9 15 H17 L16.4 21 H9.6 Z" fill="#4aaed0"/><path d="M7 9 H19" stroke="#d7dde0" stroke-width="1.5"/>',
     Berry: '<circle cx="9" cy="15" r="5" fill="#d83d68"/><circle cx="17" cy="15" r="5" fill="#e65a80"/><circle cx="13" cy="10" r="4" fill="#c92e5c"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#6ab04c"/>',
     "Jungle Fruit": '<g><ellipse cx="13" cy="14" rx="8" ry="6.5" fill="#f07a42" stroke="#7c3c20" stroke-width="1.3"/><ellipse cx="10.5" cy="11.5" rx="2.2" ry="1.4" fill="#ffc16c" opacity=".8"/><path d="M13 7 Q16 2 22 5 Q18 9 13 9Z" fill="#3d8a45" stroke="#24572c" stroke-width="1"/></g>',
@@ -22412,7 +22643,7 @@ function buildHotbar() {
       div.title = "Empty — craft items to fill";
     } else {
       div.innerHTML = `<span class="key">${item.key}</span>${iconSvg(item.label)}${item.qty != null ? `<span class="qty">${item.qty}</span>` : ""}`;
-      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : item.label === "Stone Fruit" ? `Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration` : (item.tool ? toolDisplayName(item.tool) : BUILDABLE_IDS.includes(item.label)?`${BUILD_TIER_META[item.label][craftedBuildTier(item.label)].name} ×${craftedItemCount(item.label)}`:item.label));
+      div.title = item.label === "Bucket" ? ((player.bucketSips||0)>0?`Bucket — ${player.bucketSips} sip${player.bucketSips===1?"":"s"} left`:"Bucket (empty) — fill it at water") : item.label === "Berry" ? `Berry ×${player.berries || 0} — select it, then click to eat` : item.label === "Jungle Fruit" ? `Jungle Fruit ×${player.biomeMaterials?.jungleBerry||0} — healing over time` : item.label === "Frost Berry" ? `Frost Berry ×${player.biomeMaterials?.frostBerry||0} — health + hydration` : (item.label === "Cactus A" ? `Cactus ×${player.biomeMaterials?.goodCactus||0} — eat to find out` : item.label === "Cactus B" ? `Cactus ×${player.biomeMaterials?.badCactus||0} — eat to find out` : item.label === "Stone Fruit" ? `Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — stacks +20% strength and -10% speed for 20s each` : (item.tool ? toolDisplayName(item.tool) : BUILDABLE_IDS.includes(item.label)?`${BUILD_TIER_META[item.label][craftedBuildTier(item.label)].name} ×${craftedItemCount(item.label)}`:item.label));
       div.addEventListener("click", () => handleHotkey(item.key));
     }
     bar.appendChild(div);
@@ -22443,7 +22674,9 @@ function syncHotbar() {
     const saddleActive = item.label === "Saddle" && player.heldSpecial === "Saddle";
     const towerActive = item.label === "Tower" && player.heldSpecial === "Tower";
     const windmillActive = item.label === "Windmill" && player.heldSpecial === "Windmill";
-    s.classList.toggle("active", (isTool && item.tool === player.tool && !player.heldSpecial) || bucketActive || berryActive || honeyCombActive || biomeFoodActive || wallActive || saddleActive || towerActive || windmillActive);
+    const craftToolActive=(item.special==="Chakrams"||item.special==="Flute")&&player.heldSpecial===item.special;
+    const vehicleActive=(item.special==="Boat"||item.special==="Sub")&&player.vehicleType===item.special;
+    s.classList.toggle("active", (isTool && item.tool === player.tool && !player.heldSpecial && !player.vehicleType) || bucketActive || berryActive || honeyCombActive || biomeFoodActive || wallActive || saddleActive || towerActive || windmillActive || craftToolActive || vehicleActive);
     s.classList.toggle("locked", false);
     if (item.special === "Bucket") {
       const sips=clamp(Math.floor(Number(player.bucketSips)||0),0,BUCKET_MAX_SIPS);player.bucketWater=sips>0;
@@ -22455,7 +22688,7 @@ function syncHotbar() {
     } else if(item.special==="JungleBerry"||item.special==="FrostBerry"||item.special==="GoodCactus"||item.special==="BadCactus"||item.special==="StoneFruit"||item.special==="HoneyComb"||item.special==="Honey"){
       const key=item.special==="JungleBerry"?"jungleBerry":item.special==="FrostBerry"?"frostBerry":item.special==="GoodCactus"?"goodCactus":item.special==="BadCactus"?"badCactus":item.special==="StoneFruit"?"stoneFruit":item.special==="Honey"?"honey":"honeycomb",q=s.querySelector(".qty");if(q)q.textContent=player.biomeMaterials?.[key]||0;
       if(item.special==="GoodCactus"||item.special==="BadCactus")s.title=`Cactus ×${player.biomeMaterials?.[key]||0} — eat to find out`;
-      if(item.special==="StoneFruit")s.title=`Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — +20% strength, costs hydration`;
+      if(item.special==="StoneFruit")s.title=`Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — stacks +20% strength and -10% speed for 20s each`;
       if(item.special==="HoneyComb")s.title=`Honey Comb ×${player.biomeMaterials?.honeycomb||0} — hold it for a better tame chance`;
       if(item.special==="Honey")s.title=`Honey ×${player.biomeMaterials?.honey||0} — heals and boosts speed`;
     }
@@ -23127,7 +23360,7 @@ function doCraft(c) {
   pay(c.cost);player.craftedCounts=player.craftedCounts||{};player.craftedTiers=player.craftedTiers||{};
   player.craftedCounts[c.id]=craftedItemCount(c.id)+1;player.craftedTiers[c.id]=Math.max(craftedBuildTier(c.id),clamp(Number(c.tier)||0,0,2));
   if(c.id==="Wall")player.wallTier=player.craftedTiers.Wall;if(c.id==="Tower")player.towerTier=player.craftedTiers.Tower;if(c.id==="Saddle"){player.saddleTier=player.craftedTiers.Saddle;player.hasSaddle=true;}if(c.id==="Windmill")player.windmillTier=player.craftedTiers.Windmill;
-  registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"?6:4,"craft");sfx.craft();banner(`Crafted 1 ${BUILD_TIER_META[c.id][c.tier].name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
+  if(HOTBAR_CRAFT_IDS.includes(c.id))registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"?6:4,"craft");sfx.craft();banner(`Crafted 1 ${BUILD_TIER_META[c.id][c.tier].name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
 }
 el("closeCraft").addEventListener("click", () => el("craftOverlay").classList.remove("show"));
 el("craftList").addEventListener("wheel",e=>{e.stopPropagation();},{passive:true});
@@ -23450,23 +23683,41 @@ function drawBackground() {
   ctx.save();
   ctx.translate(-game.camX,-game.camY);
 
-  ctx.fillStyle="#2c7fa2";
+  const uw=clamp(Number(player._underwaterBlend)||0,0,1);
+  ctx.fillStyle=mixHex("#2c7fa2","#bca66e",uw*.92);
   ctx.fillRect(game.camX-80,game.camY-80,W+160,H+160);
+
+  // Surface wave marks disappear as the Sub dives. Underwater, the same ocean
+  // area becomes a sandy seafloor without painting ocean over any land mass.
   const waveStep=190,waveX=Math.floor(game.camX/waveStep)*waveStep-waveStep,waveY=Math.floor(game.camY/waveStep)*waveStep-waveStep;
   ctx.lineCap="round";ctx.lineWidth=2;
-  for(let y=waveY;y<game.camY+H+waveStep;y+=waveStep){
-    for(let x=waveX;x<game.camX+W+waveStep;x+=waveStep){
-      if(isInsideIsland(x+70,y+55,20))continue;
-      const wig=((x*17+y*11)%47)-23;
-      ctx.strokeStyle="rgba(219,247,255,.24)";ctx.beginPath();ctx.arc(x+70+wig*.25,y+55,32,.18,2.75);ctx.stroke();
-      ctx.strokeStyle="rgba(17,88,124,.20)";ctx.beginPath();ctx.arc(x+104,y+104,24,3.35,5.85);ctx.stroke();
+  if(uw<.96){
+    const waveAlpha=1-uw;
+    for(let y=waveY;y<game.camY+H+waveStep;y+=waveStep){
+      for(let x=waveX;x<game.camX+W+waveStep;x+=waveStep){
+        if(isInsideAnyLand(x+70,y+55,20))continue;
+        const wig=((x*17+y*11)%47)-23;
+        ctx.strokeStyle=`rgba(219,247,255,${.24*waveAlpha})`;ctx.beginPath();ctx.arc(x+70+wig*.25,y+55,32,.18,2.75);ctx.stroke();
+        ctx.strokeStyle=`rgba(17,88,124,${.20*waveAlpha})`;ctx.beginPath();ctx.arc(x+104,y+104,24,3.35,5.85);ctx.stroke();
+      }
     }
   }
+  if(uw>.08){
+    const sandStep=105,sx0=Math.floor(game.camX/sandStep)*sandStep-sandStep,sy0=Math.floor(game.camY/sandStep)*sandStep-sandStep;
+    ctx.globalAlpha=.14*uw;
+    for(let y=sy0;y<game.camY+H+sandStep;y+=sandStep)for(let x=sx0;x<game.camX+W+sandStep;x+=sandStep){
+      const px=x+35+groundNoise(x,y,301)*42,py=y+28+groundNoise(x,y,307)*48;if(isInsideAnyLand(px,py,6))continue;
+      ctx.fillStyle=groundNoise(x,y,311)>.5?"#dbc891":"#927f55";ctx.beginPath();ctx.ellipse(px,py,3+groundNoise(x,y,313)*5,1.5+groundNoise(x,y,317)*2,.2,0,TAU);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
 
+  // Main island surf bands.
   ctx.strokeStyle="rgba(70,181,202,.34)";ctx.lineWidth=300;{const p=cachedIslandPath(-105);if(p)ctx.stroke(p);else{traceIslandPath(-105);ctx.stroke();}}
   ctx.strokeStyle="rgba(169,231,239,.22)";ctx.lineWidth=90;{const p=cachedIslandPath(-42);if(p)ctx.stroke(p);else{traceIslandPath(-42);ctx.stroke();}}
   ctx.save();ctx.setLineDash([42,30]);ctx.lineDashOffset=-(game.time*8)%72;ctx.strokeStyle="rgba(238,252,252,.55)";ctx.lineWidth=4;{const p=cachedIslandPath(-8);if(p)ctx.stroke(p);else{traceIslandPath(-8);ctx.stroke();}}ctx.restore();
 
+  // Main island ground.
   ctx.save();{const p=cachedIslandPath(0);if(p)ctx.clip(p);else{traceIslandPath(0);ctx.clip();}}
   const tile=80,bx0=Math.floor(game.camX/tile)*tile-tile,by0=Math.floor(game.camY/tile)*tile-tile;
   for(let yy=by0;yy<game.camY+H+tile;yy+=tile){
@@ -23484,9 +23735,39 @@ function drawBackground() {
     }
   }
   ctx.restore();
-
   ctx.strokeStyle="#c7b77b";ctx.lineWidth=150;{const p=cachedIslandPath(75);if(p)ctx.stroke(p);else{traceIslandPath(75);ctx.stroke();}}
   ctx.strokeStyle="rgba(57,91,52,.46)";ctx.lineWidth=34;{const p=cachedIslandPath(166);if(p)ctx.stroke(p);else{traceIslandPath(166);ctx.stroke();}}
+
+  // Reachable outer islands. For now they deliberately use only existing biome
+  // terrain; secret/fantasy biomes and ocean wildlife are left for later art/content.
+  for(const spec of OUTER_ISLANDS){
+    if(!outerIslandInView(spec,420))continue;
+    ctx.strokeStyle="rgba(70,181,202,.34)";ctx.lineWidth=220;{const p=cachedOuterIslandPath(spec,-78);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,-78);ctx.stroke();}}
+    ctx.strokeStyle="rgba(169,231,239,.22)";ctx.lineWidth=70;{const p=cachedOuterIslandPath(spec,-30);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,-30);ctx.stroke();}}
+    ctx.save();{const p=cachedOuterIslandPath(spec,0);if(p)ctx.clip(p);else{traceOuterIslandPath(spec,0);ctx.clip();}}
+    const r=(Number(spec.r)||700)+120,tx0=Math.floor((spec.cx-r)/tile)*tile,tx1=Math.ceil((spec.cx+r)/tile)*tile,ty0=Math.floor((spec.cy-r)/tile)*tile,ty1=Math.ceil((spec.cy+r)/tile)*tile;
+    for(let yy=ty0;yy<=ty1;yy+=tile)for(let xx=tx0;xx<=tx1;xx+=tile){const cx=xx+tile*.5,cy=yy+tile*.5;if(!isInsideOuterIsland(spec,cx,cy,tile*.75))continue;ctx.fillStyle=cachedGroundTileColor(xx,yy,tile);ctx.fillRect(xx,yy,tile+1,tile+1);}
+    for(let yy=ty0;yy<=ty1;yy+=decorStep)for(let xx=tx0;xx<=tx1;xx+=decorStep){const px=xx+decorStep*.5,py=yy+decorStep*.5;if(groundNoise(xx,yy,99)<.30||!isInsideOuterIsland(spec,px,py,145))continue;drawBiomeGroundDecor(px,py,xx,yy);}
+    ctx.restore();
+    ctx.strokeStyle="#c7b77b";ctx.lineWidth=110;{const p=cachedOuterIslandPath(spec,52);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,52);ctx.stroke();}}
+    ctx.strokeStyle="rgba(57,91,52,.42)";ctx.lineWidth=25;{const p=cachedOuterIslandPath(spec,110);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,110);ctx.stroke();}}
+  }
+  ctx.restore();
+}
+
+function drawUnderwaterScreenFx(amount){
+  amount=clamp(Number(amount)||0,0,1);if(amount<=.01)return;
+  ctx.save();
+  ctx.fillStyle=`rgba(18,106,153,${.18+.30*amount})`;ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=.16*amount;ctx.strokeStyle="#b9f0ff";ctx.lineWidth=2.2;ctx.lineCap="round";
+  const phase=game.time*1.7;
+  for(let y=-30;y<H+50;y+=52){
+    ctx.beginPath();
+    for(let x=-40;x<=W+40;x+=28){const yy=y+Math.sin(x*.018+phase+y*.011)*7+Math.sin(x*.007-phase*.65)*4;if(x===-40)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}
+    ctx.stroke();
+  }
+  ctx.globalAlpha=.10*amount;ctx.fillStyle="#dff8ff";
+  for(let i=0;i<10;i++){const x=((i*173+game.time*24)%(W+180))-90,y=((i*97+game.time*9)%(H+120))-60;ctx.beginPath();ctx.ellipse(x,y,55,8,.15,0,TAU);ctx.fill();}
   ctx.restore();
 }
 
@@ -24225,6 +24506,8 @@ function drawProjectile(p) {
     ctx.rotate((game.time*16)*(p.returning?-1:1));
     // Draw the exact same Throwing Axe model that leaves the player's hands.
     ctx.save();ctx.translate(-25,0);drawThrowingAxeModel(p.toolTier??2);ctx.restore();
+  } else if(p.kind==="chakram"){
+    ctx.rotate(game.time*18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.strokeStyle="#656d73";ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(0,0,4.4,0,TAU);ctx.stroke();
   } else if (p.kind === "forestThorn") {
     ctx.shadowColor = p.color || "#79c95d"; ctx.shadowBlur = 9;
     ctx.fillStyle = p.color || "#79c95d";
@@ -25863,6 +26146,8 @@ function hostlDrawSwimmingPose(actor, holding, attackT=0){
   if(holding==="Bucket") return hostlDrawSwimmingIconPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
   if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit"].includes(holding)) return hostlDrawSwimmingIconPose(()=>hostlDrawBerryIcon(holding),swimPhase);
   if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(()=>hostlDrawHoneyIcon(holding),swimPhase);
+  if(holding==="Chakrams") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},swimPhase);
+  if(holding==="Flute") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
   if(holding==="Wall"||holding==="Tower"||holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
   if(holding==="Saddle") return hostlDrawSwimmingIconPose(hostlDrawSaddleIcon,swimPhase);
   if(holding==="Fist"||holding==="TigerClaws"||holding==="BoxingGloves"){
@@ -25956,6 +26241,8 @@ function hostlRenderModernPlayer(actor,opts={}){
   if(holding==="Bucket"){hostlDrawPlayerItemPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),walkAmt);return;}
   if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit"].includes(holding)){hostlDrawPlayerItemPose(()=>hostlDrawBerryIcon(holding),walkAmt);return;}
   if(holding==="HoneyComb"||holding==="Honey"){hostlDrawPlayerItemPose(()=>hostlDrawHoneyIcon(holding),walkAmt);return;}
+  if(holding==="Chakrams"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},walkAmt);return;}
+  if(holding==="Flute"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},walkAmt);return;}
   if(holding==="Wall"||holding==="Tower"||holding==="Windmill"){hostlDrawPlayerItemPose(hostlDrawWallIcon,walkAmt);return;}
   if(holding==="Saddle"){hostlDrawPlayerItemPose(hostlDrawSaddleIcon,walkAmt);return;}
   const poseKey=hostlWeaponPoseKey(actor,holding),pose=HOSTL_PLAYER_POSES[poseKey];
@@ -25974,6 +26261,29 @@ function hostlRenderModernPlayer(actor,opts={}){
   hostlDrawPosePiece(base.body);
 }
 
+function drawVehicleLocal(type,actor,submerged=false){
+  const t=String(type||"");
+  ctx.save();
+  if(t==="Boat"){
+    // Surface boat: broad top-down hull with the cube seated inside it.
+    ctx.fillStyle="rgba(9,69,96,.28)";ctx.beginPath();ctx.ellipse(0,6,35,18,0,0,TAU);ctx.fill();
+    ctx.fillStyle="#8b5a32";ctx.strokeStyle="#3d2819";ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(0,-31);ctx.quadraticCurveTo(29,-12,27,22);ctx.quadraticCurveTo(0,35,-27,22);ctx.quadraticCurveTo(-29,-12,0,-31);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle="#c18a4e";ctx.beginPath();ctx.ellipse(0,4,18,21,0,0,TAU);ctx.fill();
+    ctx.strokeStyle="#5b3a22";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-22,3);ctx.lineTo(22,3);ctx.stroke();
+    ctx.fillStyle=HOSTL_LOCKED_PLAYER_COLOR;ctx.strokeStyle="#191817";ctx.lineWidth=3;roundRect(-12,-13,24,24,5);ctx.fill();ctx.stroke();
+  }else if(t==="Sub"){
+    const bob=submerged?Math.sin(game.time*2.2)*1.2:0;ctx.translate(0,bob);
+    ctx.fillStyle=submerged?"rgba(22,91,124,.22)":"rgba(10,82,111,.24)";ctx.beginPath();ctx.ellipse(0,6,40,21,0,0,TAU);ctx.fill();
+    ctx.fillStyle="#7a929d";ctx.strokeStyle="#263740";ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(0,2,33,20,0,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle="#566d77";ctx.beginPath();ctx.moveTo(-33,0);ctx.lineTo(-44,-10);ctx.lineTo(-44,12);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(33,0);ctx.lineTo(44,-10);ctx.lineTo(44,12);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle="#78c8e5";ctx.strokeStyle="#214453";ctx.lineWidth=2;for(const x of [-13,0,13]){ctx.beginPath();ctx.arc(x,0,6,0,TAU);ctx.fill();ctx.stroke();}
+    ctx.strokeStyle="#344b55";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(0,-31);ctx.lineTo(12,-31);ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawPlayer() {
   const p = player;
   ctx.save();
@@ -26021,6 +26331,11 @@ function drawPlayer() {
     return;
   }
 
+  if(p.vehicleType){
+    ctx.rotate((p.angle||0)-Math.PI/2);drawVehicleLocal(p.vehicleType,p,p.vehicleType==="Sub"&&(Number(p._underwaterBlend)||0)>.25);ctx.restore();
+    ctx.fillStyle="rgba(239,230,210,0.85)";ctx.font="11px sans-serif";ctx.textAlign="center";ctx.fillText(p.username,p.x,p.y-36);
+    if(p.title||p.ownerRank===1||p.testerRank===1){ctx.font="900 10px sans-serif";ctx.fillStyle=p.ownerRank===1?"#ffd76a":p.testerRank===1?"#ffcf5c":"#9ee8ff";ctx.fillText(p.ownerRank===1?"👑 OWNER":p.testerRank===1?"🎯 TESTER #1":String(p.title).toUpperCase(),p.x,p.y-52);}return;
+  }
   const swimming = !p.riding && !!p.swimming;
   if(swimming) drawSwimRippleLocal(24,game.time*6.2);
   if (p.riding) ctx.translate(0, -12);
@@ -27004,15 +27319,19 @@ const minimapGroundCache=document.createElement("canvas");minimapGroundCache.wid
 const minimapGroundCtx=minimapGroundCache.getContext("2d");
 let minimapGroundCacheX=NaN,minimapGroundCacheY=NaN,minimapGroundCacheRelief=false;
 function rebuildMinimapGround(left,top,size,relief){
-  const mmGround={forest:"#668a52",rainforest:"#285f3b",arctic:"#d9edf2",desert:"#d8b36a",mountains:"#777b73",ocean:"#2f83a7"};
-  const cells=relief?32:(MOBILE_DEVICE_HINT?38:48),cs=size/cells;
-  minimapGroundCtx.clearRect(0,0,size,size);
-  for(let gy=0;gy<cells;gy++)for(let gx=0;gx<cells;gx++){
-    const wx=left+(gx+.5)/cells*MINIMAP_VIEW_SPAN,wy=top+(gy+.5)/cells*MINIMAP_VIEW_SPAN,b=biomeBaseId(worldBiomeAt(wx,wy));
-    minimapGroundCtx.fillStyle=mmGround[b]||mmGround.ocean;minimapGroundCtx.fillRect(gx*cs,gy*cs,cs+.7,cs+.7);
+  // Draw every minimap pixel from the actual biome lookup. The old coarse cell
+  // sampling let ocean-colored squares overlap the island coastline and made the
+  // map call those pixels part of the wrong biome.
+  const rgb={forest:[102,138,82],rainforest:[40,95,59],arctic:[217,237,242],desert:[216,179,106],mountains:[119,123,115],ocean:[47,131,167]};
+  const img=minimapGroundCtx.createImageData(size,size),d=img.data;
+  for(let py=0;py<size;py++)for(let px=0;px<size;px++){
+    const wx=left+(px+.5)/size*MINIMAP_VIEW_SPAN,wy=top+(py+.5)/size*MINIMAP_VIEW_SPAN,b=biomeBaseId(worldBiomeAt(wx,wy)),c=rgb[b]||rgb.ocean,i=(py*size+px)*4;
+    d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
   }
+  minimapGroundCtx.putImageData(img,0,0);
   minimapGroundCacheX=left;minimapGroundCacheY=top;minimapGroundCacheRelief=relief;
 }
+
 function drawMinimap() {
   const size=140,half=MINIMAP_VIEW_SPAN*.5,edge=MINIMAP_VIEW_SPAN*.09;
   // The old central island view stays still while the player is inside it. Once
@@ -27269,6 +27588,7 @@ function draw(menuMode = false) {
     ctx.fillStyle = `rgba(10,15,30,${phase.sky * 0.55})`;
     ctx.fillRect(0, 0, W, H);
   }
+  if(!menuMode)drawUnderwaterScreenFx(player._underwaterBlend||0);
 
   // Cached vignette: same look, no new gradient allocation every frame.
   if (vignetteGradient) {
@@ -27401,11 +27721,12 @@ function resetGame(options = {}) {
   player.gold = meta.ownedStarters.gold15 ? 15 : (meta.ownedStarters.gold5 ? 5 : 0);
   net.goldFloor = Math.max(0, Number(player.gold) || 0);
   player.berries = meta.ownedStarters.berries10 ? 10 : 0;
-  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;player._desertHydrationWait=2.5;player._stoneFruitUntil=0;player._honeyRushUntil=0;player._honeyHealRate=0;player._honeyHasteMul=1;player._footprintLastX=NaN;player._footprintLastY=NaN;player._footSide=1;groundFootprints.length=0;
+  player.biomeMaterials = {};player._jungleHotUntil=0;player._jungleHotRate=0;player._cactusGoodUntil=0;player._cactusHealRate=0;player._cactusHydrateRate=0;player._badCactusUntil=0;player._badCactusDamageRate=0;player._badCactusHydrateRate=0;player._cactusSpineCd=0;player._desertHydrationWait=2.5;player._stoneFruitUntil=0;player._stoneFruitStacks=[];player._honeyRushUntil=0;player._honeyHealRate=0;player._honeyHasteMul=1;player._footprintLastX=NaN;player._footprintLastY=NaN;player._footSide=1;groundFootprints.length=0;
   player.hydration = 100; player.bucketWater = true; player.bucketSips = BUCKET_MAX_SIPS; updateHydrationHud();
   player.tool = "Fist";
   player.lastWeaponTool = "Fist";
   player.heldSpecial = null;
+  player.vehicleType="";player._underwaterBlend=0;player._oceanDamageWarnAt=0;
   player.owned={Fist:true,Axe:false,Pickaxe:false,Sword:false,Bow:false,TigerClaws:false,BoxingGloves:false};
   player.hotbarOrder=["Fist","Bucket"];player.inventoryOrder=[];player._inventorySwapCandidate="";
   if (player.berries > 0) registerHotbarItem("Berry");
@@ -27416,7 +27737,7 @@ function resetGame(options = {}) {
   player.username = meta.username || "Cube";
   player.inventory = [];
   player.hasSaddle = false;
-  player.skillLevel=0;player.skillXp=0;player.skillMilestones={};player.pendingSkillMilestone=0;player.skillStoneChoice="";player.skillWeaponChoice="";player.skillStarterWeapon="";player.skillRanks={speed:0,strength:0,defense:0};player.toolTiers={Axe:0,Pickaxe:0,Sword:0,Bow:0,TigerClaws:0,BoxingGloves:0};player.wallTier=0;player.towerTier=0;player.saddleTier=0;player.windmillTier=0;player.buildUnlockTiers={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedTiers={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftedCounts={Wall:0,Tower:0,Saddle:0,Windmill:0};player.craftBonuses={gather:1,buildCost:1,combat:1};player._craftedUpgrades={};applyToolTierStats();updateSkillHud();
+  player.skillLevel=0;player.skillXp=0;player.skillMilestones={};player.pendingSkillMilestone=0;player.skillStoneChoice="";player.skillWeaponChoice="";player.skillStarterWeapon="";player.skillRanks={speed:0,strength:0,defense:0};player.toolTiers={Axe:0,Pickaxe:0,Sword:0,Bow:0,TigerClaws:0,BoxingGloves:0};player.wallTier=0;player.towerTier=0;player.saddleTier=0;player.windmillTier=0;player.buildUnlockTiers={Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0};player.craftedTiers={Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0};player.craftedCounts={Wall:0,Tower:0,Saddle:0,Windmill:0,Boat:0,Sub:0,Chakrams:0,Flute:0};player.craftBonuses={gather:1,buildCost:1,combat:1};player._craftedUpgrades={};applyToolTierStats();updateSkillHud();
   player.pets = instantLiveEntry ? (livePetsBeforeReset || []).filter(p => p && !p.dead) : [];
   player.riding = instantLiveEntry && liveOwnBeforeReset?.ridingPetId ? (net.petVisuals.get(String(liveOwnBeforeReset.ridingPetId)) || null) : null;
 
