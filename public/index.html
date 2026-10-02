@@ -5513,18 +5513,18 @@ button:focus-visible{
 
 <style id="hostl-update-663-hud">
 /* 663 compact translucent bottom HUD */
-#bottomDock{bottom:6px;display:grid;grid-template-columns:26px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:6px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(96vw,650px);}
+#bottomDock{bottom:6px;display:grid;grid-template-columns:28px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:7px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(98vw,720px);}
 #resourceStrip{grid-area:resources;gap:5px;padding-left:31px;justify-content:center;overflow:visible;}
 .dock-res{font-size:10px;padding:2px 6px;border-width:2px;background:rgba(226,215,173,.76);}
 #skillHud{grid-area:skill;width:min(230px,58vw);justify-self:center;padding:0;}
 #skillHudTop{margin-bottom:1px;font-size:8px;}#skillHudTop b{font-size:9px;}#skillTrack{height:7px;border-width:1px;}
-#hydrationHud{grid-area:hydration;width:24px;height:52px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+#hydrationHud{grid-area:hydration;width:26px;height:58px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
 #hydrationHudTop{width:100%;height:10px;justify-content:center;margin:0 0 1px;font-size:7px;line-height:8px;}#hydrationHudTop b{display:none;}
-#hydrationTrack{width:18px;height:40px;border-radius:7px;border-width:2px;}
+#hydrationTrack{width:19px;height:45px;border-radius:7px;border-width:2px;}
 #hydrationFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .18s ease-out;background:linear-gradient(180deg,#8ce9ff 0%,#42bce4 52%,#258cc1 100%);}
-#hotbar{grid-area:hotbar;gap:4px;padding:3px 4px;border-radius:12px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
-.slot{width:46px;height:46px;border-width:2px;border-radius:9px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
-.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:23px;height:23px}.slot .key{font-size:9px}.slot .qty{font-size:9px}.slot .label{font-size:7px}
+#hotbar{grid-area:hotbar;gap:5px;padding:4px 5px;border-radius:13px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.slot{width:52px;height:52px;border-width:2px;border-radius:10px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
+.slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:26px;height:26px}.slot .key{font-size:10px}.slot .qty{font-size:10px}.slot .label{font-size:8px}
 #waterFillBtn{left:50%;bottom:104px;transform:translateX(-50%);min-width:94px;height:40px;border-color:#7edcff;background:linear-gradient(180deg,#2daee0,#1676b7);color:#effcff;box-shadow:0 5px 0 #0d5687,0 9px 18px rgba(0,0,0,.25);}
 #waterFillBtn:active{transform:translateX(-50%) translateY(2px);background:linear-gradient(180deg,#249dcc,#12669f);}
 #tameBtn{bottom:104px;}
@@ -5533,7 +5533,7 @@ body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-w
 body.mobile-performance #resourceStrip{padding-left:24px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
 body.mobile-performance #hydrationHud{width:21px;height:45px}body.mobile-performance #hydrationTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop{font-size:6px}
 body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:2px;padding:2px 3px;width:max-content;max-width:calc(100vw - 36px);justify-self:center;}
-body.mobile-performance .slot{width:41px;height:41px;border-width:2px}body.mobile-performance .slot .ico{width:21px;height:21px}
+body.mobile-performance .slot{width:45px;height:45px;border-width:2px}body.mobile-performance .slot .ico{width:23px;height:23px}
 body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:calc(var(--phone-bottom) + 91px);}
 </style>
 </head>
@@ -25636,7 +25636,7 @@ for (const [k, meta] of Object.entries(HOSTL_PLAYER_SPRITE_ASSETS)) {
   img.src = meta.src;
   HOSTL_PLAYER_SPRITES[k] = Object.assign({}, meta, { img });
 }
-const HOSTL_PLAYER_POSES = {"player":{"body":{"asset":"player_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"player_arm0","x":-24.0,"y":-3.0,"w":16,"h":33},{"asset":"player_arm1","x":8.0,"y":-2.0,"w":17,"h":32}],"tools":[]},"axeWood":{"body":{"asset":"axeWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeWood_arm0","x":-22.0,"y":-2.0,"w":18,"h":31},{"asset":"axeWood_arm1","x":6.0,"y":-4.0,"w":16,"h":33}],"tools":[{"asset":"axeWood_tool0","x":-47.0,"y":1.0,"w":70,"h":34}]},"axeStone":{"body":{"asset":"axeStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeStone_arm0","x":-22.0,"y":-2.0,"w":18,"h":31},{"asset":"axeStone_arm1","x":6.0,"y":-4.0,"w":16,"h":33}],"tools":[{"asset":"axeStone_tool0","x":-52.0,"y":-6.0,"w":80,"h":41}]},"axeIron":{"body":{"asset":"axeIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeIron_arm0","x":-23.0,"y":-2.0,"w":19,"h":31},{"asset":"axeIron_arm1","x":5.0,"y":-4.0,"w":17,"h":33}],"tools":[{"asset":"axeIron_tool0","x":-49.0,"y":8.0,"w":74,"h":29}]},"axeDouble":{"body":{"asset":"axeDouble_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeDouble_arm0","x":-22.0,"y":-4.0,"w":17,"h":33},{"asset":"axeDouble_arm1","x":7.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeDouble_tool0","x":-78.0,"y":-5.0,"w":154,"h":57}]},"axeThrow":{"body":{"asset":"axeThrow_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeThrow_arm0","x":-24.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeThrow_tool0","x":11.0,"y":-2.0,"w":44,"h":42}]},"axeWar":{"body":{"asset":"axeWar_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"axeWar_arm0","x":-25.5,"y":-14.0,"w":19,"h":31},{"asset":"axeWar_arm1","x":-25.5,"y":-16.0,"w":18,"h":33}],"tools":[{"asset":"axeWar_tool0","x":-96.5,"y":-23.0,"w":142,"h":62}]},"swordWood":{"body":{"asset":"swordWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordWood_arm0","x":-22.0,"y":7.0,"w":26,"h":25},{"asset":"swordWood_arm1","x":4.0,"y":-1.0,"w":18,"h":32}],"tools":[{"asset":"swordWood_tool0","x":-78.0,"y":-23.0,"w":87,"h":58}]},"swordStone":{"body":{"asset":"swordStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordStone_arm0","x":-22.0,"y":8.0,"w":26,"h":25},{"asset":"swordStone_arm1","x":3.0,"y":0.0,"w":19,"h":32}],"tools":[{"asset":"swordStone_tool0","x":-74.0,"y":-20.0,"w":85,"h":57}]},"swordIron":{"body":{"asset":"swordIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordIron_arm0","x":-22.0,"y":6.0,"w":27,"h":25},{"asset":"swordIron_arm1","x":3.0,"y":-3.0,"w":19,"h":32}],"tools":[{"asset":"swordIron_tool0","x":-83.0,"y":-15.0,"w":93,"h":49}]},"daggers":{"body":{"asset":"daggers_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"daggers_arm0","x":-36.0,"y":-1.0,"w":30,"h":22},{"asset":"daggers_arm1","x":5.0,"y":1.0,"w":31,"h":22}],"tools":[{"asset":"daggers_tool0","x":-35.0,"y":8.0,"w":22,"h":42},{"asset":"daggers_tool1","x":11.0,"y":8.0,"w":23,"h":42}]},"longSword":{"body":{"asset":"longSword_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"longSword_arm0","x":-22.0,"y":8.0,"w":27,"h":25},{"asset":"longSword_arm1","x":3.0,"y":0.0,"w":19,"h":32}],"tools":[{"asset":"longSword_tool0","x":-119.0,"y":-52.0,"w":133,"h":91}]},"spear":{"body":{"asset":"spear_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"spear_arm0","x":-6.5,"y":5.0,"w":21,"h":31},{"asset":"spear_arm1","x":-2.5,"y":7.0,"w":20,"h":30}],"tools":[{"asset":"spear_tool0","x":-29.5,"y":-29.0,"w":60,"h":133}]}};
+const HOSTL_PLAYER_POSES = {"player":{"body":{"asset":"player_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"player_arm0","x":-24.0,"y":-3.0,"w":16,"h":33},{"asset":"player_arm1","x":8.0,"y":-2.0,"w":17,"h":32}],"tools":[]},"axeWood":{"body":{"asset":"axeWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeWood_arm0","x":-22.0,"y":-2.0,"w":18,"h":31},{"asset":"axeWood_arm1","x":6.0,"y":-4.0,"w":16,"h":33}],"tools":[{"asset":"axeWood_tool0","x":-47.0,"y":1.0,"w":70,"h":34}]},"axeStone":{"body":{"asset":"axeStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeStone_arm0","x":-22.0,"y":-2.0,"w":18,"h":31},{"asset":"axeStone_arm1","x":6.0,"y":-4.0,"w":16,"h":33}],"tools":[{"asset":"axeStone_tool0","x":-52.0,"y":-6.0,"w":80,"h":41}]},"axeIron":{"body":{"asset":"axeIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeIron_arm0","x":-23.0,"y":-2.0,"w":19,"h":31},{"asset":"axeIron_arm1","x":5.0,"y":-4.0,"w":17,"h":33}],"tools":[{"asset":"axeIron_tool0","x":-49.0,"y":8.0,"w":74,"h":29}]},"axeDouble":{"body":{"asset":"axeDouble_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeDouble_arm0","x":-22.0,"y":-4.0,"w":17,"h":33},{"asset":"axeDouble_arm1","x":7.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeDouble_tool0","x":-78.0,"y":-5.0,"w":154,"h":57}]},"axeThrow":{"body":{"asset":"axeThrow_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeThrow_arm0","x":-24.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeThrow_tool0","x":11.0,"y":-2.0,"w":44,"h":42}]},"axeWar":{"body":{"asset":"axeWar_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"axeWar_arm0","x":-25.5,"y":-14.0,"w":19,"h":31},{"asset":"axeWar_arm1","x":-25.5,"y":-16.0,"w":18,"h":33}],"tools":[{"asset":"axeWar_tool0","x":-96.5,"y":-23.0,"w":142,"h":62}]},"swordWood":{"body":{"asset":"swordWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordWood_arm0","x":-22.0,"y":7.0,"w":26,"h":25,"flipX":true},{"asset":"swordWood_arm1","x":4.0,"y":-1.0,"w":18,"h":32}],"tools":[{"asset":"swordWood_tool0","x":-78.0,"y":-23.0,"w":87,"h":58}]},"swordStone":{"body":{"asset":"swordStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordStone_arm0","x":-22.0,"y":8.0,"w":26,"h":25,"flipX":true},{"asset":"swordStone_arm1","x":3.0,"y":0.0,"w":19,"h":32}],"tools":[{"asset":"swordStone_tool0","x":-74.0,"y":-20.0,"w":85,"h":57}]},"swordIron":{"body":{"asset":"swordIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordIron_arm0","x":-22.0,"y":6.0,"w":27,"h":25,"flipX":true},{"asset":"swordIron_arm1","x":3.0,"y":-3.0,"w":19,"h":32}],"tools":[{"asset":"swordIron_tool0","x":-83.0,"y":-15.0,"w":93,"h":49}]},"daggers":{"body":{"asset":"daggers_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"daggers_arm0","x":-36.0,"y":-1.0,"w":30,"h":22},{"asset":"daggers_arm1","x":5.0,"y":1.0,"w":31,"h":22}],"tools":[{"asset":"daggers_tool0","x":-35.0,"y":8.0,"w":22,"h":42},{"asset":"daggers_tool1","x":11.0,"y":8.0,"w":23,"h":42}]},"longSword":{"body":{"asset":"longSword_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"longSword_arm0","x":-22.0,"y":8.0,"w":27,"h":25,"flipX":true},{"asset":"longSword_arm1","x":3.0,"y":0.0,"w":19,"h":32}],"tools":[{"asset":"longSword_tool0","x":-119.0,"y":-52.0,"w":133,"h":91}]},"spear":{"body":{"asset":"spear_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"spear_arm0","x":-6.5,"y":5.0,"w":21,"h":31},{"asset":"spear_arm1","x":-2.5,"y":7.0,"w":20,"h":30}],"tools":[{"asset":"spear_tool0","x":-29.5,"y":-29.0,"w":60,"h":133}]}};
 function hostlWeaponPoseKey(actor, holding) {
   const spec = String(actor?.skillWeaponChoice || "");
   const tierRaw = actor?.toolTiers ? Number(actor.toolTiers[holding]) || 0 : 0;
@@ -25664,7 +25664,15 @@ function hostlDrawPosePiece(part, dx = 0, dy = 0, rot = 0, pivotX = null, pivotY
   ctx.save();
   ctx.translate(px + dx, py + dy);
   ctx.rotate(rot);
-  ctx.drawImage(spr.img, part.x - px, part.y - py, part.w, part.h);
+  if(part.flipX){
+    // Some separated hand pieces were authored facing the opposite way.
+    // Mirror only that individual piece around its own pivot; do not swap hands
+    // or alter the weapon/swing animation.
+    ctx.scale(-1,1);
+    ctx.drawImage(spr.img, -(part.x - px) - part.w, part.y - py, part.w, part.h);
+  }else{
+    ctx.drawImage(spr.img, part.x - px, part.y - py, part.w, part.h);
+  }
   ctx.restore();
 }
 function hostlPoseShoulder(part, side) {
@@ -25798,21 +25806,13 @@ function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
   // axe hand does not lag behind the head of the swing.
   for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
   for(let i=0;i<pose.arms.length;i++){
-    const arm=pose.arms[i];
+    const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
     if(isAxe){
-      const side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
       hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),rot,piv.x,piv.y);
     }else{
-      // Sword hands stay on their original Sep sides. The right hand keeps its
-      // original Sep orientation instead of rolling over with the blade.
-      // It follows the grip by position only. The left hand gets only a small
-      // supporting rotation so the swing still reads naturally.
-      if(i===1){
-        hostlDrawPosePiece(arm,dx,dy-walkAmt,0);
-      }else{
-        const piv=hostlPoseShoulder(arm,-1);
-        hostlDrawPosePiece(arm,dx*.82,dy*.82+walkAmt,rot*.38,piv.x,piv.y);
-      }
+      // Sword swing motion stays unchanged. Hand image orientation is handled
+      // by the per-piece flip flag in the pose data.
+      hostlDrawPosePiece(arm,dx*.80,dy*.80+(i%2?-walkAmt:walkAmt),rot*.92,piv.x,piv.y);
     }
   }
   hostlDrawPosePiece(pose.body);
