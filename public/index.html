@@ -8988,45 +8988,20 @@ function animalAttackCooldown(type, stage, owned = false) {
 // Physical animal melee only connects when the attacker's HEAD overlaps the target.
 // This mirrors the visible head geometry closely enough that bites feel contact-based.
 function animalHeadHitbox(a) {
-  // One clear face/head damage zone. It reaches the visible head while leaving
-  // the very tip of the snout cosmetic.
-  const r = a.r || 18;
-  let forward = 1.14;
-  let radiusMul = 0.46;
-
-  if (a.type === "bear") { forward = 1.08; radiusMul = 0.49; }
-  else if (a.type === "rabbit") { forward = 1.12; radiusMul = 0.42; }
-  else if (a.type === "cat") { forward = 1.17; radiusMul = 0.43; }
-  else if (a.type === "fox") { forward = 1.20; radiusMul = 0.44; }
-  else if (a.type === "wolf" || a.type === "dog") { forward = 1.20; radiusMul = 0.44; }
-  else if (a.type === "owl") { forward = 1.05; radiusMul = 0.49; }
-  else if (a.type === "deer") { forward = 1.12; radiusMul = 0.34; }
-  else if (a.type === "boar") { forward = 1.18; radiusMul = 0.45; }
-  else if (a.type === "saber" || a.type === "clouded") { forward = 1.00; radiusMul = 0.34; }
-  else if (a.type === "snake") { forward = 1.26; radiusMul = 0.29; }
-  else if (a.type === "dragon") { forward = 1.22; radiusMul = 0.40; }
-
-  const stageMul = a.stage === "baby" ? 1.04 :
-    a.stage === "boss" ? 1.05 :
-    a.stage === "superboss" ? 1.07 :
-    a.stage === "bigmomma" ? 1.09 : 1;
-
-  const angle = a.angle || 0;
-  const ca = Math.cos(angle), sa = Math.sin(angle);
-  const side = 0.10; // a small local-down shift under the visible snout
-
-  return {
-    x: a.x + ca * r * forward - sa * r * side,
-    y: a.y + sa * r * forward + ca * r * side,
-    r: Math.max(8, r * radiusMul * stageMul),
-  };
+  // A bite comes from the actual front/muzzle circle of the animal silhouette.
+  // No stage multiplier or oversized invisible reach is added here.
+  const hits=animalBodyHitboxes(a);
+  if(hits.length){
+    const nose=hits[hits.length-1];
+    return {x:nose.x,y:nose.y,r:Math.max(4,nose.r*.92)};
+  }
+  const r=Math.max(8,Number(a?.r)||18),angle=Number(a?.angle)||0;
+  return {x:(a?.x||0)+Math.cos(angle)*r*1.28,y:(a?.y||0)+Math.sin(angle)*r*1.28,r:Math.max(4,r*.24)};
 }
 function animalHeadTouches(a, tx, ty, tr) {
   const h = animalHeadHitbox(a);
-  // Bite contact is intentionally tighter than normal body collision.
-  // The animal's face must actually reach the target; no large invisible buffer.
-  const targetR = Math.max(2, (tr || 0) * 0.78);
-  return dist(h.x, h.y, tx, ty) <= h.r + targetR + 3;
+  const targetR = Math.max(2, (tr || 0) * 0.74);
+  return dist(h.x, h.y, tx, ty) <= h.r + targetR + 1;
 }
 function animalTargetDamageHitboxes(target) {
   if (!target) return [];
@@ -9046,26 +9021,14 @@ function animalHeadTouchesTarget(a, target, extraGrace = 0) {
   if (!a || !target) return false;
   const h = animalHeadHitbox(a);
   for (const th of animalTargetDamageHitboxes(target)) {
-    if (dist(h.x, h.y, th.x, th.y) <= h.r + th.r + 3 + Math.max(0, extraGrace || 0)) return true;
+    if (dist(h.x, h.y, th.x, th.y) <= h.r + th.r + 1 + Math.max(0, extraGrace || 0)) return true;
   }
   return false;
 }
 
 function petHeadTouchesTarget(p, target) {
-  if (!p || !target) return false;
-  if (animalHeadTouchesTarget(p, target)) return true;
-  if (p.stage !== "baby") return false;
-
-  // Baby pets keep a very small bite-contact grace, but the grace is now tested
-  // against the victim's real head/body circles rather than only its center.
-  const toward = angTo(p.x, p.y, target.x, target.y);
-  let diff = toward - (p.angle || 0);
-  while (diff > Math.PI) diff -= TAU;
-  while (diff < -Math.PI) diff += TAU;
-  if (Math.abs(diff) > 0.92) return false;
-
-  const babyGrace = clamp((p.r || 18) * 0.22, 3.2, 5.8);
-  return animalHeadTouchesTarget(p, target, babyGrace);
+  // Pets use the same real head-contact rule as wildlife, including babies.
+  return !!(p && target && animalHeadTouchesTarget(p, target));
 }
 
 function petAtkDmg(p) {
@@ -15950,11 +15913,11 @@ const BIOME_ZONES = {
   mountains:{id:"mountains",cx:WORLD_W*0.13,cy:WORLD_H*0.52},
 };
 const BIOME_PROFILES = {
-  forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","saber"] },
-  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["queenbee","workerbee","dronebee","clouded","dragon"] },
-  arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:[] },
-  desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","snake"] },
-  mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:[] },
+  forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#668a52", species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"] },
+  rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(42,112,70,.20)", edge:"rgba(28,76,47,.22)", minimap:"#285f3b", species:["snake","dragon","clouded","queenbee","workerbee","dronebee"] },
+  arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["rabbit"] },
+  desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","snake","dragon"] },
+  mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["dog","wolf","saber","queenbee","workerbee","dronebee"] },
   ocean:{ id:"ocean", name:"Ocean", tint:"rgba(0,0,0,0)", edge:"rgba(0,0,0,0)", minimap:"#2f83a7", species:[] }
 };
 const BIOME_RESOURCE_INFO = Object.freeze({
@@ -16048,9 +16011,19 @@ function worldBiomeAt(x,y){
   return x <= forestRainBoundaryX(y) ? "forest" : "rainforest";
 }
 function randomBiomeZoneId(){ return BIOME_ORDER[randi(0,BIOME_ORDER.length-1)] || "forest"; }
-function speciesHomeBiome(type){
-  for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))return id;
-  return "forest";
+function speciesAllowedBiomes(type){
+  const out=[];
+  for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))out.push(id);
+  return out.length?out:["forest"];
+}
+function speciesHomeBiome(type){ return speciesAllowedBiomes(type)[0] || "forest"; }
+function nearestAllowedBiomeFor(type,x,y,preferred=""){
+  const allowed=speciesAllowedBiomes(type);
+  const p=biomeBaseId(preferred);
+  if(allowed.includes(p))return p;
+  let best=allowed[0]||"forest",bestD=Infinity;
+  for(const id of allowed){const z=BIOME_ZONES[id]||BIOME_ZONES.forest,d=dist(x,y,z.cx,z.cy);if(d<bestD){bestD=d;best=id;}}
+  return best;
 }
 function randomPointInBiome(biomeId,pad=120){
   const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest";
@@ -16784,7 +16757,9 @@ function placeBiomeFeatures() {
   }
   const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
   placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest"); placeUnique("forestGiantFlower",20,"forest");
-  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestGiantFlower",24,"rainforest"); placeUnique("rainforestHive",6,"rainforest");
+  placeUnique("rainforestHive",2,"forest");
+  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestGiantFlower",24,"rainforest"); placeUnique("rainforestHive",2,"rainforest");
+  placeUnique("rainforestHive",2,"mountains");
   placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
   placeUnique("desertCactusGood",22,"desert"); placeUnique("desertCactusBad",18,"desert"); placeUnique("desertSandstone",24,"desert");
   placeUnique("mountainIron",30,"mountains"); placeUnique("mountainQuartz",26,"mountains"); placeUnique("mountainGem",22,"mountains"); placeUnique("mountainStoneFruit",24,"mountains");
@@ -16952,14 +16927,15 @@ function organizeRainforestHivesOffline(){
   }
 }
 function hiveBeeStageOffline(type,hiveOrdinal=0,first=false){
-  if(type==="queenbee"){if(first&&hiveOrdinal===0)return "bigmomma";const q=Math.random();return q<.66?"adult":q<.91?"boss":"superboss";}
+  if(type==="queenbee")return "bigmomma";
   return Math.random()<.55?"baby":"adult";
 }
 function weightedHiveBeeTypeOffline(){const q=Math.random();return q<.62?"dronebee":q<.92?"workerbee":"queenbee";}
 function hiveHatchStageOffline(type){if(type==="workerbee"){const q=Math.random();return q<.28?"boss":q<.78?"adult":"baby";}return Math.random()<.56?"baby":"adult";}
 function spawnHiveBeeOffline(hiveIdx,type,stage){
   const hive=resources[hiveIdx];if(!hive||!hive.alive||hive.type!=="rainforestHive")return null;
-  const bee=spawnWildAnimal(false,stage,type,null,"rainforest");if(!bee)return null;
+  const hiveBiome=biomeBaseId(worldBiomeAt(hive.x,hive.y));
+  const bee=spawnWildAnimal(false,stage,type,null,hiveBiome);if(!bee)return null;
   const footprint=animalSpawnFootprint(type,stage);
   for(let t=0;t<45;t++){const aa=rand(0,TAU),dd=(hive.solidR||90)+footprint+rand(28,90),x=clamp(hive.x+Math.cos(aa)*dd,24,WORLD_W-24),y=clamp(hive.y+Math.sin(aa)*dd*.78,24,WORLD_H-24);if(solidOverlaps(x,y,footprint)||animalSpawnCrowded(x,y,footprint,8))continue;bee.x=x;bee.y=y;bee._hiveOrbitA=aa;break;}
   bee._hiveHomeIdx=hiveIdx;bee.sleeping=stage==="baby"?(Math.random()<.93):(Math.random()<beeSleepSpawnChance(type,stage));bee._hiveOrbitA=Number.isFinite(bee._hiveOrbitA)?bee._hiveOrbitA:rand(0,TAU);bee._hiveOrbitDir=Math.random()<.5?-1:1;return bee;
@@ -16967,7 +16943,7 @@ function spawnHiveBeeOffline(hiveIdx,type,stage){
 function populateRainforestHivesOffline(first=false){
   let ordinal=0;for(let i=0;i<resources.length;i++){const hive=resources[i];if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;
     const counts={dronebee:0,workerbee:0,queenbee:0};for(const a of animals)if(a&&!a.dead&&!a.owned&&isWildBeeType(a.type)&&a._hiveHomeIdx===i)counts[a.type]=(counts[a.type]||0)+1;
-    const desired={dronebee:4,workerbee:2,queenbee:1};for(const type of ["dronebee","workerbee","queenbee"]){while((counts[type]||0)<desired[type]){if(!spawnHiveBeeOffline(i,type,hiveBeeStageOffline(type,ordinal,first)))break;counts[type]++;}}
+    const desired={dronebee:4,workerbee:2,queenbee:1};for(const type of ["dronebee","workerbee","queenbee"]){while((counts[type]||0)<desired[type]){let made=null;for(let attempt=0;attempt<8&&!made;attempt++)made=spawnHiveBeeOffline(i,type,hiveBeeStageOffline(type,ordinal,first));if(!made)break;counts[type]++;}}
     hive._beeSpawnT=300;hive._beeBroodNight=0;ordinal++;
   }
 }
@@ -17060,7 +17036,7 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
     else stage = "superboss";
   }
 
-  if (stage === "bigmomma" && animals.filter(q => q && !q.dead && !q.owned && q.stage === "bigmomma").length >= 5) stage = "superboss";
+  if (stage === "bigmomma" && type !== "queenbee" && animals.filter(q => q && !q.dead && !q.owned && q.type !== "queenbee" && q.stage === "bigmomma").length >= 5) stage = "superboss";
 
   const r = animalRadius(type, stage);
   const spawnR = animalSpawnFootprint(type, stage);
@@ -17377,7 +17353,7 @@ function initWorld() {
       if(wantsBigMomma)bigMommaTargets.push({type,biome});
       const stages=[...STARTING_STAGE_PLAN];
       if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-      const targetPerSpecies=STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7;
+      const targetPerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7);
       let made=0;
       for(const stage of stages){
         let spawned=false;
@@ -17394,7 +17370,7 @@ function initWorld() {
   }
   // Placement can occasionally reject a huge body. Repair the starting roster so
   // the world still enters Play with exactly five living Big Mommas already present.
-  let bigMommaCount=animals.filter(a=>a&&!a.dead&&!a.owned&&a.stage==="bigmomma").length;
+  let bigMommaCount=animals.filter(a=>a&&!a.dead&&!a.owned&&a.type!=="queenbee"&&a.stage==="bigmomma").length;
   for(let pass=0;bigMommaCount<5&&pass<25;pass++){
     const target=bigMommaTargets[pass%Math.max(1,bigMommaTargets.length)]||{type:"bear",biome:"forest"};
     if(spawnWildAnimal(false,"bigmomma",target.type,null,target.biome))bigMommaCount++;
@@ -18957,25 +18933,8 @@ function wildCombatTarget(a) {
 }
 
 function wildAttackConnects(attacker, target) {
-  // Works for player, hostile-cube, pet, AND wild-animal targets.
-  if (!attacker || !target || !combatTargetAlive(target)) return false;
-  if (animalHeadTouchesTarget(attacker, target)) return true;
-
-  // Saber must make real face contact; no extra invisible grace range.
-  if (attacker.type === "saber") return false;
-
-  // Physical animal-vs-animal resolution can keep two creatures a few pixels
-  // apart even while they are clearly face-to-face. Give bites a small,
-  // shape-aware grace range so combat doesn't stall forever.
-  const tr = target === player ? PLAYER_R : Math.max(10, Number(target.r) || 16);
-  const reach = Math.max(18, (attacker.r || 18) * 0.78 + tr * 0.72 + 10);
-  const d = dist(attacker.x, attacker.y, target.x, target.y);
-  if (d > reach) return false;
-  const face = angTo(attacker.x, attacker.y, target.x, target.y);
-  let diff = face - (attacker.angle || 0);
-  while (diff > Math.PI) diff -= TAU;
-  while (diff < -Math.PI) diff += TAU;
-  return Math.abs(diff) < 0.78;
+  // Normal bites only land when the visible front/head contact area touches.
+  return !!(attacker && target && combatTargetAlive(target) && animalHeadTouchesTarget(attacker, target));
 }
 
 const WILD_FIGHT_GRID_SIZE = 260;
@@ -19024,7 +18983,7 @@ function giveWildExpOffline(a,amount,reason="wild"){
   if(!a||a.dead||a.owned||a.stage==="bigmomma")return;amount=Math.max(0,Number(amount)||0);if(amount<=0)return;
   a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(1,Math.floor(Number(a.level)||1));let safety=0;
   while(safety++<12){const need=wildExpNeedOffline(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:3,adult:4,boss:5,superboss:6}[a.stage]||999;if(a.level<growAt)continue;
-    const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}
+    const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&a.type!=="queenbee"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.type!=="queenbee"&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}
     a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;floatText(a.x,a.y-a.r-18,`${next.toUpperCase()}!`,"#ffe66d");
   }
 }
@@ -20793,49 +20752,47 @@ function carryPlayerWithOfflineWildMovement(a, oldX, oldY) {
 }
 
 function keepWildInHomeBiomeOffline(a, dt) {
-  // Wild animals cannot survive outside their native biome. Player pets and
-  // Hostl-owned animals are pets, so they are intentionally exempt.
   if (!a || a.dead || a.owned || a.enemyOwner) return false;
-  const home = biomeBaseId(a.biome || speciesHomeBiome(a.type));
-  const here = biomeBaseId(worldBiomeAt(a.x, a.y));
-  if (isWildBeeType(a.type) && (here === "rainforest" || here === "forest")) { a._wrongBiomeTime=0; return false; }
-  if (here === home || here === "ocean") { a._wrongBiomeTime=0; return false; }
+  const allowed=speciesAllowedBiomes(a.type);
+  const here=biomeBaseId(worldBiomeAt(a.x,a.y));
 
-  a.sleeping=false;
-  a.hostileTarget=null;
-  a.enraged=false;
-  a.tameFailedAggro=false;
-  a.desperateAggro=false;
-  a.fleeUntil=0;
-  a.fleeFrom=null;
-  a.mateTarget=null;
-  a.combat=0;
+  // Once an animal makes it back into an allowed biome, keep it running inward
+  // for a short committed period so it does not bounce across the boundary.
+  if(allowed.includes(here)){
+    a.biome=here;
+    a._wrongBiomeTime=0;
+    if((Number(a._biomeReturnCommit)||0)>0 && a._homeReturnPoint){
+      a._biomeReturnCommit=Math.max(0,(Number(a._biomeReturnCommit)||0)-dt);
+      const pos=a._homeReturnPoint,d=dist(a.x,a.y,pos.x,pos.y);
+      if(d>55 && a._biomeReturnCommit>0){
+        a.sleeping=false;
+        const aim=angTo(a.x,a.y,pos.x,pos.y);smoothTurn(a,aim,dt,5.4);
+        moveFacing(a,(a.speed||60)*1.24,dt);resolveAnimalWorld(a);return true;
+      }
+      a._biomeReturnCommit=0;a._homeReturnPoint=null;a._homeReturnBiome="";
+    }
+    return false;
+  }
+  if(here==="ocean")return false;
+
+  a.sleeping=false;a.hostileTarget=null;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;
+  a.fleeUntil=0;a.fleeFrom=null;a.mateTarget=null;a.combat=0;
   a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
 
-  // Percentage damage means babies and Big Mommas get the same amount of time
-  // to escape. With no path home, a healthy animal dies in about 18 seconds.
   const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;
   a.hp=Math.max(0,(Number(a.hp)||0)-loss);
   a._biomeDamageFxT=(Number(a._biomeDamageFxT)||0)-dt;
   if(a._biomeDamageFxT<=0){a._biomeDamageFxT=.48;a.flash=Math.max(Number(a.flash)||0,.11);}
-  if(a.hp<=0){
-    a.hp=0;a.dead=true;a.hostileTarget=null;a.fleeFrom=null;
-    return true;
-  }
+  if(a.hp<=0){a.hp=0;spawnQueenBroodFromBossOffline(a,null);a.dead=true;a.hostileTarget=null;a.fleeFrom=null;return true;}
 
-  // Run toward the stable center of the home biome. Once the animal crosses
-  // the boundary, normal wildlife AI resumes immediately.
-  const zone=BIOME_ZONES[home]||BIOME_ZONES.forest;
-  if(!a._homeReturnPoint||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){
-    a._homeReturnPoint={x:zone.cx+rand(-220,220),y:zone.cy+rand(-220,220)};
-    if(biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home)a._homeReturnPoint={x:zone.cx,y:zone.cy};
+  const preferred=allowed.includes(biomeBaseId(a.biome))?biomeBaseId(a.biome):"";
+  const home=nearestAllowedBiomeFor(a.type,a.x,a.y,preferred);
+  if(!a._homeReturnPoint||a._homeReturnBiome!==home||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){
+    a._homeReturnPoint=randomPointInBiome(home,260);a._homeReturnBiome=home;
   }
-  const pos=a._homeReturnPoint;
-  const aim=angTo(a.x,a.y,pos.x,pos.y);
-  smoothTurn(a,aim,dt,5.4);
-  moveFacing(a,(a.speed||60)*1.32,dt);
-  resolveAnimalWorld(a);
-  return true;
+  a._biomeReturnCommit=1.65;
+  const pos=a._homeReturnPoint,aim=angTo(a.x,a.y,pos.x,pos.y);
+  smoothTurn(a,aim,dt,5.4);moveFacing(a,(a.speed||60)*1.32,dt);resolveAnimalWorld(a);return true;
 }
 
 function updateAnimals(dt) {
@@ -21805,14 +21762,27 @@ function validDeathCamTarget(t) {
   return true;
 }
 function spawnQueenBroodFromBossOffline(victim,killer){
-  if(net.room||!victim||!(killer===player||killer?.owned)||victim._queenBroodSpawned||victim.type!=="queenbee"||!["superboss","bigmomma"].includes(victim.stage))return;
-  victim._queenBroodSpawned=true;const count=victim.stage==="bigmomma"?randi(3,5):randi(2,4);
-  for(let i=0;i<count;i++){const b=spawnWildAnimal(false,"baby","queenbee",victim,"rainforest");if(!b)continue;b.x=clamp(victim.x+rand(-105,105),35,WORLD_W-35);b.y=clamp(victim.y+rand(-90,90),35,WORLD_H-35);b.sleeping=true;b.enraged=false;b.tameFailedAggro=false;b._queenBrood=true;}
+  if(net.room||!victim||victim._queenBroodSpawned||victim.type!=="queenbee"||!["superboss","bigmomma"].includes(victim.stage))return;
+  victim._queenBroodSpawned=true;
+  const count=victim.stage==="bigmomma"?10:randi(2,4);
+  const biome=biomeBaseId(worldBiomeAt(victim.x,victim.y));
+  for(let i=0;i<count;i++){
+    const b=spawnWildAnimal(false,"baby","queenbee",null,biome);if(!b)continue;
+    const ring=i<5?Math.max(72,victim.r*.56):Math.max(118,victim.r*.78),aa=(i%5)/5*TAU+(i>=5?.34:0);
+    b.x=clamp(victim.x+Math.cos(aa)*ring,35,WORLD_W-35);b.y=clamp(victim.y+Math.sin(aa)*ring*.78,35,WORLD_H-35);
+    b.sleeping=true;b.enraged=false;b.tameFailedAggro=false;b.desperateAggro=false;b._queenBrood=true;
+    if(Number.isFinite(victim._hiveHomeIdx))b._hiveHomeIdx=victim._hiveHomeIdx;
+    resolveAnimalWorld(b);
+  }
   floatText(victim.x,victim.y-victim.r-32,`${count} baby queens!`,"#ffe66d");
 }
+
 function setKilledBy(victim, killer) {
-  if (!victim || !killer || victim === killer) return;
-  spawnQueenBroodFromBossOffline(victim,killer);
+  if (!victim) return;
+  // Big Momma Queen Bee brood is a death rule, not a killer reward: it must
+  // happen even if the Queen dies without a player/pet being credited.
+  spawnQueenBroodFromBossOffline(victim,killer || null);
+  if (!killer || victim === killer) return;
   victim._killedBy = killer;
 }
 function setDeathCameraTarget(target, kind = "", id = "") {

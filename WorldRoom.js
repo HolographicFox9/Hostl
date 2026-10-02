@@ -1083,27 +1083,10 @@ function animalProjectileTouch(a,x,y,radius=0){
   return false;
 }
 function animalFaceGeometry(a){
-  const r=a?.r||18;
-  let forward=1.14,radiusMul=.46;
-  if(a.type==="bear"){forward=1.08;radiusMul=.49;}
-  else if(a.type==="rabbit"){forward=1.12;radiusMul=.42;}
-  else if(a.type==="cat"){forward=1.17;radiusMul=.43;}
-  else if(a.type==="fox"){forward=1.20;radiusMul=.44;}
-  else if(a.type==="wolf"||a.type==="dog"){forward=1.20;radiusMul=.44;}
-  else if(a.type==="owl"){forward=1.05;radiusMul=.49;}
-  else if(a.type==="deer"){forward=1.12;radiusMul=.34;}
-  else if(a.type==="boar"){forward=1.18;radiusMul=.45;}
-  else if(a.type==="saber"){forward=1.00;radiusMul=.34;}
-  else if(a.type==="snake"){forward=1.26;radiusMul=.29;}
-  else if(a.type==="dragon"){forward=1.22;radiusMul=.40;}
-
-  const stageMul=a.stage==="baby"?1.04:a.stage==="boss"?1.05:a.stage==="superboss"?1.07:a.stage==="bigmomma"?1.09:1;
-  const angle=a.angle||0,ca=Math.cos(angle),sa=Math.sin(angle),side=.10;
-  return{
-    x:a.x+ca*r*forward-sa*r*side,
-    y:a.y+sa*r*forward+ca*r*side,
-    r:Math.max(8,r*radiusMul*stageMul)
-  };
+  const hits=animalHitCircles(a);
+  if(hits.length){const nose=hits[hits.length-1];return{x:nose.x,y:nose.y,r:Math.max(4,nose.r*.92)};}
+  const r=Math.max(8,Number(a?.r)||18),angle=Number(a?.angle)||0;
+  return{x:(a?.x||0)+Math.cos(angle)*r*1.28,y:(a?.y||0)+Math.sin(angle)*r*1.28,r:Math.max(4,r*.24)};
 }
 function animalTargetDamageCircles(ref,target){
   if(!target)return[];
@@ -1123,17 +1106,12 @@ function animalAttackContact(a,ref,target,extraGrace=0){
   for(const th of animalTargetDamageCircles(ref,target)){
     const toward=angTo(a.x,a.y,th.x,th.y);
     if(Math.abs(angleDiff(a.angle||0,toward))>1.22)continue;
-    if(dist(h.x,h.y,th.x,th.y)<=h.r+th.r+3+grace)return true;
+    if(dist(h.x,h.y,th.x,th.y)<=h.r+th.r+1+grace)return true;
   }
   return false;
 }
 function petAttackContact(a,ref,target){
-  if(animalAttackContact(a,ref,target))return true;
-  if(!a||!target||a.stage!=="baby")return false;
-  const toward=angTo(a.x,a.y,target.x,target.y);
-  if(Math.abs(angleDiff(a.angle||0,toward))>.92)return false;
-  const grace=clamp((a.r||18)*.22,3.2,5.8);
-  return animalAttackContact(a,ref,target,grace);
+  return animalAttackContact(a,ref,target);
 }
 function animalTargetOverlap(a,ref,target){
   if(!a||!target)return 0;
@@ -1234,11 +1212,11 @@ const BIOME_ZONES={
 };
 const BIOME_ORDER=["forest","rainforest","arctic","desert","mountains"];
 const BIOME_PROFILES={
-  forest:{id:"forest",name:"Forest",species:["fox","dog","cat","rabbit","deer","boar","owl","wolf","bear","saber"]},
-  rainforest:{id:"rainforest",name:"Rain Forest",species:["queenbee","workerbee","dronebee","clouded","dragon"]},
-  arctic:{id:"arctic",name:"Arctic",species:[]},
-  desert:{id:"desert",name:"Desert",species:["fennec","snake"]},
-  mountains:{id:"mountains",name:"Mountains",species:[]},
+  forest:{id:"forest",name:"Forest",species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"]},
+  rainforest:{id:"rainforest",name:"Rain Forest",species:["snake","dragon","clouded","queenbee","workerbee","dronebee"]},
+  arctic:{id:"arctic",name:"Arctic",species:["rabbit"]},
+  desert:{id:"desert",name:"Desert",species:["fennec","snake","dragon"]},
+  mountains:{id:"mountains",name:"Mountains",species:["dog","wolf","saber","queenbee","workerbee","dronebee"]},
   ocean:{id:"ocean",name:"Ocean",species:[]}
 };
 const BIOME_RESOURCE_INFO=Object.freeze({
@@ -1285,7 +1263,9 @@ function desertBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);ret
 function mountainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX-ISLAND_RADIUS*1.10+Math.sin(yn*Math.PI*1.7+.6)*WORLD_H*.012+Math.sin(yn*Math.PI*3.9-.9)*WORLD_H*.004;}
 function worldBiomeAt(x,y){if(!isInsideIsland(x,y,0))return "ocean";if(y<=arcticBoundaryY(x))return "arctic";if(y>=desertBoundaryY(x))return "desert";if(x<=mountainBoundaryX(y))return "mountains";return x<=forestRainBoundaryX(y)?"forest":"rainforest";}
 function randomBiomeZoneId(){return BIOME_ORDER[randi(0,BIOME_ORDER.length-1)]||"forest";}
-function speciesHomeBiome(type){for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))return id;return "forest";}
+function speciesAllowedBiomes(type){const out=[];for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))out.push(id);return out.length?out:["forest"];}
+function speciesHomeBiome(type){return speciesAllowedBiomes(type)[0]||"forest";}
+function nearestAllowedBiomeFor(type,x,y,preferred=""){const allowed=speciesAllowedBiomes(type),p=biomeBaseId(preferred);if(allowed.includes(p))return p;let best=allowed[0]||"forest",bestD=Infinity;for(const id of allowed){const z=BIOME_ZONES[id]||BIOME_ZONES.forest,d=dist(x,y,z.cx,z.cy);if(d<bestD){bestD=d;best=id;}}return best;}
 function randomPointInBiome(biomeId,pad=120){const wanted=BIOME_ORDER.includes(biomeBaseId(biomeId))?biomeBaseId(biomeId):"forest",safePad=Math.max(0,Number(pad)||0),maxR=Math.max(180,ISLAND_RADIUS-safePad-70);if(wanted==="mountains"){for(let tries=0;tries<520;tries++){const y=rand(ISLAND_CY-ISLAND_RADIUS*.48,ISLAND_CY+ISLAND_RADIUS*.48),edge=mountainBoundaryX(y)-safePad-25;if(edge<=safePad+40)continue;const x=rand(Math.max(safePad,120),edge);if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};}}for(let tries=0;tries<360;tries++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*maxR,x=ISLAND_CX+Math.cos(a)*rr,y=ISLAND_CY+Math.sin(a)*rr;if(worldBiomeAt(x,y)===wanted&&isInsideIsland(x,y,safePad))return{x,y};}const zone=BIOME_ZONES[wanted]||BIOME_ZONES.forest;return{x:zone.cx,y:zone.cy};}
 function randomLandPoint(pad=120){ return randomPointInBiome(randomBiomeZoneId(),pad); }
 function isHotDryBiome(id){return String(id||"").startsWith("desert");}
@@ -1739,11 +1719,11 @@ export class WorldRoom extends Room {
   nearestBeeFlowerResourceId(a,maxRange=3400,preferredBiome=""){let best="",bestD=Math.max(120,Number(maxRange)||3400);for(const[id,r]of this.state.resources){if(!this.isBeeFlowerResource(r))continue;if(preferredBiome==="forest"&&r.type!=="forestGiantFlower")continue;if(preferredBiome==="rainforest"&&r.type!=="rainforestGiantFlower")continue;const d=dist(a.x,a.y,r.x,r.y);if(d<bestD){best=id;bestD=d;}}return best;}
   settleBeeNearHome(a,slot=0){const hive=this.beeHomeResourceForAnimal(a);if(!hive)return false;const ringStep=a.type==="queenbee"?2:a.type==="workerbee"?1:0;const ring=Math.floor(slot/6)+ringStep,perRing=6+ring*2,angle=((slot%perRing)/perRing)*TAU+(ring*.37);const base=(hive.solidR||48)+Math.max(20,(a.r||18)*.70)+22+ring*18+(a.type==="queenbee"?72:(a.type==="workerbee"?22:10));const tx=clamp(hive.x+Math.cos(angle)*base,24,WORLD_W-24),ty=clamp(hive.y+Math.sin(angle)*(base*.78),24,WORLD_H-24);if(this.canPlace(tx,ty,Math.max(8,(a.r||18)*.52),0)){a.x=tx;a.y=ty;}a.wanderA=angle+Math.PI*.5;a.wanderT=rand(.35,1.1);a._hiveOrbitA=angle;a._hiveOrbitDir=a._hiveOrbitDir||((Math.random()<.5)?-1:1);a.sleeping=a.stage==="baby"?Math.random()<.93:false;return true;}
   organizeRainforestHives(){const counts=new Map();for(const[,a]of this.state.animals){if(!a||a.dead||a.hp<=0||!this.isWildBeeType(a.type))continue;const hive=this.beeHomeResourceForAnimal(a);if(!hive)continue;const key=a._hiveHomeId||"",slot=counts.get(key)||0;this.settleBeeNearHome(a,slot);counts.set(key,slot+1);}}
-  hiveBeeStage(type,hiveOrdinal=0,first=false){if(type==="queenbee"){if(first&&hiveOrdinal===0)return "bigmomma";const q=Math.random();return q<.66?"adult":q<.91?"boss":"superboss";}return Math.random()<.55?"baby":"adult";}
+  hiveBeeStage(type,hiveOrdinal=0,first=false){if(type==="queenbee")return "bigmomma";return Math.random()<.55?"baby":"adult";}
   weightedHiveBeeType(){const q=Math.random();return q<.62?"dronebee":q<.92?"workerbee":"queenbee";}
   hiveHatchStage(type){if(type==="workerbee"){const q=Math.random();return q<.28?"boss":q<.78?"adult":"baby";}return Math.random()<.56?"baby":"adult";}
   spawnHiveBee(hiveId,hive,type,stage){if(!hive||!hive.alive||hive.type!=="rainforestHive")return null;const footprint=animalSpawnFootprint(type,stage);for(let t=0;t<45;t++){const aa=rand(0,TAU),dd=(hive.solidR||90)+footprint+rand(28,90),x=clamp(hive.x+Math.cos(aa)*dd,24,WORLD_W-24),y=clamp(hive.y+Math.sin(aa)*dd*.78,24,WORLD_H-24);if(!this.canPlace(x,y,footprint,0))continue;const id=this.addAnimal(type,stage,x,y,{sleeping:stage==="baby"?Math.random()<.93:Math.random()<beeSleepSpawnChance(type,stage),gender:canonicalAnimalGender(type)}),bee=this.state.animals.get(id);if(!bee)return null;bee._hiveHomeId=hiveId;bee._hiveOrbitA=aa;bee._hiveOrbitDir=Math.random()<.5?-1:1;return bee;}return null;}
-  populateRainforestHives(first=false){let ordinal=0;for(const[hiveId,hive]of this.state.resources){if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;const counts={dronebee:0,workerbee:0,queenbee:0};for(const[,a]of this.state.animals)if(a&&a.hp>0&&this.isWildBeeType(a.type)&&a._hiveHomeId===hiveId)counts[a.type]=(counts[a.type]||0)+1;const desired={dronebee:4,workerbee:2,queenbee:1};for(const type of ["dronebee","workerbee","queenbee"]){while((counts[type]||0)<desired[type]){if(!this.spawnHiveBee(hiveId,hive,type,this.hiveBeeStage(type,ordinal,first)))break;counts[type]++;}}hive._beeSpawnT=300;hive._beeBroodNight=0;ordinal++;}}
+  populateRainforestHives(first=false){let ordinal=0;for(const[hiveId,hive]of this.state.resources){if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;const counts={dronebee:0,workerbee:0,queenbee:0};for(const[,a]of this.state.animals)if(a&&a.hp>0&&this.isWildBeeType(a.type)&&a._hiveHomeId===hiveId)counts[a.type]=(counts[a.type]||0)+1;const desired={dronebee:4,workerbee:2,queenbee:1};for(const type of ["dronebee","workerbee","queenbee"]){while((counts[type]||0)<desired[type]){let made=null;for(let attempt=0;attempt<8&&!made;attempt++)made=this.spawnHiveBee(hiveId,hive,type,this.hiveBeeStage(type,ordinal,first));if(!made)break;counts[type]++;}}hive._beeSpawnT=300;hive._beeBroodNight=0;ordinal++;}}
   updateHiveBeeSpawners(dt){this._beeSpawnerTickAccum=(Number(this._beeSpawnerTickAccum)||0)+dt;if(this._beeSpawnerTickAccum<1)return;const step=this._beeSpawnerTickAccum;this._beeSpawnerTickAccum=0;for(const[hiveId,hive]of this.state.resources){if(!hive||!hive.alive||hive.type!=="rainforestHive")continue;hive._beeSpawnT=(Number.isFinite(Number(hive._beeSpawnT))?Number(hive._beeSpawnT):300)-step;if(hive._beeSpawnT>0)continue;let hiveCount=0;for(const[,a]of this.state.animals)if(a&&a.hp>0&&this.isWildBeeType(a.type)&&a._hiveHomeId===hiveId)hiveCount++;if(hiveCount<14){const type=this.weightedHiveBeeType();this.spawnHiveBee(hiveId,hive,type,this.hiveHatchStage(type));}hive._beeSpawnT=300;}}
   breedHiveBeesEveryTenNights(){if(this.state.dayCount%10!==0)return;for(const[hiveId,hive]of this.state.resources){if(!hive||!hive.alive||hive.type!=="rainforestHive"||hive._beeBroodNight===this.state.dayCount)continue;let queen=null,drone=null,count=0;for(const[,a]of this.state.animals){if(!a||a.dead||a.hp<=0||a._hiveHomeId!==hiveId||!this.isWildBeeType(a.type))continue;count++;if(a.stage!=="baby"&&a.type==="queenbee")queen=a;if(a.stage!=="baby"&&a.type==="dronebee")drone=a;}hive._beeBroodNight=this.state.dayCount;if(!queen||!drone||count>=14)continue;const baby=this.spawnHiveBee(hiveId,hive,this.weightedHiveBeeType(),"baby");if(!baby)continue;baby.bredChild=true;baby.sleeping=Math.random()<.94;this.broadcastFx({kind:"familyBirth",x:hive.x,y:hive.y});}}
   growHiveFromPollen(hive){if(!hive)return;hive.scale=Math.min(5.75,(Number(hive.scale)||4.2)+.035);}
@@ -1797,7 +1777,7 @@ export class WorldRoom extends Room {
   updateBeeHomeBehavior(id,a,dt){const hive=this.beeHomeResourceForAnimal(a);if(!hive)return false;if(a.stage==="baby"){if(!a.sleeping&&Math.random()<dt*.055){a.sleeping=true;return true;}const c=this.hiveResourceCenter(hive),d=dist(a.x,a.y,c.x,c.y),near=(hive.solidR||70)+80;if(d>near){const aim=angTo(a.x,a.y,c.x,c.y);smoothTurn(a,aim,dt,4.2);this.moveCreatureSwept(a,(a.speed||60)*.50,dt);}else{a.wanderT=(a.wanderT||0)-dt;if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.8,4.0);}smoothTurn(a,a.wanderA||0,dt,3.4);this.moveCreatureSwept(a,(a.speed||60)*.22,dt);}return true;}if(a.type==="workerbee"&&this.updateWorkerBeeJob(a,dt,hive))return true;if(a.type==="dronebee"&&this.updateDroneBeeHiveLife(a,dt,hive))return true;if(a.type==="queenbee"&&this.updateQueenBeeHiveLife(a,dt,hive))return true;return false;}
 
   addAnimal(type,stage,x,y,opts={}) {
-    if(stage==="bigmomma"&&Array.from(this.state.animals.values()).filter(q=>q&&q.hp>0&&q.stage==="bigmomma").length>=5)stage="superboss";
+    if(stage==="bigmomma"&&type!=="queenbee"&&Array.from(this.state.animals.values()).filter(q=>q&&q.hp>0&&q.type!=="queenbee"&&q.stage==="bigmomma").length>=5)stage="superboss";
     const a=new AnimalState(); const info=PET_TYPES[type]; const r=animalRadius(type,stage),hp=typeHp(type,stage); const coat=pick(info.coats||[info.color]);
     const hasSpots=(type==="dog"&&Math.random()<.55)||(type==="cat"&&Math.random()<.35)||(type==="rabbit"&&Math.random()<.25);
     const spots=hasSpots?Array.from({length:randi(3,7)},()=>({x:rand(-.5,.5),y:rand(-.4,.4),s:rand(.12,.22)})):[];
@@ -2016,7 +1996,7 @@ export class WorldRoom extends Room {
   placeBiomeFeatures(){
     for(let i=0;i<72;i++)for(let t=0;t<20;t++){const pos=randomPointInBiome("rainforest",80),scale=rand(1.05,1.65),solid=10.8*scale;if(!this.canPlace(pos.x,pos.y,solid+10,0))continue;this.addResource("bush",pos.x,pos.y,8,solid,24*scale,scale,0);break;}
     const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++)for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(!this.canPlace(pos.x,pos.y,solid+12,0))continue;this.addResource(type,pos.x,pos.y,hp,solid,0,scale,rand(-.35,.35));break;}};
-    placeUnique("forestHerb",24,"forest");placeUnique("forestResin",22,"forest");placeUnique("forestGiantFlower",20,"forest");placeUnique("rainforestVine",26,"rainforest");placeUnique("rainforestFruit",24,"rainforest");placeUnique("rainforestGiantFlower",24,"rainforest");placeUnique("rainforestHive",6,"rainforest");placeUnique("arcticIceCrystal",30,"arctic");placeUnique("arcticFrostBerry",26,"arctic");placeUnique("desertCactusGood",22,"desert");placeUnique("desertCactusBad",18,"desert");placeUnique("desertSandstone",24,"desert");placeUnique("mountainIron",30,"mountains");placeUnique("mountainQuartz",26,"mountains");placeUnique("mountainGem",22,"mountains");placeUnique("mountainStoneFruit",24,"mountains");
+    placeUnique("forestHerb",24,"forest");placeUnique("forestResin",22,"forest");placeUnique("forestGiantFlower",20,"forest");placeUnique("rainforestHive",2,"forest");placeUnique("rainforestVine",26,"rainforest");placeUnique("rainforestFruit",24,"rainforest");placeUnique("rainforestGiantFlower",24,"rainforest");placeUnique("rainforestHive",2,"rainforest");placeUnique("rainforestHive",2,"mountains");placeUnique("arcticIceCrystal",30,"arctic");placeUnique("arcticFrostBerry",26,"arctic");placeUnique("desertCactusGood",22,"desert");placeUnique("desertCactusBad",18,"desert");placeUnique("desertSandstone",24,"desert");placeUnique("mountainIron",30,"mountains");placeUnique("mountainQuartz",26,"mountains");placeUnique("mountainGem",22,"mountains");placeUnique("mountainStoneFruit",24,"mountains");
   }
   generateWorld(){
     this.addGold(WORLD_W/2,WORLD_H/2,"pure",176,999999999,true,true);
@@ -2051,14 +2031,14 @@ export class WorldRoom extends Room {
         const wantsBigMomma=BIG_MOMMA_SPECIES_INDEXES.has(speciesOrdinal);
         if(wantsBigMomma)bigMommaTargets.push({type,biome});
         const stages=[...STARTING_STAGE_PLAN];if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-        const targetPerSpecies=STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7;
+        const targetPerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7);
         let made=0;
         for(const stage of stages){let spawned=false;for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWild(stage,type,null,biome);if(spawned)made++;}
         for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length),stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];if(spawnWild(stage,type,null,biome))made++;}
         speciesOrdinal++;
       }
     }
-    let bigMommaCount=Array.from(this.state.animals.values()).filter(a=>a&&a.hp>0&&a.stage==="bigmomma").length;
+    let bigMommaCount=Array.from(this.state.animals.values()).filter(a=>a&&a.hp>0&&a.type!=="queenbee"&&a.stage==="bigmomma").length;
     for(let pass=0;bigMommaCount<5&&pass<25;pass++){const target=bigMommaTargets[pass%Math.max(1,bigMommaTargets.length)]||{type:"bear",biome:"forest"};if(spawnWild("bigmomma",target.type,null,target.biome))bigMommaCount++;}
     console.log(`Island world generated: ${this.state.resources.size} resources, ${this.state.gold.size} gold, ${this.state.chests.size} chests, ${this.state.animals.size} wildlife`);
   }
@@ -2397,14 +2377,18 @@ export class WorldRoom extends Room {
 
   spawnQueenBroodFromBoss(a){
     if(!a||a.type!=="queenbee"||!["superboss","bigmomma"].includes(a.stage))return 0;
-    const count=a.stage==="bigmomma"?randi(3,5):randi(2,4);let made=0;
-    for(let i=0;i<count;i++)for(let tries=0;tries<18;tries++){
-      const aa=rand(0,TAU),dd=rand(38,105),x=clamp(a.x+Math.cos(aa)*dd,24,WORLD_W-24),y=clamp(a.y+Math.sin(aa)*dd,24,WORLD_H-24),foot=animalSpawnFootprint("queenbee","baby");
-      if(!this.canPlace(x,y,foot,0))continue;const bid=this.addAnimal("queenbee","baby",x,y,{sleeping:true,gender:"Female",motherId:"",bredChild:true,biome:worldBiomeAt(a.x,a.y)}),baby=this.state.animals.get(bid);if(!baby)continue;
-      baby.enraged=false;baby.tameFailedAggro=false;baby.desperateAggro=false;baby.combat=0;if(a._hiveHomeId)baby._hiveHomeId=a._hiveHomeId;this.broadcastFx({kind:"familyBirth",x,y});made++;break;
+    const count=a.stage==="bigmomma"?10:randi(2,4);let made=0;
+    const biome=biomeBaseId(worldBiomeAt(a.x,a.y)),foot=animalSpawnFootprint("queenbee","baby");
+    for(let i=0;i<count;i++){
+      const ring=i<5?Math.max(72,(a.r||18)*.56):Math.max(118,(a.r||18)*.78),aa=(i%5)/5*TAU+(i>=5?.34:0);
+      let x=clamp(a.x+Math.cos(aa)*ring,24,WORLD_W-24),y=clamp(a.y+Math.sin(aa)*ring*.78,24,WORLD_H-24);
+      const bid=this.addAnimal("queenbee","baby",x,y,{sleeping:true,gender:"Female",motherId:"",bredChild:true,biome}),baby=this.state.animals.get(bid);if(!baby)continue;
+      baby.enraged=false;baby.tameFailedAggro=false;baby.desperateAggro=false;baby.combat=0;if(a._hiveHomeId)baby._hiveHomeId=a._hiveHomeId;
+      this.resolveStatic(baby,Math.max(6,foot*.55));this.broadcastFx({kind:"familyBirth",x:baby.x,y:baby.y});made++;
     }
     return made;
   }
+
   hitWild(id,a,dmg,attackerId,crit=false,attackerRef=null){
     if(!a||a.hp<=0)return;
     dmg=animalDamageTaken(a.type,a.stage,dmg);
@@ -3037,18 +3021,6 @@ export class WorldRoom extends Room {
       return{ref:preferredRef,obj:preferred};
     }
 
-    // Creature-vs-creature collision can hold bodies just outside the exact
-    // head circle. Allow a small face-to-face grace reach so wildlife fights
-    // don't stall with both creatures touching but never landing a bite.
-    if(preferred&&preferredRef&&(preferredRef.kind==="animal"||preferredRef.kind==="enemy")){
-      const tr=this.targetRadius(preferredRef,preferred),reach=Math.max(18,(a.r||18)*.78+tr*.72+10);
-      const d=dist(a.x,a.y,preferred.x,preferred.y);
-      if(d<=reach){
-        const face=angTo(a.x,a.y,preferred.x,preferred.y);
-        let diff=face-(a.angle||0);while(diff>Math.PI)diff-=TAU;while(diff<-Math.PI)diff+=TAU;
-        if(Math.abs(diff)<.78)return{ref:preferredRef,obj:preferred};
-      }
-    }
     return null;
   }
 
@@ -3057,14 +3029,7 @@ export class WorldRoom extends Room {
   }
 
   wildAttackConnects(a,ref,target){
-    if(!a||!ref||!target)return false;
-    if(animalAttackContact(a,ref,target))return true;
-    // Match offline: saber gets no invisible grace reach.
-    if(a.type==="saber")return false;
-    const tr=ref.kind==="player"?PLAYER_R:Math.max(10,Number(target.r)||16);
-    const reach=Math.max(18,(a.r||18)*.78+tr*.72+10);
-    const d=dist(a.x,a.y,target.x,target.y);if(d>reach)return false;
-    return Math.abs(angleDiff(a.angle||0,angTo(a.x,a.y,target.x,target.y)))<.78;
+    return !!(a&&ref&&target&&animalAttackContact(a,ref,target));
   }
 
   playerEscapingAnimal(player,a){
@@ -3574,7 +3539,7 @@ export class WorldRoom extends Room {
       obj.hp=Math.max(0,obj.hp-amount);obj.flash=.15;obj.combat=8;obj.enraged=true;obj.sleeping=false;obj.recentHit=4;this.broadcastEntityHealth("animal",ref.id,obj);
       if(attackerKind==="animal"&&attackerId&&this.state.animals.has(attackerId))this.animalAggro.set(ref.id,{kind:"animal",id:attackerId});
       else if(attackerKind==="enemy"&&attackerId&&this.state.enemies.has(attackerId))this.animalAggro.set(ref.id,{kind:"enemy",id:attackerId});
-      if(obj.hp<=0){obj.dead=true;this.awardPetXpContributors("animal",ref.id,obj,"");if(attackerKind==="animal"&&attackerId&&this.state.animals.has(attackerId))this.giveWildKillExp(attackerId,this.state.animals.get(attackerId),obj);if(attackerKind==="player")this.maybeRewardWildMaterial(attackerId,obj);this.state.animals.delete(ref.id);this.animalAggro.delete(ref.id);this.animalFleeFrom.delete(ref.id);}
+      if(obj.hp<=0){obj.dead=true;this.awardPetXpContributors("animal",ref.id,obj,"");if(attackerKind==="animal"&&attackerId&&this.state.animals.has(attackerId))this.giveWildKillExp(attackerId,this.state.animals.get(attackerId),obj);if(attackerKind==="player")this.maybeRewardWildMaterial(attackerId,obj);this.spawnQueenBroodFromBoss(obj);this.state.animals.delete(ref.id);this.animalAggro.delete(ref.id);this.animalFleeFrom.delete(ref.id);}
       return true;
     }
     if(ref.kind==="enemy"){
@@ -3612,7 +3577,7 @@ export class WorldRoom extends Room {
   wildExpNeed(a){const base={baby:28,adult:72,boss:150,superboss:300,bigmomma:999999}[a?.stage]||999999;return Math.round(base*(1+Math.max(0,(Number(a?.level)||1)-1)*.18));}
   giveWildExp(id,a,amount,reason="wild"){
     if(!a||a.dead||a.hp<=0||a.stage==="bigmomma")return;amount=Math.max(0,Number(amount)||0);if(amount<=0)return;a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(1,Math.floor(Number(a.level)||1));let safety=0;
-    while(safety++<12){const need=this.wildExpNeed(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:3,adult:4,boss:5,superboss:6}[a.stage]||999;if(a.level<growAt)continue;const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&Array.from(this.state.animals.values()).filter(q=>q&&q.hp>0&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightKey="";this.broadcastFx({kind:"hit",x:a.x,y:a.y-(a.r||18)-18,text:`${next.toUpperCase()}!`,color:"#ffe66d"});}
+    while(safety++<12){const need=this.wildExpNeed(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:3,adult:4,boss:5,superboss:6}[a.stage]||999;if(a.level<growAt)continue;const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&a.type!=="queenbee"&&Array.from(this.state.animals.values()).filter(q=>q&&q.hp>0&&q.type!=="queenbee"&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightKey="";this.broadcastFx({kind:"hit",x:a.x,y:a.y-(a.r||18)-18,text:`${next.toUpperCase()}!`,color:"#ffe66d"});}
   }
   giveWildKillExp(id,a,victim){if(!a||!victim)return;this.giveWildExp(id,a,petKillXpForAnimal(victim),"hunt");}
   givePetExp(id,p,amount){
@@ -3818,45 +3783,34 @@ export class WorldRoom extends Room {
   }
 
   keepWildInHomeBiome(id,a,dt){
-    // state.animals also contains Hostl guard/mount animals. Those are pets and
-    // must be allowed to follow their owner across biomes without damage.
     if(!a||a.hp<=0||a.owned||this.enemyOwnerByPet.has(id))return false;
-    const home=biomeBaseId(a.biome||speciesHomeBiome(a.type));
-    const here=biomeBaseId(worldBiomeAt(a.x,a.y));
-    if(this.isWildBeeType(a.type)&&(here==="forest"||here==="rainforest")){a._wrongBiomeTime=0;return false;}
-    if(here===home||here==="ocean"){a._wrongBiomeTime=0;return false;}
+    const allowed=speciesAllowedBiomes(a.type),here=biomeBaseId(worldBiomeAt(a.x,a.y));
+    if(allowed.includes(here)){
+      a.biome=here;
+      a._wrongBiomeTime=0;
+      if((Number(a._biomeReturnCommit)||0)>0&&a._homeReturnPoint){
+        a._biomeReturnCommit=Math.max(0,(Number(a._biomeReturnCommit)||0)-dt);
+        const p=a._homeReturnPoint,d=dist(a.x,a.y,p.x,p.y);
+        if(d>55&&a._biomeReturnCommit>0){a.sleeping=false;smoothTurn(a,angTo(a.x,a.y,p.x,p.y),dt,5.4);this.moveCreatureSwept(a,(a.speed||60)*1.24,dt);this.resolveStatic(a,(a.r||18)*.68);return true;}
+        a._biomeReturnCommit=0;a._homeReturnPoint=null;a._homeReturnBiome="";
+      }
+      return false;
+    }
+    if(here==="ocean")return false;
 
-    a.sleeping=false;
-    a.enraged=false;
-    a.tameFailedAggro=false;
-    a.desperateAggro=false;
-    a.combat=0;
-    this.animalAggro.delete(id);
-    this.animalFleeFrom.delete(id);
-    this.clearWildMate(id);
+    a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;
+    this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.clearWildMate(id);
     a._wrongBiomeTime=(Number(a._wrongBiomeTime)||0)+dt;
-
-    const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;
-    a.hp=Math.max(0,(Number(a.hp)||0)-loss);
+    const loss=Math.max(.55,(Number(a.maxHp)||40)*.055)*dt;a.hp=Math.max(0,(Number(a.hp)||0)-loss);
     a._biomeDamageFxT=(Number(a._biomeDamageFxT)||0)-dt;
     if(a._biomeDamageFxT<=0){a._biomeDamageFxT=.48;a.flash=Math.max(Number(a.flash)||0,.11);this.broadcastEntityHealth("animal",id,a);}
-    if(a.hp<=0){
-      a.hp=0;a.dead=true;this.broadcastEntityHealth("animal",id,a);this.clearWildMate(id);
-      this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);
-      return true;
-    }
+    if(a.hp<=0){a.hp=0;a.dead=true;this.broadcastEntityHealth("animal",id,a);this.spawnQueenBroodFromBoss(a);this.clearWildMate(id);this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);return true;}
 
-    const zone=BIOME_ZONES[home]||BIOME_ZONES.forest;
-    if(!a._homeReturnPoint||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){
-      a._homeReturnPoint={x:zone.cx+rand(-220,220),y:zone.cy+rand(-220,220)};
-      if(biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home)a._homeReturnPoint={x:zone.cx,y:zone.cy};
-    }
-    const homePoint=a._homeReturnPoint;
-    const aTo=angTo(a.x,a.y,homePoint.x,homePoint.y);
-    smoothTurn(a,aTo,dt,5.4);
-    this.moveCreatureSwept(a,(a.speed||60)*1.32,dt);
-    this.resolveStatic(a,(a.r||18)*.68);
-    return true;
+    const preferred=allowed.includes(biomeBaseId(a.biome))?biomeBaseId(a.biome):"";
+    const home=nearestAllowedBiomeFor(a.type,a.x,a.y,preferred);
+    if(!a._homeReturnPoint||a._homeReturnBiome!==home||biomeBaseId(worldBiomeAt(a._homeReturnPoint.x,a._homeReturnPoint.y))!==home){a._homeReturnPoint=randomPointInBiome(home,260);a._homeReturnBiome=home;}
+    a._biomeReturnCommit=1.65;
+    const p=a._homeReturnPoint;smoothTurn(a,angTo(a.x,a.y,p.x,p.y),dt,5.4);this.moveCreatureSwept(a,(a.speed||60)*1.32,dt);this.resolveStatic(a,(a.r||18)*.68);return true;
   }
 
   updatePets(dt){
