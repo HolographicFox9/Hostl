@@ -6446,7 +6446,7 @@ if (window.visualViewport) window.visualViewport.addEventListener("resize", sche
 resize(true);
 
 // ---------- constants ----------
-const WORLD_W = 62000, WORLD_H = 50000;
+const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
 const CUBE_SHARED_RULES_VERSION = "704";
 const TOOL_BASE = {
@@ -16015,9 +16015,9 @@ const MOONMARK_BIOMES = {
 const MOONMARK_RADIUS = 390;
 // Expanded main island: Forest + Rain Forest + Arctic.
 // The Clouded Leopard stays in the Rain Forest; Arctic wildlife gets its own home.
-// The mainland itself is larger now, and it fills one continuous rectangular land world.
-// Ocean starts only after that mainland ends; the larger outer world supplies
-// open sea and room for reachable islands without cutting water into Arctic edges.
+// MAIN_WORLD_W/H are the mainland's overall footprint, not a rectangular coast.
+// The actual coast is a broad, irregular island shape that reaches close to those
+// limits; ocean exists only outside that coast.
 const MAIN_WORLD_W = 44000, MAIN_WORLD_H = 34000;
 const ISLAND_CX = WORLD_W * 0.5, ISLAND_CY = WORLD_H * 0.5;
 const MAIN_WORLD_LEFT = ISLAND_CX - MAIN_WORLD_W * 0.5;
@@ -16031,9 +16031,9 @@ const ISLAND_SHORE_WIDTH = 230;
 // use existing biome terrain; fantasy/secret biomes and new island-only animals
 // are intentionally left for the later content pass instead of being invented here.
 const OUTER_ISLANDS = Object.freeze([
-  {id:"reef_isle",cx:WORLD_W*.935,cy:WORLD_H*.30,r:1080,biome:"rainforest",seed:.73},
-  {id:"sunbar_isle",cx:WORLD_W*.90,cy:WORLD_H*.91,r:920,biome:"desert",seed:1.91},
-  {id:"frost_isle",cx:WORLD_W*.55,cy:WORLD_H*.052,r:720,biome:"arctic",seed:3.17}
+  {id:"reef_isle",cx:ISLAND_CX+29000,cy:ISLAND_CY-7000,r:1080,biome:"rainforest",seed:.73},
+  {id:"sunbar_isle",cx:ISLAND_CX+26000,cy:ISLAND_CY+27000,r:920,biome:"desert",seed:1.91},
+  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:720,biome:"arctic",seed:3.17}
 ]);
 const OCEAN_DEEP_DAMAGE_START = 820;
 const OCEAN_DEEP_DAMAGE_FULL = 2200;
@@ -16080,23 +16080,27 @@ function biomeProfileAt(x,y){ return BIOME_PROFILES[biomeBaseId(worldBiomeAt(x,y
 function islandDistance(x,y){ return Math.hypot(x-ISLAND_CX,y-ISLAND_CY); }
 function islandAngleDelta(a,b){ let d=(a-b)%TAU; if(d>Math.PI)d-=TAU; else if(d<-Math.PI)d+=TAU; return d; }
 function islandRadiusAtAngle(angle,pad=0){
-  const theta=Number(angle)||0;
-  let scale=1
-    +Math.sin(theta*2.15+.35)*.085
-    +Math.sin(theta*4.7-1.1)*.055
-    +Math.sin(theta*7.9+2.2)*.025;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,.42)/.42,2))*.11;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,-.78)/.48,2))*.07;
-  scale-=Math.exp(-Math.pow(islandAngleDelta(theta,2.35)/.52,2))*.13;
-  scale-=Math.exp(-Math.pow(islandAngleDelta(theta,-2.55)/.34,2))*.06;
-  // Mountains live on added western land instead of replacing the original Forest.
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,Math.PI)/.62,2))*.60;
-  scale=Math.max(.74,Math.min(1.75,scale));
-  return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
+  // Use a true ellipse as the base instead of a super-ellipse. The old
+  // super-ellipse kept long flat sides, which made the mainland read like a
+  // rectangle on the minimap. Layer asymmetric coves/headlands on the ellipse
+  // so the coast is visibly organic from every zoom level.
+  const a=Number(angle)||0,c=Math.cos(a),s=Math.sin(a),rx=MAIN_WORLD_W*.5,ry=MAIN_WORLD_H*.5;
+  const base=1/Math.sqrt((c*c)/(rx*rx)+(s*s)/(ry*ry));
+  let scale=.920
+    +Math.sin(a*3.00+.35)*.045
+    +Math.sin(a*5.00-1.10)*.028
+    +Math.sin(a*9.00+1.70)*.014;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,-Math.PI*.5)/.55,2))*.055;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,Math.PI)/.60,2))*.045;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,.30)/.45,2))*.025;
+  scale-=Math.exp(-Math.pow(islandAngleDelta(a,2.20)/.32,2))*.075;
+  scale-=Math.exp(-Math.pow(islandAngleDelta(a,-.65)/.30,2))*.045;
+  scale=clamp(scale,.78,1.04);
+  return Math.max(80,base*scale-(Number(pad)||0));
 }
 function isInsideIsland(x,y,pad=0){
-  const p=Number(pad)||0;
-  return x>=MAIN_WORLD_LEFT+p&&x<=MAIN_WORLD_RIGHT-p&&y>=MAIN_WORLD_TOP+p&&y<=MAIN_WORLD_BOTTOM-p;
+  const dx=Number(x)-ISLAND_CX,dy=Number(y)-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);
+  return d<=islandRadiusAtAngle(a,pad);
 }
 function outerIslandRadiusAtAngle(spec,angle,pad=0){
   const s=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0;
@@ -16110,9 +16114,8 @@ function isInsideOuterIsland(spec,x,y,pad=0){
 function outerIslandAt(x,y,pad=0){for(const spec of OUTER_ISLANDS)if(isInsideOuterIsland(spec,x,y,pad))return spec;return null;}
 function isInsideAnyLand(x,y,pad=0){return isInsideIsland(x,y,pad)||!!outerIslandAt(x,y,pad);}
 function mainIslandSignedCoastDistance(x,y){
-  const dx=Math.max(MAIN_WORLD_LEFT-x,0,x-MAIN_WORLD_RIGHT),dy=Math.max(MAIN_WORLD_TOP-y,0,y-MAIN_WORLD_BOTTOM);
-  const outside=Math.hypot(dx,dy);if(outside>0)return outside;
-  return -Math.min(x-MAIN_WORLD_LEFT,MAIN_WORLD_RIGHT-x,y-MAIN_WORLD_TOP,MAIN_WORLD_BOTTOM-y);
+  const dx=Number(x)-ISLAND_CX,dy=Number(y)-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);
+  return d-islandRadiusAtAngle(a,0);
 }
 function outerIslandSignedCoastDistance(spec,x,y){const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-outerIslandRadiusAtAngle(spec,a,0);}
 function oceanDepthAt(x,y){
@@ -16130,20 +16133,22 @@ function landDepthToCoastAt(x,y){
 function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanDepthAt(x,y)<=range:landDepthToCoastAt(x,y)<=range;}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){
-  const p=Math.max(0,Number(pad)||0);
-  return {x:clamp(Number(x)||ISLAND_CX,MAIN_WORLD_LEFT+p,MAIN_WORLD_RIGHT-p),y:clamp(Number(y)||ISLAND_CY,MAIN_WORLD_TOP+p,MAIN_WORLD_BOTTOM-p)};
+  const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));
+  if(d<=r||d<1e-6)return{x:px,y:py};
+  const q=r/d;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};
 }
 function keepObjectOnIsland(obj,pad=20){ if(!obj)return; const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad); obj.x=p.x;obj.y=p.y; }
 const ISLAND_PATH_CACHE = new Map();
 function cachedIslandPath(pad=0,samples=180){
   if(typeof Path2D!=="function")return null;
-  const p=Number(pad)||0,key=`rect|${p}`;let path=ISLAND_PATH_CACHE.get(key);if(path)return path;
-  const l=MAIN_WORLD_LEFT+p,r=MAIN_WORLD_RIGHT-p,t=MAIN_WORLD_TOP+p,b=MAIN_WORLD_BOTTOM-p;
-  path=new Path2D();path.rect(l,t,Math.max(1,r-l),Math.max(1,b-t));ISLAND_PATH_CACHE.set(key,path);return path;
+  const p=Number(pad)||0,key=`natural|${p}|${samples}`;let path=ISLAND_PATH_CACHE.get(key);if(path)return path;
+  path=new Path2D();
+  for(let i=0;i<samples;i++){const a=i/samples*TAU,r=islandRadiusAtAngle(a,p),x=ISLAND_CX+Math.cos(a)*r,y=ISLAND_CY+Math.sin(a)*r;if(i===0)path.moveTo(x,y);else path.lineTo(x,y);}path.closePath();
+  ISLAND_PATH_CACHE.set(key,path);return path;
 }
 function traceIslandPath(pad=0,samples=180){
-  const p=Number(pad)||0,l=MAIN_WORLD_LEFT+p,r=MAIN_WORLD_RIGHT-p,t=MAIN_WORLD_TOP+p,b=MAIN_WORLD_BOTTOM-p;
-  ctx.beginPath();ctx.rect(l,t,Math.max(1,r-l),Math.max(1,b-t));
+  const p=Number(pad)||0;ctx.beginPath();
+  for(let i=0;i<samples;i++){const a=i/samples*TAU,r=islandRadiusAtAngle(a,p),x=ISLAND_CX+Math.cos(a)*r,y=ISLAND_CY+Math.sin(a)*r;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();
 }
 const OUTER_ISLAND_PATH_CACHE=new Map();
 function cachedOuterIslandPath(spec,pad=0,samples=72){
@@ -27337,7 +27342,7 @@ function authoritativeResourcesForRender() {
 
 let lastMinimapDrawAt = 0;
 let minimapCamX = ISLAND_CX, minimapCamY = ISLAND_CY;
-const MINIMAP_VIEW_SPAN = 48000;
+const MINIMAP_VIEW_SPAN = 50000;
 const minimapGroundCache=document.createElement("canvas");minimapGroundCache.width=140;minimapGroundCache.height=140;
 const minimapGroundCtx=minimapGroundCache.getContext("2d");
 let minimapGroundCacheX=NaN,minimapGroundCacheY=NaN,minimapGroundCacheRelief=false;
@@ -27357,14 +27362,23 @@ function rebuildMinimapGround(left,top,size,relief){
 
 function drawMinimap() {
   const size=140,half=MINIMAP_VIEW_SPAN*.5;
-  // Keep the mainland centered while travelling on land or just offshore. Once
-  // the player reaches genuinely open water, the minimap camera follows them so
-  // boats/subs can navigate the expanded sea and outer islands.
-  let targetX=ISLAND_CX,targetY=ISLAND_CY;
-  const inOcean=worldBiomeAt(player.x,player.y)==="ocean",seaDepth=inOcean?oceanDepthAt(player.x,player.y):0;
-  if(inOcean&&seaDepth>650){targetX=player.x;targetY=player.y;}
+  // The minimap is a local window, never a zoomed-out picture of the whole world.
+  // It stays put while the player is comfortably inside it, then pans only when
+  // the player reaches the outer part of the current map window. This lets ocean
+  // travel continue naturally without shrinking the mainland into a tiny square.
+  // Keep the home island centered until the player is almost at the edge of the
+  // visible map. Only then move the minimap camera. With a 50k window the full
+  // irregular mainland and a small ocean ring are visible, while distant islands
+  // stay off-map until the player actually travels toward them.
+  const dead=half-2500;
+  const px=Number(player.x)||ISLAND_CX,py=Number(player.y)||ISLAND_CY;
+  if(Math.hypot(px-minimapCamX,py-minimapCamY)>MINIMAP_VIEW_SPAN*.95){minimapCamX=px;minimapCamY=py;}
+  let targetX=minimapCamX,targetY=minimapCamY;
+  const dx=px-minimapCamX,dy=py-minimapCamY;
+  if(dx>dead)targetX=px-dead;else if(dx<-dead)targetX=px+dead;
+  if(dy>dead)targetY=py-dead;else if(dy<-dead)targetY=py+dead;
   targetX=clamp(targetX,half,WORLD_W-half);targetY=clamp(targetY,half,WORLD_H-half);
-  minimapCamX+=(targetX-minimapCamX)*.18;minimapCamY+=(targetY-minimapCamY)*.18;
+  minimapCamX+=(targetX-minimapCamX)*.22;minimapCamY+=(targetY-minimapCamY)*.22;
   const left=minimapCamX-half,top=minimapCamY-half,scale=size/MINIMAP_VIEW_SPAN;
   const toMap=(x,y)=>({x:(x-left)*scale,y:(y-top)*scale});
   const visible=(x,y,pad=5)=>{const m=toMap(x,y);return m.x>=-pad&&m.x<=size+pad&&m.y>=-pad&&m.y<=size+pad;};

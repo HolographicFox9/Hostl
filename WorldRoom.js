@@ -6,8 +6,8 @@
 import { Room } from "@colyseus/core";
 import { Schema, MapSchema, defineTypes } from "@colyseus/schema";
 
-const WORLD_W = 62000;
-const WORLD_H = 50000;
+const WORLD_W = 84000;
+const WORLD_H = 70000;
 const PLAYER_R = 18;
 const GRID_CELL = 192;
 const TAU = Math.PI * 2;
@@ -1273,9 +1273,9 @@ const ISLAND_CX=WORLD_W*.5,ISLAND_CY=WORLD_H*.5;
 const MAIN_WORLD_LEFT=ISLAND_CX-MAIN_WORLD_W*.5,MAIN_WORLD_RIGHT=ISLAND_CX+MAIN_WORLD_W*.5,MAIN_WORLD_TOP=ISLAND_CY-MAIN_WORLD_H*.5,MAIN_WORLD_BOTTOM=ISLAND_CY+MAIN_WORLD_H*.5;
 const ISLAND_RADIUS=Math.min(MAIN_WORLD_W,MAIN_WORLD_H)*.415,ISLAND_SHORE_WIDTH=230;
 const OUTER_ISLANDS=Object.freeze([
-  {id:"reef_isle",cx:WORLD_W*.935,cy:WORLD_H*.30,r:1080,biome:"rainforest",seed:.73},
-  {id:"sunbar_isle",cx:WORLD_W*.90,cy:WORLD_H*.91,r:920,biome:"desert",seed:1.91},
-  {id:"frost_isle",cx:WORLD_W*.55,cy:WORLD_H*.052,r:720,biome:"arctic",seed:3.17}
+  {id:"reef_isle",cx:ISLAND_CX+29000,cy:ISLAND_CY-7000,r:1080,biome:"rainforest",seed:.73},
+  {id:"sunbar_isle",cx:ISLAND_CX+26000,cy:ISLAND_CY+27000,r:920,biome:"desert",seed:1.91},
+  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:720,biome:"arctic",seed:3.17}
 ]);
 const OCEAN_DEEP_DAMAGE_START=820,OCEAN_DEEP_DAMAGE_FULL=2200,OCEAN_DEEP_DAMAGE_MIN=4,OCEAN_DEEP_DAMAGE_MAX=16;
 const BIOME_ZONES={
@@ -1315,18 +1315,16 @@ const BIOME_RESOURCE_INFO=Object.freeze({
 function islandDistance(x,y){return Math.hypot(x-ISLAND_CX,y-ISLAND_CY);}
 function islandAngleDelta(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;else if(d<-Math.PI)d+=TAU;return d;}
 function islandRadiusAtAngle(angle,pad=0){
-  const a=Number(angle)||0,c=Math.cos(a),s=Math.sin(a),rx=MAIN_WORLD_W*.5,ry=MAIN_WORLD_H*.5,n=2.45;
-  const denom=Math.pow(Math.abs(c)/Math.max(1,rx),n)+Math.pow(Math.abs(s)/Math.max(1,ry),n);
-  const base=Math.pow(Math.max(1e-12,denom),-1/n);
-  const rectLimit=Math.min(rx/Math.max(1e-6,Math.abs(c)),ry/Math.max(1e-6,Math.abs(s)));
-  let scale=.945+Math.sin(a*2.15+.40)*.052+Math.sin(a*4.75-1.00)*.031+Math.sin(a*8.20+2.00)*.015;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(a,-Math.PI*.5)/.70,2))*.060;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(a,Math.PI)/.65,2))*.045;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(a,.20)/.50,2))*.020;
-  scale-=Math.exp(-Math.pow(islandAngleDelta(a,2.15)/.38,2))*.045;
-  scale=clamp(scale,.84,.998);
-  const coast=Math.min(rectLimit*.998,base*scale);
-  return Math.max(80,coast-(Number(pad)||0));
+  const a=Number(angle)||0,c=Math.cos(a),s=Math.sin(a),rx=MAIN_WORLD_W*.5,ry=MAIN_WORLD_H*.5;
+  const base=1/Math.sqrt((c*c)/(rx*rx)+(s*s)/(ry*ry));
+  let scale=.920+Math.sin(a*3.00+.35)*.045+Math.sin(a*5.00-1.10)*.028+Math.sin(a*9.00+1.70)*.014;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,-Math.PI*.5)/.55,2))*.055;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,Math.PI)/.60,2))*.045;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,.30)/.45,2))*.025;
+  scale-=Math.exp(-Math.pow(islandAngleDelta(a,2.20)/.32,2))*.075;
+  scale-=Math.exp(-Math.pow(islandAngleDelta(a,-.65)/.30,2))*.045;
+  scale=clamp(scale,.78,1.04);
+  return Math.max(80,base*scale-(Number(pad)||0));
 }
 function isInsideIsland(x,y,pad=0){const dx=Number(x)-ISLAND_CX,dy=Number(y)-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d<=islandRadiusAtAngle(a,pad);}
 function outerIslandRadiusAtAngle(spec,angle,pad=0){const ss=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0,scale=1+Math.sin(a*3.0+ss)*.10+Math.sin(a*5.1-ss*.7)*.05+Math.sin(a*7.3+ss*1.4)*.025;return Math.max(80,base*clamp(scale,.78,1.24)-(Number(pad)||0));}
