@@ -1315,32 +1315,31 @@ const BIOME_RESOURCE_INFO=Object.freeze({
 function islandDistance(x,y){return Math.hypot(x-ISLAND_CX,y-ISLAND_CY);}
 function islandAngleDelta(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;else if(d<-Math.PI)d+=TAU;return d;}
 function islandRadiusAtAngle(angle,pad=0){
-  const theta=Number(angle)||0;
-  let scale=1
-    +Math.sin(theta*2.15+.35)*.085
-    +Math.sin(theta*4.7-1.1)*.055
-    +Math.sin(theta*7.9+2.2)*.025;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,.42)/.42,2))*.11;
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,-.78)/.48,2))*.07;
-  scale-=Math.exp(-Math.pow(islandAngleDelta(theta,2.35)/.52,2))*.13;
-  scale-=Math.exp(-Math.pow(islandAngleDelta(theta,-2.55)/.34,2))*.06;
-  // Mountains live on added western land instead of replacing the original Forest.
-  scale+=Math.exp(-Math.pow(islandAngleDelta(theta,Math.PI)/.62,2))*.60;
-  scale=Math.max(.74,Math.min(1.75,scale));
-  return Math.max(80,ISLAND_RADIUS*scale-(Number(pad)||0));
+  const a=Number(angle)||0,c=Math.cos(a),s=Math.sin(a),rx=MAIN_WORLD_W*.5,ry=MAIN_WORLD_H*.5,n=2.45;
+  const denom=Math.pow(Math.abs(c)/Math.max(1,rx),n)+Math.pow(Math.abs(s)/Math.max(1,ry),n);
+  const base=Math.pow(Math.max(1e-12,denom),-1/n);
+  const rectLimit=Math.min(rx/Math.max(1e-6,Math.abs(c)),ry/Math.max(1e-6,Math.abs(s)));
+  let scale=.945+Math.sin(a*2.15+.40)*.052+Math.sin(a*4.75-1.00)*.031+Math.sin(a*8.20+2.00)*.015;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,-Math.PI*.5)/.70,2))*.060;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,Math.PI)/.65,2))*.045;
+  scale+=Math.exp(-Math.pow(islandAngleDelta(a,.20)/.50,2))*.020;
+  scale-=Math.exp(-Math.pow(islandAngleDelta(a,2.15)/.38,2))*.045;
+  scale=clamp(scale,.84,.998);
+  const coast=Math.min(rectLimit*.998,base*scale);
+  return Math.max(80,coast-(Number(pad)||0));
 }
-function isInsideIsland(x,y,pad=0){const p=Number(pad)||0;return x>=MAIN_WORLD_LEFT+p&&x<=MAIN_WORLD_RIGHT-p&&y>=MAIN_WORLD_TOP+p&&y<=MAIN_WORLD_BOTTOM-p;}
+function isInsideIsland(x,y,pad=0){const dx=Number(x)-ISLAND_CX,dy=Number(y)-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d<=islandRadiusAtAngle(a,pad);}
 function outerIslandRadiusAtAngle(spec,angle,pad=0){const ss=Number(spec?.seed)||0,base=Math.max(120,Number(spec?.r)||700),a=Number(angle)||0,scale=1+Math.sin(a*3.0+ss)*.10+Math.sin(a*5.1-ss*.7)*.05+Math.sin(a*7.3+ss*1.4)*.025;return Math.max(80,base*clamp(scale,.78,1.24)-(Number(pad)||0));}
 function isInsideOuterIsland(spec,x,y,pad=0){if(!spec)return false;const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d<=outerIslandRadiusAtAngle(spec,a,pad);}
 function outerIslandAt(x,y,pad=0){for(const spec of OUTER_ISLANDS)if(isInsideOuterIsland(spec,x,y,pad))return spec;return null;}
 function isInsideAnyLand(x,y,pad=0){return isInsideIsland(x,y,pad)||!!outerIslandAt(x,y,pad);}
-function mainIslandSignedCoastDistance(x,y){const dx=Math.max(MAIN_WORLD_LEFT-x,0,x-MAIN_WORLD_RIGHT),dy=Math.max(MAIN_WORLD_TOP-y,0,y-MAIN_WORLD_BOTTOM),outside=Math.hypot(dx,dy);if(outside>0)return outside;return -Math.min(x-MAIN_WORLD_LEFT,MAIN_WORLD_RIGHT-x,y-MAIN_WORLD_TOP,MAIN_WORLD_BOTTOM-y);}
+function mainIslandSignedCoastDistance(x,y){const dx=Number(x)-ISLAND_CX,dy=Number(y)-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-islandRadiusAtAngle(a,0);}
 function outerIslandSignedCoastDistance(spec,x,y){const dx=x-spec.cx,dy=y-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);return d-outerIslandRadiusAtAngle(spec,a,0);}
 function oceanDepthAt(x,y){if(!Number.isFinite(x)||!Number.isFinite(y)||isInsideAnyLand(x,y,0))return 0;let best=Math.max(0,mainIslandSignedCoastDistance(x,y));for(const spec of OUTER_ISLANDS)best=Math.min(best,Math.max(0,outerIslandSignedCoastDistance(spec,x,y)));return Math.max(0,best);}
 function landDepthToCoastAt(x,y){let best=Infinity;const main=-mainIslandSignedCoastDistance(x,y);if(main>=0)best=Math.min(best,main);for(const spec of OUTER_ISLANDS){const d=-outerIslandSignedCoastDistance(spec,x,y);if(d>=0)best=Math.min(best,d);}return Number.isFinite(best)?best:0;}
 function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanDepthAt(x,y)<=range:landDepthToCoastAt(x,y)<=range;}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
-function islandConstrainedPoint(x,y,pad=0){const p=Math.max(0,Number(pad)||0);return{x:clamp(Number(x)||ISLAND_CX,MAIN_WORLD_LEFT+p,MAIN_WORLD_RIGHT-p),y:clamp(Number(y)||ISLAND_CY,MAIN_WORLD_TOP+p,MAIN_WORLD_BOTTOM-p)};}
+function islandConstrainedPoint(x,y,pad=0){const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));if(d<=r||d<1e-6)return{x:px,y:py};const q=r/d;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};}
 function keepObjectOnIsland(obj,pad=20){if(!obj)return;const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad);obj.x=p.x;obj.y=p.y;}
 function forestRainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX+Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035+Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;}
 function arcticBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY-ISLAND_RADIUS*.22+Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024+Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;}
