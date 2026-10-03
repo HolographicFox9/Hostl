@@ -6448,7 +6448,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "704";
+const CUBE_SHARED_RULES_VERSION = "708";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -10000,7 +10000,7 @@ const net = {
   // Static world topology almost never changes after join. Colyseus keeps each
   // netState object live, so avoid rescanning ~2,600 resources on every visual sync.
   lastSharedResourceTopologySyncAt: 0,
-  // Static terrain is already generated from the selected world's permanent seed.
+  // Fixed terrain/biomes are shared; resource and wildlife placements are live session state.
   // Multiplayer binds only the nearby authoritative objects to that terrain as the
   // home camera/player moves, instead of rebuilding all ~2,600 objects at once.
   lastStaticStreamAt: 0,
@@ -10230,6 +10230,8 @@ function bindNearbyNetworkResource(s, id) {
   r.netState = s;
   r._netStreamMark = net.staticStreamPass;
   r.type = type;
+  const oldX=Number(r.x)||0,oldY=Number(r.y)||0;
+  if(Math.abs(oldX-x)>.01||Math.abs(oldY-y)>.01){r.x=x;r.y=y;moveStaticCollider("resources",r,oldX,oldY);}
   r.hp = damageLockedHp(r, Math.max(0, Number(s.hp) || 0));
   r.maxHp = Math.max(1, Number(s.maxHp) || 1);
   r.alive = s.alive !== false && r.hp > 0;
@@ -10927,9 +10929,9 @@ function syncNetworkFullWorld(force = false) {
     if (!own.dead && player.dead && !game.over) { player.dead = false; player.splitT = 0; }
   }
 
-  // The selected world already exists behind the Home screen from its permanent
-  // seed. Bind only the server objects around the current camera/player. This keeps
-  // harvesting authoritative without rebuilding the whole 18k map before Play.
+  // The fixed terrain exists behind Home, while live room resources can move/spawn.
+  // Bind the authoritative objects around the current camera/player without rebuilding
+  // the whole world before Play.
   const staticCx = game.started ? player.x : (game.camX + W * .5);
   const staticCy = game.started ? player.y : (game.camY + H * .5);
   const staticRadius = game.started ? 2200 : Math.max(1500, Math.hypot(W,H) * .85 + 500);
@@ -10970,7 +10972,7 @@ function syncNetworkFullWorld(force = false) {
   for(const id of Array.from(net.wallVisuals.keys()))if(!wallSeen.has(id))net.wallVisuals.delete(id); walls=Array.from(net.wallVisuals.values());
 
   const towerSeen = new Set();
-  eachNetworkCollection("towers",(s,id)=>{towerSeen.add(id);let v=net.towerVisuals.get(id)||{netId:id};v.x=Number(s.x)||0;v.y=Number(s.y)||0;v.cd=Number(s.cd)||0;v.ownerId=s.ownerId||"";v.tier=Number(s.tier)||0;net.towerVisuals.set(id,v);});
+  eachNetworkCollection("towers",(s,id)=>{towerSeen.add(id);let v=net.towerVisuals.get(id)||{netId:id};v.x=Number(s.x)||0;v.y=Number(s.y)||0;v.cd=Number(s.cd)||0;v.ownerId=s.ownerId||"";v.tier=Number(s.tier)||0;v.hp=damageLockedHp(v,Math.max(0,Number(s.hp)||0));v.maxHp=Math.max(1,Number(s.maxHp)||1);net.towerVisuals.set(id,v);});
   for(const id of Array.from(net.towerVisuals.keys()))if(!towerSeen.has(id))net.towerVisuals.delete(id); towers=Array.from(net.towerVisuals.values());
 
   const projSeen = new Set(), normal=[], blasts=[];
@@ -15871,6 +15873,17 @@ function addStaticCollider(kind, obj) {
   const cy = Math.floor(obj.y / STATIC_GRID_CELL);
   getStaticBucket(cx, cy, true)[kind].push(obj);
 }
+function moveStaticCollider(kind, obj, oldX, oldY) {
+  const oldCx = Math.floor((Number(oldX) || 0) / STATIC_GRID_CELL);
+  const oldCy = Math.floor((Number(oldY) || 0) / STATIC_GRID_CELL);
+  const bucket = getStaticBucket(oldCx, oldCy, false);
+  if (bucket && Array.isArray(bucket[kind])) {
+    const list = bucket[kind];
+    for (let i = list.length - 1; i >= 0; i--) if (list[i] === obj) list.splice(i, 1);
+    if (!(bucket.resources.length || bucket.gold.length || bucket.chests.length)) staticCollisionGrid.delete(staticGridKey(oldCx, oldCy));
+  }
+  addStaticCollider(kind, obj);
+}
 function rebuildStaticCollisionGrid() {
   staticCollisionGrid = new Map();
   for (const r of resources) addStaticCollider("resources", r);
@@ -17538,7 +17551,6 @@ function restoreCleanWorldTemplate() {
 }
 
 function initWorld() {
-  return withSelectedWorldSeed(() => {
   resources = [];
   staticCollisionGrid = new Map();
   placePonds();
@@ -17595,7 +17607,6 @@ function initWorld() {
   rebuildStaticCollisionGrid();
   rebuildStaticSpawnCandidateCache();
   if (!cleanWorldTemplate) captureCleanWorldTemplate();
-  });
 }
 
 let cachedStaticSpawnCandidates = [];
@@ -17999,7 +18010,7 @@ function placeWall() {
 }
 function placeTower() {
   if(craftedItemCount("Tower")<1){banner("Craft a Tower first",true);return false;}const tier=craftedBuildTier("Tower"),a=player.angle;
-  if(net.room){try{net.room.send("build",{kind:"tower",angle:a,towerTier:tier});}catch(_){}}else towers.push({x:player.x+Math.cos(a)*55,y:player.y+Math.sin(a)*55,cd:.5,tier,ownerId:"local"});
+  if(net.room){try{net.room.send("build",{kind:"tower",angle:a,towerTier:tier});}catch(_){}}else{const hp=tier>=2?260:tier>=1?180:120;towers.push({x:player.x+Math.cos(a)*55,y:player.y+Math.sin(a)*55,cd:.5,tier,ownerId:"local",hp,maxHp:hp});}
   consumeCraftedItem("Tower");sfx.craft();syncHud();return true;
 }
 function placeWindmill(){
@@ -19743,6 +19754,11 @@ function updateProjectiles(dt) {
 
 function updateTowers(dt) {
   for (const t of towers) {
+    if (!net.room && player.dead && t.ownerId === "local") {
+      const maxHp = Math.max(1, Number(t.maxHp) || (Number(t.tier)>=2?260:Number(t.tier)>=1?180:120));
+      t.maxHp = maxHp; t.hp = Math.max(0, (Number.isFinite(Number(t.hp)) ? Number(t.hp) : maxHp) - (maxHp / 75) * dt);
+      if (t.hp <= 0) continue;
+    }
     t.cd -= dt; if (t.cd > 0) continue;
     const tier=Number(t.tier)||0, range=tier>=2?360:tier>=1?285:235;
     let nearest=null,bestD=range;
@@ -19754,6 +19770,7 @@ function updateTowers(dt) {
       projectiles.push({x:t.x+Math.cos(a)*18,y:t.y+Math.sin(a)*18,vx:Math.cos(a)*(tier>=2?610:520),vy:Math.sin(a)*(tier>=2?610:520),life:1.05,r:tier>=2?6:5,hostile:false,kind:"towerRock",color:tier>=1?"#aeb7bf":"#8f8174",dmg,ownerId:t.ownerId||"local"});
     }
   }
+  if (!net.room) towers = towers.filter(t => (Number.isFinite(Number(t.hp)) ? Number(t.hp) : 1) > 0);
 }
 
 // ---------- resources / walls ----------
@@ -19787,6 +19804,10 @@ function damageLockedHp(obj, incomingHp) {
 }
 function syncResourceNetState(r) {
   if (!r || !r.netState) return;
+  const nx=Number(r.netState.x),ny=Number(r.netState.y);
+  if(Number.isFinite(nx)&&Number.isFinite(ny)&&(Math.abs(nx-(Number(r.x)||0))>.01||Math.abs(ny-(Number(r.y)||0))>.01)){
+    const oldX=Number(r.x)||0,oldY=Number(r.y)||0;r.x=nx;r.y=ny;moveStaticCollider("resources",r,oldX,oldY);
+  }
   const incomingHp = Math.max(0, Number(r.netState.hp) || 0);
   r.hp = damageLockedHp(r, incomingHp);
   r.maxHp = Math.max(0.01, Number(r.netState.maxHp) || r.maxHp || 1);
@@ -19797,6 +19818,32 @@ function syncGoldNetState(g) {
   g.infinite = !!g.netState.infinite;
   g.pure = !!g.netState.pure;
   g.goldLeft = g.infinite ? Infinity : Math.max(0, Number(g.netState.goldLeft) || 0);
+}
+function relocateOfflineResourceSpawn(r) {
+  if (!r || r.netState || r.alive || r.type === "pond" || r.type === "river" || r.type === "rainforestHive" || isBeeFlowerResource(r)) return false;
+  const oldX = Number(r.x) || 0, oldY = Number(r.y) || 0;
+  const solid = Math.max(8, Number(r.solidR) || 12);
+  const pad = Math.max(120, solid + 90);
+  const info = BIOME_RESOURCE_INFO[r.type];
+  const biome = info && info.category !== "flower" ? biomeBaseId(info.biome) : "";
+  for (let tries = 0; tries < 120; tries++) {
+    const pos = biome ? randomPointInBiome(biome, pad) : randomLandPoint(pad);
+    if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue;
+    // A harvested object never simply grows back on the exact old tile.
+    if (dist(pos.x, pos.y, oldX, oldY) < 760) continue;
+    if (!player.dead && dist(pos.x, pos.y, player.x, player.y) < 360 + solid) continue;
+    let nearPet = false;
+    for (const p of player.pets || []) if (p && !p.dead && dist(pos.x, pos.y, p.x, p.y) < 150 + solid) { nearPet = true; break; }
+    if (nearPet || solidOverlaps(pos.x, pos.y, solid + 10)) continue;
+    r.x = pos.x; r.y = pos.y;
+    if (r.type === "log") r.rot = rand(0, TAU);
+    r.hp = r.maxHp; r.alive = true; r.gatherCredit = 0; r.respawnAt = 0; r.pulse = 0;
+    moveStaticCollider("resources", r, oldX, oldY);
+    return true;
+  }
+  // Crowded area: leave it gone and try another random location shortly.
+  r.respawnAt = game.time + rand(4, 8);
+  return false;
 }
 function updateResources(dt) {
   // Per-frame work is limited to the part of the world that can actually be seen
@@ -19809,8 +19856,8 @@ function updateResources(dt) {
     if (!r) continue;
     if (r.pulse > 0) r.pulse = Math.max(0, r.pulse - dt * 4);
     syncResourceNetState(r);
-    if (!r.netState && !r.alive && game.time >= r.respawnAt) {
-      r.alive = true; r.hp = r.maxHp; r.gatherCredit = 0;
+    if (!r.netState && !r.alive && r.respawnAt && game.time >= r.respawnAt) {
+      relocateOfflineResourceSpawn(r);
     }
   }
   for (const g of queryStaticNearby("gold", cx, cy, nearRange)) {
@@ -19837,9 +19884,9 @@ function updateResources(dt) {
       const r = resources[resourceSweepIndex++];
       if (!r) continue;
       syncResourceNetState(r);
-      if (!r.netState && !r.alive && game.time >= r.respawnAt) {
-        r.alive = true; r.hp = r.maxHp; r.gatherCredit = 0;
-      }
+      if (!r.netState && !r.alive && r.respawnAt && game.time >= r.respawnAt) {
+      relocateOfflineResourceSpawn(r);
+    }
       if (r.pulse > 0 && !renderInView(r.x, r.y, 220)) r.pulse = Math.max(0, r.pulse - sweepDt * 4);
     }
   }
@@ -19862,6 +19909,10 @@ function updateResources(dt) {
 }
 function updateWalls(dt) {
   for (const w of walls) {
+    if (!net.room && player.dead && w.ownerId === "local" && w.ttl === -1 && !w.sourcePet) {
+      const maxHp = Math.max(1, Number(w.maxHp) || Number(w.hp) || 72);
+      w.maxHp = maxHp; w.hp = Math.max(0, (Number.isFinite(Number(w.hp)) ? Number(w.hp) : maxHp) - (maxHp / 75) * dt);
+    }
     if (w.flash > 0) w.flash = Math.max(0, w.flash - dt);
     if (!net.room && w.ttl > 0) w.ttl -= dt;
     if (!net.room && (w.hp ?? 1) > 0) {
@@ -27342,7 +27393,7 @@ function authoritativeResourcesForRender() {
 
 let lastMinimapDrawAt = 0;
 let minimapCamX = ISLAND_CX, minimapCamY = ISLAND_CY;
-const MINIMAP_VIEW_SPAN = 45000;
+const MINIMAP_VIEW_SPAN = 42000;
 const minimapGroundCache=document.createElement("canvas");minimapGroundCache.width=140;minimapGroundCache.height=140;
 const minimapGroundCtx=minimapGroundCache.getContext("2d");
 let minimapGroundCacheX=NaN,minimapGroundCacheY=NaN,minimapGroundCacheRelief=false;
@@ -27805,9 +27856,9 @@ function resetGame(options = {}) {
 
   game.survivalTime = 0; game.kills = 0; game.waveTimer = 4;
   game.runId=(globalThis.crypto?.randomUUID?.()||(`run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`));game.reviveCount=0;game.reviveAdUsed=false;game.revivePending=false;game.deathCarrySnapshot=null;game.creditedDeathCubits=0;
-  if (!instantLiveEntry) {
+  if (!instantLiveEntry && !preserveLiveWorld) {
     game.time = 0; game.wave = 0;
-  } else {
+  } else if (net.room) {
     const st = net.room?.state;
     if (Number.isFinite(Number(st?.worldTime))) game.time = Number(st.worldTime);
     if (Number.isFinite(Number(st?.wave))) game.wave = Number(st.wave);
@@ -27816,9 +27867,9 @@ function resetGame(options = {}) {
   el("finalTime").childNodes[0].nodeValue = "0:00";
   game.over = false; game.camX = 0; game.camY = 0; game.shake = 0;
   game.deathCamTarget = null; game.deathCamTargetKind = ""; game.deathCamTargetId = "";
-  if (!instantLiveEntry) {
+  if (!instantLiveEntry && !preserveLiveWorld) {
     game.phaseIdx = 0; game.phaseTimer = TIME_PHASES[0].duration; game.dayCount = 1;
-  } else {
+  } else if (net.room) {
     const st = net.room?.state;
     const phase = Number(st?.dayPhase);
     if (Number.isFinite(phase)) game.phaseIdx = phase;
@@ -28961,8 +29012,8 @@ if (worldSelect) {
     selectedWorldId = next;
     try { localStorage.setItem("hostlWorldId", selectedWorldId); } catch (_) {}
     if (net.room) disconnectMultiplayer();
-    // A selected world exists immediately behind Home: build its deterministic
-    // terrain/wildlife now, then bind it to the live multiplayer room silently.
+    // A selected world exists immediately behind Home: prepare a live local preview,
+    // then bind it to the authoritative multiplayer room silently.
     if (!game.started) {
       cleanWorldTemplate=null;initWorld();
       game.homeCamReady=false;game.camX=ISLAND_CX-W*.5;game.camY=ISLAND_CY-H*.5;pickHomeCameraTarget(true);
@@ -29159,10 +29210,18 @@ el("restartBtn").addEventListener("click", (e) => {
   // or the same click that happened to be in this screen position during gameplay.
   if (!game.over || !el("overlay").classList.contains("show")) return;
   if (performance.now() < restartAllowedAt) return;
-  resetGame();
+  // Try Again starts a new player run inside the same live world. Harvested
+  // resources, random respawns and surviving player builds keep their current
+  // session state until the player actually returns Home after death.
+  resetGame({preserveLiveWorld:true});
 });
 el("homeBtn").addEventListener("click", () => {
+  const returningHomeAfterDeath = !!(game.over || player.dead);
   if(net.room){try{net.room.send("playerPreview",{});}catch(_){}}
+  else if(returningHomeAfterDeath){
+    walls = walls.filter(w => !(w && w.ownerId === "local" && w.ttl === -1 && !w.sourcePet));
+    towers = towers.filter(t => !(t && t.ownerId === "local"));
+  }
   game.started = false;
   game.over = false;
   game.survivalTime = 0;
