@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "708";
+const CUBE_SHARED_RULES_VERSION = "709";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -1279,11 +1279,11 @@ const OUTER_ISLANDS=Object.freeze([
 ]);
 const OCEAN_DEEP_DAMAGE_START=820,OCEAN_DEEP_DAMAGE_FULL=2200,OCEAN_DEEP_DAMAGE_MIN=4,OCEAN_DEEP_DAMAGE_MAX=16;
 const BIOME_ZONES={
-  forest:{id:"forest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.41,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.57},
-  rainforest:{id:"rainforest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.65,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.57},
-  arctic:{id:"arctic",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.25},
-  desert:{id:"desert",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.50,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.80},
-  mountains:{id:"mountains",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.13,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.52}
+  forest:{id:"forest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.41,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.51},
+  rainforest:{id:"rainforest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.74,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.51},
+  arctic:{id:"arctic",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.51,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.12},
+  desert:{id:"desert",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.53,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.91},
+  mountains:{id:"mountains",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.15,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.49}
 };
 const BIOME_ORDER=["forest","rainforest","arctic","desert","mountains"];
 const BIOME_PROFILES={
@@ -1339,12 +1339,19 @@ function nearOceanShore(x,y,range=190){return worldBiomeAt(x,y)==="ocean"?oceanD
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));if(d<=r||d<1e-6)return{x:px,y:py};const q=r/d;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};}
 function keepObjectOnIsland(obj,pad=20){if(!obj)return;const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad);obj.x=p.x;obj.y=p.y;}
+const BIOME_SCORE_SHAPES=Object.freeze({mountains:{cx:-.70,cy:-.03,sx:.48,sy:.82,bias:.09,seed:1.7},forest:{cx:-.18,cy:.02,sx:.66,sy:.78,bias:.10,seed:3.1},rainforest:{cx:.48,cy:.02,sx:.62,sy:.78,bias:.10,seed:4.4},arctic:{cx:.02,cy:-.83,sx:.92,sy:.44,bias:-.05,seed:5.6},desert:{cx:.06,cy:.84,sx:.94,sy:.43,bias:-.06,seed:7.2}});
+function biomeOrganicNoise(nx,ny,seed){return Math.sin(nx*5.3+ny*2.1+seed)*.24+Math.sin(nx*2.2-ny*6.1+seed*1.6)*.18+Math.sin((nx+ny)*9.2+seed*.7)*.11+Math.sin(nx*12.7-ny*4.8+seed*.37)*.09+Math.sin(nx*18.2+ny*14.1+seed*1.13)*.055;}
+function biomeScoresAt(x,y){const nx=(Number(x)-ISLAND_CX)/Math.max(1,MAIN_WORLD_W*.5),ny=(Number(y)-ISLAND_CY)/Math.max(1,MAIN_WORLD_H*.5),out={};for(const id of BIOME_ORDER){const q=BIOME_SCORE_SHAPES[id],dx=(nx-q.cx)/q.sx,dy=(ny-q.cy)/q.sy;out[id]=-(dx*dx+dy*dy)+q.bias+biomeOrganicNoise(nx,ny,q.seed);}return out;}
 function forestRainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX+MAIN_WORLD_W*.04+Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035+Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;}
 function arcticBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY-ISLAND_RADIUS*.55+Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024+Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;}
 function desertBoundaryY(x){const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);return ISLAND_CY+ISLAND_RADIUS*.55+Math.sin(xn*Math.PI*1.55-.35)*MAIN_WORLD_H*.020+Math.sin(xn*Math.PI*3.2+1.4)*MAIN_WORLD_H*.008;}
 function mountainBoundaryX(y){const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);return ISLAND_CX-ISLAND_RADIUS*.72+Math.sin(yn*Math.PI*1.7+.6)*MAIN_WORLD_H*.012+Math.sin(yn*Math.PI*3.9-.9)*MAIN_WORLD_H*.004;}
-function worldBiomeAt(x,y){const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;if(!isInsideIsland(x,y,0))return "ocean";if(y<=arcticBoundaryY(x))return "arctic";if(y>=desertBoundaryY(x))return "desert";if(x<=mountainBoundaryX(y))return "mountains";return x<=forestRainBoundaryX(y)?"forest":"rainforest";}
-function randomBiomeZoneId(){return BIOME_ORDER[randi(0,BIOME_ORDER.length-1)]||"forest";}
+function worldBiomeAt(x,y){const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;if(!isInsideIsland(x,y,0))return "ocean";const scores=biomeScoresAt(x,y);let best="forest",bestScore=-Infinity;for(const id of BIOME_ORDER){const sc=Number(scores[id]);if(sc>bestScore){bestScore=sc;best=id;}}return best;}
+let BIOME_AREA_COUNT_CACHE=null;
+function biomeAreaCounts(){if(BIOME_AREA_COUNT_CACHE)return BIOME_AREA_COUNT_CACHE;const counts=Object.fromEntries(BIOME_ORDER.map(id=>[id,0])),cols=72,rows=56;for(let gy=0;gy<rows;gy++)for(let gx=0;gx<cols;gx++){const x=MAIN_WORLD_LEFT+(gx+.5)/cols*MAIN_WORLD_W,y=MAIN_WORLD_TOP+(gy+.5)/rows*MAIN_WORLD_H;if(!isInsideIsland(x,y,0))continue;const id=biomeBaseId(worldBiomeAt(x,y));if(counts[id]!=null)counts[id]++;}BIOME_AREA_COUNT_CACHE=counts;return counts;}
+function biomeAreaScale(id){const counts=biomeAreaCounts(),total=BIOME_ORDER.reduce((n,k)=>n+(counts[k]||0),0),avg=total/Math.max(1,BIOME_ORDER.length),v=(counts[biomeBaseId(id)]||avg)/Math.max(1,avg);return clamp(v,.65,1.65);}
+function scaledBiomeSpawnCount(base,biome,minCount=1){return Math.max(minCount,Math.round(Math.max(0,Number(base)||0)*biomeAreaScale(biome)));}
+function randomBiomeZoneId(){const counts=biomeAreaCounts(),total=BIOME_ORDER.reduce((n,id)=>n+(counts[id]||0),0);let roll=Math.random()*Math.max(1,total);for(const id of BIOME_ORDER){roll-=counts[id]||0;if(roll<=0)return id;}return "forest";}
 function speciesAllowedBiomes(type){const out=[];for(const id of BIOME_ORDER)if((BIOME_PROFILES[id]?.species||[]).includes(type))out.push(id);return out.length?out:["forest"];}
 function speciesHomeBiome(type){return speciesAllowedBiomes(type)[0]||"forest";}
 function nearestAllowedBiomeFor(type,x,y,preferred=""){const allowed=speciesAllowedBiomes(type),p=biomeBaseId(preferred);if(allowed.includes(p))return p;let best=allowed[0]||"forest",bestD=Infinity;for(const id of allowed){const z=BIOME_ZONES[id]||BIOME_ZONES.forest,d=dist(x,y,z.cx,z.cy);if(d<bestD){bestD=d;best=id;}}return best;}
@@ -2106,8 +2113,8 @@ export class WorldRoom extends Room {
 
   scatter(type,count,hp,minCenter){for(let i=0;i<count;i++){for(let tries=0;tries<85;tries++){let scale=1,solid=12,canopy=0;if(type==="tree"){scale=rand(1.2,2.3);solid=8.8*scale;canopy=46*scale;}else if(type==="rock"){scale=rand(1,2.05);solid=26.5*scale;}else if(type==="log"){scale=rand(1,1.6);solid=17.5*scale;}else if(type==="bush"){scale=rand(1.08,1.7);solid=10.8*scale;canopy=24*scale;}const pos=randomLandPoint(Math.max(120,solid+80)),x=pos.x,y=pos.y,biome=worldBiomeAt(x,y);const chance=biome==="arctic"?(type==="tree"?.34:type==="bush"?.44:type==="log"?.40:.86):biome==="desert"?(type==="tree"?.18:type==="bush"?.22:type==="log"?.08:.92):biome==="mountains"?(type==="tree"?.26:type==="bush"?.34:type==="log"?.20:.98):type==="tree"?(biome==="rainforest"?1:.88):type==="bush"?(biome==="rainforest"?1:.82):type==="log"?(biome==="rainforest"?.90:.78):(biome==="rainforest"?.56:.68);if(Math.random()>chance)continue;if(!this.canPlace(x,y,solid,minCenter))continue;this.addResource(type,x,y,hp,solid,canopy,scale,type==="log"?rand(0,TAU):0);break;}}}
   placeBiomeFeatures(){
-    for(let i=0;i<72;i++)for(let t=0;t<20;t++){const pos=randomPointInBiome("rainforest",80),scale=rand(1.05,1.65),solid=10.8*scale;if(!this.canPlace(pos.x,pos.y,solid+10,0))continue;this.addResource("bush",pos.x,pos.y,8,solid,24*scale,scale,0);break;}
-    const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];for(let i=0;i<count;i++)for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(!this.canPlace(pos.x,pos.y,solid+12,0))continue;this.addResource(type,pos.x,pos.y,hp,solid,0,scale,rand(-.35,.35));break;}};
+    for(let i=0;i<scaledBiomeSpawnCount(72,"rainforest",24);i++)for(let t=0;t<20;t++){const pos=randomPointInBiome("rainforest",80),scale=rand(1.05,1.65),solid=10.8*scale;if(!this.canPlace(pos.x,pos.y,solid+10,0))continue;this.addResource("bush",pos.x,pos.y,8,solid,24*scale,scale,0);break;}
+    const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];count=scaledBiomeSpawnCount(count,biome,1);for(let i=0;i<count;i++)for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(!this.canPlace(pos.x,pos.y,solid+12,0))continue;this.addResource(type,pos.x,pos.y,hp,solid,0,scale,rand(-.35,.35));break;}};
     placeUnique("forestHerb",24,"forest");placeUnique("forestResin",22,"forest");placeUnique("forestGiantFlower",20,"forest");placeUnique("rainforestHive",2,"forest");placeUnique("rainforestVine",26,"rainforest");placeUnique("rainforestFruit",24,"rainforest");placeUnique("rainforestGiantFlower",24,"rainforest");placeUnique("rainforestHive",2,"rainforest");placeUnique("rainforestHive",2,"mountains");placeUnique("arcticIceCrystal",30,"arctic");placeUnique("arcticFrostBerry",26,"arctic");placeUnique("desertCactusGood",22,"desert");placeUnique("desertCactusBad",18,"desert");placeUnique("desertSandstone",24,"desert");placeUnique("mountainIron",30,"mountains");placeUnique("mountainQuartz",26,"mountains");placeUnique("mountainGem",22,"mountains");placeUnique("mountainStoneFruit",24,"mountains");
   }
   generateWorld(){
@@ -2143,7 +2150,7 @@ export class WorldRoom extends Room {
         const wantsBigMomma=BIG_MOMMA_SPECIES_INDEXES.has(speciesOrdinal);
         if(wantsBigMomma)bigMommaTargets.push({type,biome});
         const stages=[...STARTING_STAGE_PLAN];if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-        const targetPerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7);
+        const basePerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7),targetPerSpecies=Math.max(STARTING_STAGE_PLAN.length,scaledBiomeSpawnCount(basePerSpecies,biome,STARTING_STAGE_PLAN.length));
         let made=0;
         for(const stage of stages){let spawned=false;for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWild(stage,type,null,biome);if(spawned)made++;}
         for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length),stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];if(spawnWild(stage,type,null,biome))made++;}
