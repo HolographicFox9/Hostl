@@ -16163,19 +16163,19 @@ function outerIslandInView(spec,pad=380){
 }
 function forestRainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CX + Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035 + Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;
+  return ISLAND_CX + MAIN_WORLD_W*.04 + Math.sin(yn*Math.PI*1.25)*MAIN_WORLD_W*.035 + Math.sin(yn*Math.PI*2.8+1.2)*MAIN_WORLD_W*.012;
 }
 function arcticBoundaryY(x){
   const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CY-ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024 + Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;
+  return ISLAND_CY-ISLAND_RADIUS*.55 + Math.sin(xn*Math.PI*1.8+.45)*MAIN_WORLD_H*.024 + Math.sin(xn*Math.PI*4.4-1.1)*MAIN_WORLD_H*.010;
 }
 function desertBoundaryY(x){
   const xn=(x-ISLAND_CX)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CY+ISLAND_RADIUS*.22 + Math.sin(xn*Math.PI*1.55-.35)*MAIN_WORLD_H*.020 + Math.sin(xn*Math.PI*3.2+1.4)*MAIN_WORLD_H*.008;
+  return ISLAND_CY+ISLAND_RADIUS*.55 + Math.sin(xn*Math.PI*1.55-.35)*MAIN_WORLD_H*.020 + Math.sin(xn*Math.PI*3.2+1.4)*MAIN_WORLD_H*.008;
 }
 function mountainBoundaryX(y){
   const yn=(y-ISLAND_CY)/Math.max(1,ISLAND_RADIUS);
-  return ISLAND_CX-ISLAND_RADIUS*1.10 + Math.sin(yn*Math.PI*1.7+.6)*MAIN_WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*MAIN_WORLD_H*.004;
+  return ISLAND_CX-ISLAND_RADIUS*.72 + Math.sin(yn*Math.PI*1.7+.6)*MAIN_WORLD_H*.012 + Math.sin(yn*Math.PI*3.9-.9)*MAIN_WORLD_H*.004;
 }
 function worldBiomeAt(x,y){
   const outer=outerIslandAt(x,y,0);if(outer)return outer.biome;
@@ -27342,7 +27342,7 @@ function authoritativeResourcesForRender() {
 
 let lastMinimapDrawAt = 0;
 let minimapCamX = ISLAND_CX, minimapCamY = ISLAND_CY;
-const MINIMAP_VIEW_SPAN = 50000;
+const MINIMAP_VIEW_SPAN = 45000;
 const minimapGroundCache=document.createElement("canvas");minimapGroundCache.width=140;minimapGroundCache.height=140;
 const minimapGroundCtx=minimapGroundCache.getContext("2d");
 let minimapGroundCacheX=NaN,minimapGroundCacheY=NaN,minimapGroundCacheRelief=false;
@@ -27367,7 +27367,7 @@ function drawMinimap() {
   // the player reaches the outer part of the current map window. This lets ocean
   // travel continue naturally without shrinking the mainland into a tiny square.
   // Keep the home island centered until the player is almost at the edge of the
-  // visible map. Only then move the minimap camera. With a 50k window the full
+  // visible map. Only then move the minimap camera. With a tighter 45k window the full
   // irregular mainland and a small ocean ring are visible, while distant islands
   // stay off-map until the player actually travels toward them.
   const dead=half-2500;
