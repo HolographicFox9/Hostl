@@ -6448,7 +6448,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "709";
+const CUBE_SHARED_RULES_VERSION = "717";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8980,9 +8980,11 @@ function animalHitboxFit(type, stage) {
   const stageFit = {
     baby:      { len: 1.04, body: 1.04, head: 1.08 },
     adult:     { len: 0.90, body: 0.90, head: 0.88 },
-    boss:      { len: 1.04, body: 1.04, head: 1.08 },
-    superboss: { len: 1.06, body: 1.05, head: 1.10 },
-    bigmomma:  { len: 1.08, body: 1.06, head: 1.12 }
+    // Large stages already use much larger visible artwork. Keep their hitboxes
+    // close to that silhouette instead of adding another oversized multiplier.
+    boss:      { len: 0.99, body: 1.00, head: 1.02 },
+    superboss: { len: 1.00, body: 1.00, head: 1.03 },
+    bigmomma:  { len: 1.01, body: 1.00, head: 1.04 }
   }[stage] || { len: 1.04, body: 1.04, head: 1.08 };
 
   const speciesFit = {
@@ -9113,6 +9115,51 @@ function animalHeadHitbox(a) {
   const scale=animalHeadHitboxScale(a?.type);
   return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
+function animalSolidHeadHitbox(a) {
+  // Every animal gets a dedicated solid/damage HEAD hitbox. This stays
+  // separate from animalHeadHitbox(), which is the smaller bite/attack face.
+  if (!a) return null;
+  const r=Math.max(4,Number(a.r)||18), ang=Number(a.angle)||0;
+  const ca=Math.cos(ang), sa=Math.sin(ang);
+  const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
+  if (bee) {
+    // These ratios come from the actual uploaded Bee Sep head rectangles after
+    // they are scaled by drawUploadedBeeSkin(). The radius is trimmed slightly
+    // from the art edge so touching the outer pixels is still forgiving.
+    const profiles={
+      queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
+      workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},
+      dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}
+    };
+    const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60];
+    const forward=pr[0]*r, side=pr[1]*r;
+    return {
+      x:(Number(a.x)||0)+ca*forward-sa*side,
+      y:(Number(a.y)||0)+sa*forward+ca*side,
+      r:Math.max(4,r*pr[2])
+    };
+  }
+
+  const hits=animalBodyHitboxes(a);
+  if (hits.length) {
+    const nose=hits[hits.length-1];
+    const skull=hits[Math.max(0,hits.length-2)]||nose;
+    // Put the solid part mostly on the skull so the snout can overlap slightly,
+    // but the player can never pass through the whole head.
+    let mix=.20;
+    let mul=.82;
+    if(a.type==="boar"){mix=.08;mul=a.stage==="baby"?.58:a.stage==="boss"?.46:a.stage==="superboss"?.42:a.stage==="bigmomma"?.40:.62;}
+    else if(a.type==="deer")mul=.72;
+    else if(a.stage==="baby")mul=.76;
+    return {
+      x:skull.x+(nose.x-skull.x)*mix,
+      y:skull.y+(nose.y-skull.y)*mix,
+      r:Math.max(animalHitboxMinRadius(a)*1.05,skull.r*mul)
+    };
+  }
+  const face=animalHeadHitbox(a);
+  return face?{...face,r:Math.max(3.2,face.r*1.15)}:null;
+}
 function animalHeadTouches(a, tx, ty, tr) {
   const h = animalHeadHitbox(a);
   const targetR = Math.max(2, (tr || 0) * 0.74);
@@ -9125,7 +9172,7 @@ function animalTargetDamageHitboxes(target) {
   // This prevents bites from only registering near the victim's center/torso.
   if (target.type && target.stage && PET_TYPES[target.type]) {
     const hits = animalBodyHitboxes(target).map(h => ({...h}));
-    const head = animalHeadHitbox(target);
+    const head = animalSolidHeadHitbox(target);
     if (head) hits.push(head);
     return hits;
   }
@@ -11066,11 +11113,16 @@ function applyChestNetworkReward(data={}) {
 }
 function applyTameNetworkResult(data={}) {
   if(Number.isFinite(Number(data.honeycomb))){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials.honeycomb=Math.max(0,Math.floor(Number(data.honeycomb)||0));if(player.biomeMaterials.honeycomb<=0&&player.heldSpecial==="HoneyComb")restoreLastWeaponAfterSpecial();syncHotbar();syncMobilePrimaryButton();}
-  if (data.pending) { game.tamePending = true; banner(`Taming…${Number.isFinite(Number(data.chance)) ? " "+Math.round(Number(data.chance)*100)+"% chance" : ""}${data.usedComb?" • bee ate 1 Honey Comb":""}`); return; }
+  if (data.pending) {
+    game.tamePending = true;
+    const target=net.animalVisuals.get(String(data.animalId||""))||animals.find(a=>String(a?.netId||"")===String(data.animalId||""));
+    if(target)tameHeartStart(target,String(data.animalId||""));
+    banner(`Taming…${Number.isFinite(Number(data.chance)) ? " "+Math.round(Number(data.chance)*100)+"% chance" : ""}${data.usedComb?" • bee ate 1 Honey Comb":""}`); return;
+  }
   game.tamePending = false;
-  if (data.reason === "max") { banner("Max 4 regular pets! Bred family pets do not use a slot.", true); return; }
-  if (data.success) { if (sfx.tame) sfx.tame(); banner(`Tamed ${PET_TYPES[data.type]?.name||"pet"}!${Number(data.bonusXp)>0?` +${Math.floor(Number(data.bonusXp))} starting XP`:""}`); achievementTamedSpecies(String(data.type||"")); }
-  else if (data.type) { banner(`${PET_TYPES[data.type]?.name||"Animal"} resisted taming`, true); }
+  if (data.reason === "max") { if(game.tameHeartFx)game.tameHeartFx.life=0; banner("Max 4 regular pets! Bred family pets do not use a slot.", true); return; }
+  if (data.success) { tameHeartResolve(true,data); if (sfx.tame) sfx.tame(); banner(`Tamed ${PET_TYPES[data.type]?.name||"pet"}!${Number(data.bonusXp)>0?` +${Math.floor(Number(data.bonusXp))} starting XP`:""}`); achievementTamedSpecies(String(data.type||"")); }
+  else if (data.type) { tameHeartResolve(false,data); banner(`${PET_TYPES[data.type]?.name||"Animal"} resisted taming`, true); }
 }
 function applyPetBreedNetworkResult(data={}) {
   if (!data.success) {
@@ -11149,6 +11201,7 @@ function applyPlayerActionEvent(data={}) {
     v.angle=Number(data.angle);
   }
   if(typeof data.heldSpecial==="string") v.heldSpecial=data.heldSpecial;
+  if(action==="flute"&&sfx.flute&&dist(player.x,player.y,v.x,v.y)<900)sfx.flute();
 }
 function applyPhaseNetworkEvent(data={}) {
   const phase=TIME_PHASES[Number(data.phase)||0]; if(!phase)return;
@@ -12221,6 +12274,12 @@ const sfx = {
   hurt: () => beep(120, 0.18, "sawtooth", 0.06),
   die: () => beep(90, 0.5, "sawtooth", 0.07),
   eat: () => beep(760, 0.1, "sine", 0.04),
+  flute: () => {
+    // Breathier three-note flute phrase; triggered the instant PLAY is clicked.
+    beep(740, 0.22, "sine", 0.043);
+    setTimeout(() => beep(880, 0.21, "sine", 0.038), 90);
+    setTimeout(() => beep(988, 0.25, "sine", 0.034), 180);
+  },
   tame: () => { beep(440, 0.1, "sine", 0.05); setTimeout(() => beep(660, 0.15, "sine", 0.05), 80); },
   ability: () => { beep(300, 0.08, "sawtooth", 0.04); beep(500, 0.12, "triangle", 0.04); },
   gold: () => beep(880, 0.1, "sine", 0.04),
@@ -16200,6 +16259,28 @@ function islandConstrainedPoint(x,y,pad=0){
   const q=r/d;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};
 }
 function keepObjectOnIsland(obj,pad=20){ if(!obj)return; const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad); obj.x=p.x;obj.y=p.y; }
+function outerIslandById(id){return OUTER_ISLANDS.find(spec=>spec.id===String(id||""))||null;}
+function outerIslandConstrainedPoint(spec,x,y,pad=0){
+  if(!spec)return{x:Number(x)||ISLAND_CX,y:Number(y)||ISLAND_CY};
+  const px=Number(x)||spec.cx,py=Number(y)||spec.cy,dx=px-spec.cx,dy=py-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=outerIslandRadiusAtAngle(spec,a,Math.max(0,Number(pad)||0));
+  if(d<=r||d<1e-6)return{x:px,y:py};const q=r/d;return{x:spec.cx+dx*q,y:spec.cy+dy*q};
+}
+function keepObjectOnLandmass(obj,pad=20){
+  if(!obj)return;
+  const spec=outerIslandById(obj._outerIslandId);
+  if(spec){const p=outerIslandConstrainedPoint(spec,Number(obj.x)||spec.cx,Number(obj.y)||spec.cy,pad);obj.x=p.x;obj.y=p.y;return;}
+  keepObjectOnIsland(obj,pad);
+}
+function randomPointOnOuterIsland(spec,pad=80){
+  if(!spec)return{x:ISLAND_CX,y:ISLAND_CY};
+  const safe=Math.max(24,Number(pad)||0);
+  for(let tries=0;tries<120;tries++){
+    const a=rand(0,TAU),coast=outerIslandRadiusAtAngle(spec,a,safe),rr=Math.sqrt(Math.random())*Math.max(24,coast*.88);
+    const x=spec.cx+Math.cos(a)*rr,y=spec.cy+Math.sin(a)*rr;
+    if(isInsideOuterIsland(spec,x,y,safe))return{x,y};
+  }
+  return{x:spec.cx,y:spec.cy};
+}
 const ISLAND_PATH_CACHE = new Map();
 function cachedIslandPath(pad=0,samples=180){
   if(typeof Path2D!=="function")return null;
@@ -16812,15 +16893,10 @@ function animalPhysicalHitboxes(a){
   const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
-  const face=animalHeadHitbox(collisionAnimal);
-  if(face){
-    const ang=Number(collisionAnimal.angle)||0;
-    // Scale the solid skull with the animal's actual head stage. The center is
-    // pulled back enough to leave only the snout tip as intentional overhang.
-    const stageMul={baby:.92,adult:.99,boss:1.04,superboss:1.08,bigmomma:1.12}[collisionAnimal.stage]||.99;
-    const back=Math.max(1.2,face.r*.20);
+  const head=animalSolidHeadHitbox(collisionAnimal);
+  if(head){
     const mountedMul=(typeof player!=="undefined"&&player?.riding===a)?.94:1;
-    hits.push({x:face.x-Math.cos(ang)*back,y:face.y-Math.sin(ang)*back,r:Math.max(3.2,face.r*stageMul*mountedMul)});
+    hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mountedMul)});
   }
   return hits;
 }
@@ -17335,8 +17411,24 @@ function updateBeeHomeBehaviorOffline(a,dt){
   if(a.type==="workerbee"&&updateWorkerBeeJobOffline(a,dt,hive))return true;if(a.type==="dronebee"&&updateDroneBeeHiveLifeOffline(a,dt,hive))return true;if(a.type==="queenbee"&&updateQueenBeeHiveLifeOffline(a,dt,hive))return true;return false;
 }
 
-function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, groupAnchor = null, forcedBiome = null) {
+function outerIslandAnimalSpawnBlocked(spec,x,y,solid){
+  if(!spec||!isInsideOuterIsland(spec,x,y,Math.max(26,(Number(solid)||0)+18)))return true;
+  const nearbyRange=Math.max(160,(Number(solid)||0)+180);
+  for(const r of queryStaticNearby("resources",x,y,nearbyRange)){
+    if(!r||(!r.alive&&r.respawnAt))continue;
+    if(r.type==="pond"||r.type==="river"){if(waterNearPoint(r,x,y,(Number(solid)||0)+24))return true;continue;}
+    if(r.type==="oceanRock"||BIOME_RESOURCE_INFO[r.type]?.biome==="ocean")continue;
+    if(r.type==="log"){if(resourceTouchingCircle(r,x,y,(Number(solid)||0)+4))return true;continue;}
+    const c=resourceSolidCenter(r);if(dist(x,y,c.x,c.y)<(Number(solid)||0)+(Number(r.solidR)||10)+5)return true;
+  }
+  for(const g of goldChunks){if(!g||(!g.infinite&&g.goldLeft<=0))continue;const h=goldSolidHitbox(g);if(dist(x,y,h.x,h.y)<(Number(solid)||0)+h.r+4)return true;}
+  for(const c of chests){if(!c||c.opened)continue;const h=chestSolidHitbox(c);if(dist(x,y,h.x,h.y)<(Number(solid)||0)+h.r+5)return true;}
+  return false;
+}
+
+function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, groupAnchor = null, forcedBiome = null, outerSpec = null) {
   const biomeHint = groupAnchor ? biomeBaseId(worldBiomeAt(groupAnchor.x, groupAnchor.y))
+    : outerSpec ? biomeBaseId(outerSpec.biome)
     : nearPlayer ? biomeBaseId(worldBiomeAt(player.x, player.y))
     : forcedBiome ? biomeBaseId(forcedBiome)
     : forcedType ? speciesHomeBiome(forcedType)
@@ -17367,6 +17459,9 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
       const d = rand(minD, maxD);
       x = clamp(groupAnchor.x + Math.cos(a) * d, spawnR + 24, WORLD_W - spawnR - 24);
       y = clamp(groupAnchor.y + Math.sin(a) * d, spawnR + 24, WORLD_H - spawnR - 24);
+    } else if (outerSpec) {
+      const point = randomPointOnOuterIsland(outerSpec, spawnR + 34);
+      x = point.x; y = point.y;
     } else if (nearPlayer) {
       const a = rand(0, TAU);
       const d = rand(Math.max(180, spawnR + 90), Math.max(520, spawnR + 300));
@@ -17381,14 +17476,14 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
     tries++;
   } while (
     (
-      solidOverlaps(x, y, spawnR) ||
-      animalSpawnCrowded(x, y, spawnR, groupAnchor ? 8 : (nearPlayer ? 26 : 40))
+      (outerSpec ? outerIslandAnimalSpawnBlocked(outerSpec,x,y,spawnR) : solidOverlaps(x, y, spawnR)) ||
+      animalSpawnCrowded(x, y, spawnR, outerSpec ? 16 : (groupAnchor ? 8 : (nearPlayer ? 26 : 40)))
     ) &&
-    tries < (groupAnchor ? 100 : 70)
+    tries < (outerSpec ? 115 : (groupAnchor ? 100 : 70))
   );
 
   // Never force a group member into a solid or another creature.
-  if (solidOverlaps(x, y, spawnR) || animalSpawnCrowded(x, y, spawnR, groupAnchor ? 4 : 18)) return null;
+  if ((outerSpec ? outerIslandAnimalSpawnBlocked(outerSpec,x,y,spawnR) : solidOverlaps(x, y, spawnR)) || animalSpawnCrowded(x, y, spawnR, outerSpec ? 10 : (groupAnchor ? 4 : 18))) return null;
 
   const sleeping = Math.random() < beeSleepSpawnChance(type, stage);
   const hp = typeHp(type, stage);
@@ -17413,7 +17508,8 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
     recentHit: 0, attackAnim: 0,
     fleeUntil: 0, enraged: false, tameFailedAggro: false, desperateAggro: false,
   };
-  if (isWildBeeType(type)) { offlineBeeHomeResource(animal); }
+  if(outerSpec)animal._outerIslandId=outerSpec.id;
+  if (isWildBeeType(type) && !outerSpec) { offlineBeeHomeResource(animal); }
   animals.push(animal);
   return animal;
 }
@@ -17475,11 +17571,16 @@ function spawnWildBabyFromParents(mother, father) {
   const coats = info.coats || [info.color || "#c9a06a"];
   const coat = Math.random() < 0.5 ? (mother.coat || coats[0]) : (father.coat || coats[0]);
   const mx = (mother.x + father.x) * 0.5, my = (mother.y + father.y) * 0.5;
+  const outerId = mother._outerIslandId || father._outerIslandId || "";
+  const outerSpec = outerId ? outerIslandById(outerId) : null;
   let x = mx, y = my;
   for (let i = 0; i < 12; i++) {
     const a = rand(0, TAU), d = rand(8, 30);
     const tx = clamp(mx + Math.cos(a) * d, 24, WORLD_W - 24), ty = clamp(my + Math.sin(a) * d, 24, WORLD_H - 24);
-    if (!solidOverlaps(tx, ty, Math.max(7, r * 0.45))) { x = tx; y = ty; break; }
+    const open = outerSpec
+      ? !outerIslandAnimalSpawnBlocked(outerSpec, tx, ty, Math.max(7, r * 0.45))
+      : !solidOverlaps(tx, ty, Math.max(7, r * 0.45));
+    if (open) { x = tx; y = ty; break; }
   }
   const hasSpots = (type === "dog" && Math.random() < 0.55) || (type === "cat" && Math.random() < 0.35) || (type === "rabbit" && Math.random() < 0.25);
   const baby = {
@@ -17493,6 +17594,7 @@ function spawnWildBabyFromParents(mother, father) {
     atkCd: 0, combat: 0, exp: 0, level: 1, recentHit: 0, attackAnim: 0,
     fleeUntil: 0, enraged: false, tameFailedAggro: false, desperateAggro: false,
   };
+  if (outerId) baby._outerIslandId = outerId;
   animals.push(baby);
   mother._lastBreedDay = game.dayCount; father._lastBreedDay = game.dayCount;
   clearWildMatePair(mother);
@@ -17538,7 +17640,11 @@ function wildCanSleepNow(a){
 }
 function snakeFluteCalmActive(a){
   if(!a||a.type!=="snake")return false;
-  if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.25){a._fluteCalmUntil=0;return false;}
+  // Better flutes hold a snake calm deeper into its health bar. Normal = 25%,
+  // upgraded = 10%, best = 3% (almost defeated, but not completely safe).
+  const tier=clamp(Math.floor(Number(a._fluteTier)||0),0,2);
+  const minSafeHp=[.25,.10,.03][tier];
+  if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=minSafeHp){a._fluteCalmUntil=0;return false;}
   return (Number(a._fluteCalmUntil)||0)>game.time;
 }
 function updateCreatureRecovery(creature, dt, regenRate) {
@@ -17669,7 +17775,9 @@ function initWorld() {
   // Balance wildlife by biome population rather than giving every species the
   // same count. Forest already has many species, so smaller species-pool biomes
   // receive more individuals per species and feel just as alive.
-  const STARTING_WILD_PER_SPECIES_BY_BIOME = {forest:7,rainforest:9,arctic:12,desert:10,mountains:12};
+  // Much denser wildlife. The map is enormous, so the old counts left long empty stretches.
+  // Keep this species-based so every biome feels populated instead of just adding one giant cluster.
+  const STARTING_WILD_PER_SPECIES_BY_BIOME = {forest:12,rainforest:16,arctic:22,desert:18,mountains:20};
   const STARTING_STAGE_PLAN = ["baby","baby","adult","adult","adult","boss","superboss"];
   const EXTRA_STAGE_PLAN = ["baby","adult","adult","baby","adult"];
   const BIG_MOMMA_SPECIES_INDEXES = new Set([0,7,14,21,28]);
@@ -17683,7 +17791,7 @@ function initWorld() {
       if(wantsBigMomma)bigMommaTargets.push({type,biome});
       const stages=[...STARTING_STAGE_PLAN];
       if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-      const basePerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7);
+      const basePerSpecies=type==="fennec"?28:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||12);
       const targetPerSpecies=Math.max(STARTING_STAGE_PLAN.length,scaledBiomeSpawnCount(basePerSpecies,biome,STARTING_STAGE_PLAN.length));
       let made=0;
       for(const stage of stages){
@@ -17705,6 +17813,19 @@ function initWorld() {
   for(let pass=0;bigMommaCount<5&&pass<25;pass++){
     const target=bigMommaTargets[pass%Math.max(1,bigMommaTargets.length)]||{type:"bear",biome:"forest"};
     if(spawnWildAnimal(false,"bigmomma",target.type,null,target.biome))bigMommaCount++;
+  }
+
+  // Outer islands now have their own real wildlife instead of being empty land.
+  // Keep island populations mostly baby/adult so the smaller islands stay navigable.
+  const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:18};
+  for(const spec of OUTER_ISLANDS){
+    const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!isWildBeeType(type));
+    const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;
+    let made=0;
+    for(let attempt=0;attempt<target*10&&made<target;attempt++){
+      const type=pool[randi(0,Math.max(0,pool.length-1))]||chooseWildType(spec.biome),roll=Math.random(),stage=roll<.52?"baby":roll<.93?"adult":roll<.995?"boss":"superboss";
+      if(spawnWildAnimal(false,stage,type,null,spec.biome,spec))made++;
+    }
   }
   organizeRainforestHivesOffline();
   rebuildStaticCollisionGrid();
@@ -17902,6 +18023,30 @@ function stardust(x, y, n = 34, speed = 145) {
     });
   }
 }
+function tameHeartStart(animal,targetId="") {
+  if(!animal)return null;
+  const offset=Math.max(30,(Number(animal.r)||18)+28);
+  let fx=game.tameHeartFx;
+  if(!fx||fx.life<=0||fx.type!=="tameHeart"){
+    fx={type:"tameHeart",x:animal.x,y:animal.y-offset,life:6,maxLife:6,state:"pending",phase:0,popped:false,anchorAnimal:animal,targetId:String(targetId||animal.netId||"")};
+    abilityFx.push(fx);game.tameHeartFx=fx;
+  }else{
+    fx.anchorAnimal=animal;fx.targetId=String(targetId||animal.netId||fx.targetId||"");fx.state="pending";fx.life=6;fx.maxLife=6;fx.popped=false;fx.x=animal.x;fx.y=animal.y-offset;
+  }
+  return fx;
+}
+function tameHeartResolve(success,data={}) {
+  let fx=game.tameHeartFx;
+  const x=Number(data.x),y=Number(data.y),r=Math.max(8,Number(data.r)||18);
+  if(!fx||fx.life<=0||fx.type!=="tameHeart"){
+    fx={type:"tameHeart",x:Number.isFinite(x)?x:player.x,y:Number.isFinite(y)?y-r-28:player.y-48,life:1,maxLife:1,state:"pending",phase:0,popped:false,anchorAnimal:null,targetId:String(data.animalId||"")};
+    abilityFx.push(fx);game.tameHeartFx=fx;
+  }
+  fx.anchorAnimal=null;
+  if(Number.isFinite(x))fx.x=x;if(Number.isFinite(y))fx.y=y-r-28;
+  fx.state=success?"success":"fail";fx.maxLife=success?.78:1.08;fx.life=fx.maxLife;fx.phase=0;fx.popped=false;
+  return fx;
+}
 function familyBirthCelebration(x, y) {
   abilityFx.push({type:"birthHeart",x,y:y-8,life:1.18,maxLife:1.18,popped:false,phase:0});
   // Births can happen elsewhere in the shared world; only play the soothing chime nearby.
@@ -18091,14 +18236,16 @@ function throwChakram(){
 }
 function playFlute(){
   if(player.attackCd>0||craftedItemCount("Flute")<1)return;
-  const tier=craftedBuildTier("Flute"),range=[260,340,430][tier],duration=[7,9,11][tier];player.attackCd=1.05;
+  // Flutes begin with a wide field and gain substantial reach each quality tier.
+  const tier=craftedBuildTier("Flute"),range=[360,500,650][tier],duration=[7,9,11][tier];player.attackCd=1.05;
+  if(sfx.flute)sfx.flute();
   if(net.room){try{net.room.send("playFlute",{tier});}catch(_){};return;}
   let affected=0;
   for(const a of animals){
     if(!a||a.dead||a.owned||dist(player.x,player.y,a.x,a.y)>range)continue;
     affected++;
     if(a.type==="snake"){
-      a._fluteCalmUntil=game.time+duration;a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.combat=0;
+      a._fluteTier=tier;a._fluteCalmUntil=game.time+duration;a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.combat=0;
       floatText(a.x,a.y-a.r-12,"calm","#a0e0ff");
     }else{
       a.hostileTarget=null;a.fleeFrom=null;a.fleeUntil=0;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;a.recentHit=0;a._stayAwakeUntil=0;a.sleeping=true;
@@ -20171,23 +20318,33 @@ function updateWalls(dt) {
 }
 
 // ---------- animals & pets ----------
+function tameInteractionRange(a){
+  if(!a)return 82;
+  // Use the baby's real body footprint instead of a fixed center distance. Long
+  // separated-art animals (especially the Fennec Fox) can now be reached even
+  // when their solid head/body collision keeps the player farther from center.
+  const footprint=animalSpawnFootprint(a.type,a.stage);
+  const speciesBonus=a.type==="fennec"?24:0;
+  return clamp(Math.max(88,PLAYER_R+footprint+28+speciesBonus),88,128);
+}
 function tryTameNearby() {
   if (game.tamePending) { banner("Tame attempt already in progress…", true); return; }
   if (player.pets.filter(p => p && !p.dead && !p.bredChild).length >= 4) { banner("Max 4 regular pets! Bred family pets do not use a slot.", true); return; }
   if (net.room) {
-    let best=null,bestD=70;
-    for(const a of animals){ if(a.dead||a.owned||!a.sleeping||a.stage!=="baby"||!a.netId)continue; const d=dist(player.x,player.y,a.x,a.y); if(d<bestD){bestD=d;best=a;} }
+    let best=null,bestD=Infinity;
+    for(const a of animals){ if(a.dead||a.owned||!a.sleeping||a.stage!=="baby"||!a.netId)continue; const d=dist(player.x,player.y,a.x,a.y),reach=tameInteractionRange(a); if(d<=reach&&d<bestD){bestD=d;best=a;} }
     if(!best){banner("No sleeping baby nearby (press T)",true);return;}
     game.tamePending = true;
+    tameHeartStart(best,best.netId);
     if(sfx.tameTry)sfx.tameTry(); banner(`Taming… ${Math.round(tameChanceFor(best.type)*100)}% chance`);
     try{net.room.send("tame",{id:best.netId});}catch(_){game.tamePending=false;}
     return;
   }
-  let best = null, bestD = 70;
+  let best = null, bestD = Infinity;
   for (const a of animals) {
     if (a.owned || a.dead || !a.sleeping || a.stage !== "baby") continue;
-    const d = dist(player.x, player.y, a.x, a.y);
-    if (d < bestD) { bestD = d; best = a; }
+    const d = dist(player.x, player.y, a.x, a.y), reach=tameInteractionRange(a);
+    if (d <= reach && d < bestD) { bestD = d; best = a; }
   }
   if (!best) { banner("No sleeping baby nearby (press T)", true); return; }
   const chance = tameChanceFor(best.type);
@@ -20199,6 +20356,7 @@ function tryTameNearby() {
     syncHotbar();
   }
   game.tamePending = true;
+  tameHeartStart(best,best.netId||"");
   // suspense build-up sound
   if (sfx.tameTry) sfx.tameTry();
   else {
@@ -20238,6 +20396,7 @@ function tryTameNearby() {
       best.hp = best.maxHp;
       if (!best.coat) best.coat = PET_TYPES[best.type].color;
       player.pets.push(best);
+      tameHeartResolve(true,{x:best.x,y:best.y,r:best.r});
       if (sfx.tame) sfx.tame();
       try {
         const ac = sfx._ac || (sfx._ac = new (window.AudioContext || window.webkitAudioContext)());
@@ -20268,6 +20427,7 @@ function tryTameNearby() {
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.75);
         o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.8);
       } catch (_) {}
+      tameHeartResolve(false,{x:best.x,y:best.y,r:best.r});
       best.sleeping = false;
       best.enraged = true;
       best.tameFailedAggro = true;
@@ -21010,9 +21170,10 @@ function resolveAnimalWorld(a) {
       a.y += Math.sin(ang) * hit.overlap;
     }
   }
-  // Wild land animals stay on the main island. Owned pets may follow their
-  // player into the ocean and all the way to the outer islands.
-  if(!a.owned)keepObjectOnIsland(a, Math.max(22,(Number(a.r)||18)*.78));
+  // Wild animals stay on the landmass where they spawned. Main-island wildlife
+  // remains on the main island; outer-island wildlife stays on its own island.
+  // Owned pets may still follow their player across water.
+  if(!a.owned)keepObjectOnLandmass(a, Math.max(22,(Number(a.r)||18)*.78));
 }
 
 
@@ -21374,7 +21535,7 @@ function updateAnimals(dt) {
       a.combat = Math.max(0, (a.combat || 0) - fdt);
       updateCreatureRecovery(a, fdt, Math.max(0.8, a.maxHp * 0.018));
       a.tailPhase = (a.tailPhase || 0) + fdt * 0.55;
-      if(!a.sleeping){smoothTurn(a,a.wanderA||a.angle||0,fdt,1.8);moveFacing(a,Math.max(10,(Number(a.speed)||60)*.18),fdt);a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);}
+      if(!a.sleeping){smoothTurn(a,a.wanderA||a.angle||0,fdt,1.8);moveFacing(a,Math.max(10,(Number(a.speed)||60)*.18),fdt);a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);keepObjectOnLandmass(a,Math.max(22,(Number(a.r)||18)*.78));}
       continue;
     }
     a._farTickAccum = 0;
@@ -22047,6 +22208,10 @@ function updateAbilityFx(dt) {
         stardust(fx.x, fx.y, 38, 155);
         spark(fx.x, fx.y, "#ff8daf", 12, 105);
       }
+    } else if (fx.type === "tameHeart") {
+      if(fx.anchorAnimal&&!fx.anchorAnimal.dead){const rr=Math.max(8,Number(fx.anchorAnimal.r)||18);fx.x=fx.anchorAnimal.x;fx.y=fx.anchorAnimal.y-rr-28;}
+      const elapsed=(fx.maxLife||1)-fx.life;
+      if(fx.state==="success"&&!fx.popped&&elapsed>=.34){fx.popped=true;stardust(fx.x,fx.y,42,165);spark(fx.x,fx.y,"#ff9fca",10,110);fx.life=Math.min(fx.life,.30);}
     } else if (fx.type === "sonicBurst") {
       // Rendered in drawAbilityFx() so the Cat's full white-blue wave is always visible.
     } else if (fx.type === "owlWave") {
@@ -22765,7 +22930,7 @@ function updateTameBtn() {
   let near = false;
   for (const a of animals) {
     if (a.owned || a.dead || !a.sleeping || a.stage !== "baby") continue;
-    if (dist(player.x, player.y, a.x, a.y) < 75) { near = true; break; }
+    if (dist(player.x, player.y, a.x, a.y) <= tameInteractionRange(a)) { near = true; break; }
   }
   btn.classList.toggle("show", near);
 }
@@ -26329,6 +26494,7 @@ for (const [k, meta] of Object.entries(HOSTL_PLAYER_SPRITE_ASSETS)) {
   img.src = meta.src;
   HOSTL_PLAYER_SPRITES[k] = Object.assign({}, meta, { img });
 }
+// Axe pose calibration: runtime pieces come from the matching Sep art; Ref art is reference-only for assembly/hand placement.
 const HOSTL_PLAYER_POSES = {"player":{"body":{"asset":"player_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"player_arm0","x":-24.0,"y":-3.0,"w":16,"h":33},{"asset":"player_arm1","x":8.0,"y":-2.0,"w":17,"h":32}],"tools":[]},"axeWood":{"body":{"asset":"axeWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeWood_arm0","x":9.0,"y":-2.0,"w":18,"h":31},{"asset":"axeWood_arm1","x":8.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeWood_tool0","x":-47.0,"y":1.0,"w":70,"h":34}]},"axeStone":{"body":{"asset":"axeStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeStone_arm0","x":8.0,"y":-1.0,"w":18,"h":31},{"asset":"axeStone_arm1","x":8.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeStone_tool0","x":-52.0,"y":-6.0,"w":80,"h":41}]},"axeIron":{"body":{"asset":"axeIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeIron_arm0","x":-27.0,"y":-10.0,"w":19,"h":31},{"asset":"axeIron_arm1","x":7.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeIron_tool0","x":-49.0,"y":8.0,"w":74,"h":29}]},"axeDouble":{"body":{"asset":"axeDouble_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeDouble_arm0","x":-26.0,"y":-12.0,"w":17,"h":33},{"asset":"axeDouble_arm1","x":9.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeDouble_tool0","x":-78.0,"y":-5.0,"w":154,"h":57}]},"axeThrow":{"body":{"asset":"axeThrow_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeThrow_arm0","x":-27.0,"y":-2.0,"w":16,"h":33}],"tools":[{"asset":"axeThrow_tool0","x":12.0,"y":-2.0,"w":44,"h":42}]},"axeWar":{"body":{"asset":"axeWar_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"axeWar_arm0","x":-26.5,"y":-11.0,"w":19,"h":31},{"asset":"axeWar_arm1","x":2.5,"y":-20.0,"w":18,"h":33}],"tools":[{"asset":"axeWar_tool0","x":-96.5,"y":-23.0,"w":142,"h":62}]},"swordWood":{"body":{"asset":"swordWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordWood_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordWood_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordWood_tool0","x":-78.0,"y":-23.0,"w":87,"h":58}]},"swordStone":{"body":{"asset":"swordStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordStone_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordStone_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordStone_tool0","x":-74.0,"y":-19.0,"w":85,"h":57}]},"swordIron":{"body":{"asset":"swordIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordIron_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordIron_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordIron_tool0","x":-83.0,"y":-15.0,"w":93,"h":49}]},"daggers":{"body":{"asset":"daggers_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"daggers_arm0","x":-36.0,"y":-1.0,"w":30,"h":22},{"asset":"daggers_arm1","x":5.0,"y":1.0,"w":31,"h":22}],"tools":[{"asset":"daggers_tool0","x":-35.0,"y":8.0,"w":22,"h":42},{"asset":"daggers_tool1","x":11.0,"y":8.0,"w":23,"h":42}]},"longSword":{"body":{"asset":"longSword_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"longSword_arm0","x":-26.5,"y":-3.0,"w":19,"h":32},{"asset":"longSword_arm1","x":-8.5,"y":8.0,"w":27,"h":25}],"tools":[{"asset":"longSword_tool0","x":-119.5,"y":-52.0,"w":133,"h":91}]},"spear":{"body":{"asset":"spear_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"spear_arm0","x":-19.5,"y":-1.0,"w":21,"h":31},{"asset":"spear_arm1","x":-2.5,"y":7.0,"w":20,"h":30}],"tools":[{"asset":"spear_tool0","x":-29.5,"y":-29.0,"w":60,"h":133}]}};
 function hostlWeaponPoseKey(actor, holding) {
   const spec = String(actor?.skillWeaponChoice || "");
@@ -26443,11 +26609,20 @@ function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
   }
   const bodyBob=Math.cos(swimPhase*0.55)*0.5;
 
-  // While swimming, attacking is disabled, so most held tools let the player's
-  // right arm (screen-left / pose.arms[0]) come off the handle and do the swim
-  // stroke. The remaining hand(s) keep carrying the tool. Throwing Axe stays a
-  // one-hand exception and keeps its authored one-hand behavior.
-  if(poseKey!=="axeThrow" && (pose.arms?.length||0)>=2){
+  // Keep the authored Sep/Ref grip intact. Two-handed weapons may free one arm
+  // for the swim stroke, but every arm that is still holding a weapon is moved
+  // with that weapon using the same pivot. The one-handed Throwing Axe always
+  // keeps its single hand locked to the handle.
+  if(poseKey==="axeThrow"){
+    const groupRot=Math.sin(swimPhase)*0.13;
+    const groupDx=Math.sin(swimPhase)*1.8;
+    const groupDy=4.5 + Math.cos(swimPhase*1.02)*1.2;
+    for(const tool of pose.tools)hostlDrawPosePiece(tool,groupDx,groupDy,groupRot,0,7);
+    for(const arm of pose.arms)hostlDrawPosePiece(arm,groupDx,groupDy,groupRot,0,7);
+    hostlDrawPosePiece(pose.body,0,bodyBob);
+    return;
+  }
+  if((pose.arms?.length||0)>=2){
     const swimArm=pose.arms[0];
     const holdArms=pose.arms.slice(1);
     const anchorArm=holdArms[0] || pose.arms[0];
@@ -26473,7 +26648,7 @@ function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
   const toolDx=Math.sin(swimPhase)*2.4;
   const toolDy=5.5 + Math.cos(swimPhase*1.02)*1.5;
   for(const tool of pose.tools) hostlDrawPosePiece(tool,toolDx,toolDy,toolRot,0,7);
-  hostlDrawSwimmingBaseArms(pose, swimPhase, true);
+  for(const arm of pose.arms) hostlDrawPosePiece(arm,toolDx,toolDy,toolRot,0,7);
   hostlDrawPosePiece(pose.body,0,bodyBob);
 }
 function hostlDrawSwimmingPose(actor, holding, attackT=0){
@@ -26517,24 +26692,24 @@ function hostlDrawDoubleAxe(pose,attackT,walkAmt){
     else if(attackT<.72){const q=hostlAnimEase((attackT-.30)/.42);rot=-.38+1.48*q;}
     else{const q=hostlAnimEase((attackT-.72)/.28);rot=1.10*(1-q);}
   }
-  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,0,rot,0,7);
-  for(let i=0;i<pose.arms.length;i++){
-    const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-    hostlDrawPosePiece(arm,0,(i%2?-walkAmt:walkAmt),rot*.90,piv.x,piv.y);
-  }
+  // The Double-Edged Axe is one assembled Sep puzzle while held: axe + both
+  // hands use the same pivot so neither hand slides off the long handle.
+  const heldBob=walkAmt*.35;
+  const tool=pose.tools[0];if(tool)hostlDrawPosePiece(tool,0,heldBob,rot,0,7);
+  for(const arm of pose.arms)hostlDrawPosePiece(arm,0,heldBob,rot,0,7);
   hostlDrawPosePiece(pose.body);
 }
 function hostlAnimEase(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 function hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt){
   const tr=hostlGenericWeaponSwingTransform(poseKey,attackT),isAxe=tr.isAxe,rot=tr.rot,dx=tr.dx,dy=tr.dy;
   if(isAxe){
-    // Axe pieces still swing together, but keep the authored arm pivots so the
-    // swing feels broad and heavy.
-    for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,dy,rot,0,7);
-    for(let i=0;i<pose.arms.length;i++){
-      const arm=pose.arms[i],side=i===0?-1:1,piv=hostlPoseShoulder(arm,side);
-      hostlDrawPosePiece(arm,dx,dy,rot,piv.x,piv.y);
-    }
+    // Ref files define the assembled grip; Sep files provide the pieces. Move
+    // the axe and every holding hand as ONE group around the same pivot. This
+    // preserves the exact resting hand placement through wind-up, chop, return,
+    // and walking instead of letting the hands drift through/off the handle.
+    const heldDy=dy+walkAmt*.35;
+    for(const tool of pose.tools)hostlDrawPosePiece(tool,dx,heldDy,rot,0,7);
+    for(const arm of pose.arms)hostlDrawPosePiece(arm,dx,heldDy,rot,0,7);
     hostlDrawPosePiece(pose.body);
     return;
   }
@@ -27589,6 +27764,30 @@ function drawTopHealthOverlays(viewResources = resources, viewGold = goldChunks,
   }
 }
 
+function drawTameHeartPath(fill,stroke){
+  ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=2.3;
+  ctx.beginPath();ctx.moveTo(0,27);ctx.bezierCurveTo(-7,19,-27,8,-27,-7);ctx.bezierCurveTo(-27,-23,-8,-29,0,-16);ctx.bezierCurveTo(8,-29,27,-23,27,-7);ctx.bezierCurveTo(27,8,7,19,0,27);ctx.closePath();ctx.fill();ctx.stroke();
+}
+function drawTameHeartOverlay(){
+  for(const fx of abilityFx){
+    if(fx.type!=="tameHeart"||fx.life<=0||fx.popped)continue;
+    const elapsed=(fx.maxLife||1)-fx.life;
+    ctx.save();ctx.translate(fx.x,fx.y);
+    if(fx.state==="pending"){
+      const pulse=1+Math.sin((fx.phase||0)*3.2)*.07;ctx.scale(.72*pulse,.72*pulse);ctx.shadowColor="#ff6f9c";ctx.shadowBlur=12;drawTameHeartPath("#ef476f","#ffd2df");
+    }else if(fx.state==="success"){
+      const t=clamp(elapsed/.34,0,1),scale=.78+t*.38+Math.sin(elapsed*20)*.05;ctx.scale(scale,scale);ctx.shadowColor="#ffd6ec";ctx.shadowBlur=16+18*t;drawTameHeartPath(t>.45?"#ff9fca":"#ef476f","#fff1f8");
+    }else{
+      const split=clamp((elapsed-.18)/.58,0,1),sep=split*16,drop=split*10,rot=split*.32;
+      ctx.shadowColor="#8d5bb7";ctx.shadowBlur=9*(1-split);
+      for(const side of [-1,1]){ctx.save();ctx.translate(side*sep,drop);ctx.rotate(side*rot);ctx.beginPath();ctx.rect(side<0?-36:-1,-36,side<0?35:37,72);ctx.clip();drawTameHeartPath("#7d48a8","#c8a4e8");ctx.restore();}
+      // Jagged crack remains visible before the halves fully pull apart.
+      if(split<.82){ctx.globalAlpha=1-split*.7;ctx.strokeStyle="#2f173f";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-2,-18);ctx.lineTo(4,-8);ctx.lineTo(-3,1);ctx.lineTo(5,10);ctx.lineTo(-1,24);ctx.stroke();}
+    }
+    ctx.restore();
+  }
+}
+
 function drawFx() {
   for (const p of particles) {
     if (p.trail) continue;
@@ -27828,15 +28027,14 @@ function draw(menuMode = false) {
   }
   for (const g of viewGold) safeCanvasEntityDraw("gold", g, drawGoldChunk);
 
-  // On foot, draw the player after rocks/gold but before taller world objects.
-  // When riding, delay the player until after the mount so the rider sits on top.
-  if (!menuMode && !player.riding) {
+  // Players are always BELOW animals, whether on foot or mounted. Draw every
+  // player before any pet/wildlife/mount so an animal can never appear under a
+  // person just because that person started or stopped riding.
+  if (!menuMode) {
     safeCanvasDrawCall("ability fx", drawAbilityFx);
     safeCanvasDrawCall("player", drawPlayer);
   }
-  // Remote players are drawn later, after every pet. This guarantees another
-  // player's body/rider always appears above their pet instead of being hidden
-  // underneath the animal sprite.
+  if (!menuMode || net.room) safeCanvasDrawCall("remote players", drawRemotePlayers);
 
   // Animal trails are a ground effect: draw them BEFORE wildlife and pets.
   for (const p of particles) {
@@ -27846,14 +28044,10 @@ function draw(menuMode = false) {
     circ(p.x, p.y, p.size);
   }
   ctx.globalAlpha = 1;
-  if(!menuMode&&player.riding&&!player.riding.dead){safeCanvasEntityDraw("ridden pet",player.riding,drawAnimal);safeCanvasDrawCall("ability fx",drawAbilityFx);safeCanvasDrawCall("player",drawPlayer);}
+  if(!menuMode&&player.riding&&!player.riding.dead) safeCanvasEntityDraw("ridden pet",player.riding,drawAnimal);
   for (const a of animals) if (!a.owned && renderInView(a.x, a.y, Math.max(135, (Number(a.r) || 18) * 3.5))) safeCanvasEntityDraw("wild animal", a, drawAnimal);
   for (const p of player.pets) if (p!==player.riding&&renderInView(p.x, p.y, Math.max(135, (Number(p.r) || 18) * 3.5))) safeCanvasEntityDraw("pet", p, drawAnimal);
   if (!menuMode || net.room) safeCanvasDrawCall("remote pets", drawRemotePets);
-  // Multiplayer layering rule: pets first, people second. This applies whether
-  // the remote player is merely standing beside a pet or actively riding it.
-  // It prevents any remote pet sprite from covering its owner/rider.
-  if (!menuMode || net.room) safeCanvasDrawCall("remote players", drawRemotePlayers);
   for (const en of enemies) if (!en.dead && renderInView(en.x, en.y, 130)) safeCanvasEntityDraw("enemy", en, drawEnemy);
   for (const p of projectiles) if (inView(p.x, p.y, 30)) safeCanvasEntityDraw("projectile", p, drawProjectile);
   for (const b of petBlasts) {
@@ -27906,6 +28100,7 @@ function draw(menuMode = false) {
   // Draw the full leafy tree after all creatures so you are always underneath it.
   for (const tr of visibleTrees) safeCanvasEntityDraw("tree", tr, drawResource);
   for (const tr of visibleTrees) safeCanvasEntityDraw("tree canopy", tr, drawTreeCanopy);
+  safeCanvasDrawCall("tame heart", drawTameHeartOverlay);
   safeCanvasDrawCall("effects", drawFx);
   // Important HP bars draw last so they stay in front of all in-game visuals.
   safeCanvasDrawCall("top health overlays", () => drawTopHealthOverlays(viewResources, viewGold, viewChests));

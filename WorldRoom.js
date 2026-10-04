@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "709";
+const CUBE_SHARED_RULES_VERSION = "717";
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -922,9 +922,10 @@ function animalHitboxFit(type,stage){
   const stageFit={
     baby:{len:1.04,body:1.04,head:1.08},
     adult:{len:.90,body:.90,head:.88},
-    boss:{len:1.04,body:1.04,head:1.08},
-    superboss:{len:1.06,body:1.05,head:1.10},
-    bigmomma:{len:1.08,body:1.06,head:1.12}
+    // Large stages already use larger visible art; avoid double-inflating collision.
+    boss:{len:.99,body:1.00,head:1.02},
+    superboss:{len:1.00,body:1.00,head:1.03},
+    bigmomma:{len:1.01,body:1.00,head:1.04}
   }[stage]||{len:1.04,body:1.04,head:1.08};
 
   const speciesFit={
@@ -1386,6 +1387,10 @@ function randomOceanFloorPoint(minDepth=390,maxDepth=1900){
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));if(d<=r||d<1e-6)return{x:px,y:py};const q=r/d;return{x:ISLAND_CX+dx*q,y:ISLAND_CY+dy*q};}
 function keepObjectOnIsland(obj,pad=20){if(!obj)return;const p=islandConstrainedPoint(Number(obj.x)||ISLAND_CX,Number(obj.y)||ISLAND_CY,pad);obj.x=p.x;obj.y=p.y;}
+function outerIslandById(id){return OUTER_ISLANDS.find(spec=>spec.id===String(id||""))||null;}
+function outerIslandConstrainedPoint(spec,x,y,pad=0){if(!spec)return{x:Number(x)||ISLAND_CX,y:Number(y)||ISLAND_CY};const px=Number(x)||spec.cx,py=Number(y)||spec.cy,dx=px-spec.cx,dy=py-spec.cy,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=outerIslandRadiusAtAngle(spec,a,Math.max(0,Number(pad)||0));if(d<=r||d<1e-6)return{x:px,y:py};const q=r/d;return{x:spec.cx+dx*q,y:spec.cy+dy*q};}
+function keepObjectOnLandmass(obj,pad=20){if(!obj)return;const spec=outerIslandById(obj._outerIslandId);if(spec){const p=outerIslandConstrainedPoint(spec,Number(obj.x)||spec.cx,Number(obj.y)||spec.cy,pad);obj.x=p.x;obj.y=p.y;return;}keepObjectOnIsland(obj,pad);}
+function randomPointOnOuterIsland(spec,pad=80){if(!spec)return{x:ISLAND_CX,y:ISLAND_CY};const safe=Math.max(24,Number(pad)||0);for(let tries=0;tries<120;tries++){const a=rand(0,TAU),coast=outerIslandRadiusAtAngle(spec,a,safe),rr=Math.sqrt(Math.random())*Math.max(24,coast*.88),x=spec.cx+Math.cos(a)*rr,y=spec.cy+Math.sin(a)*rr;if(isInsideOuterIsland(spec,x,y,safe))return{x,y};}return{x:spec.cx,y:spec.cy};}
 const BIOME_SCORE_SHAPES=Object.freeze({mountains:{cx:-.70,cy:-.03,sx:.48,sy:.82,bias:.09,seed:1.7},forest:{cx:-.18,cy:.02,sx:.66,sy:.78,bias:.10,seed:3.1},rainforest:{cx:.48,cy:.02,sx:.62,sy:.78,bias:.10,seed:4.4},arctic:{cx:.02,cy:-.83,sx:.92,sy:.44,bias:-.05,seed:5.6},desert:{cx:.06,cy:.84,sx:.94,sy:.43,bias:-.06,seed:7.2}});
 function biomeOrganicNoise(nx,ny,seed){return Math.sin(nx*5.3+ny*2.1+seed)*.24+Math.sin(nx*2.2-ny*6.1+seed*1.6)*.18+Math.sin((nx+ny)*9.2+seed*.7)*.11+Math.sin(nx*12.7-ny*4.8+seed*.37)*.09+Math.sin(nx*18.2+ny*14.1+seed*1.13)*.055;}
 function biomeScoresAt(x,y){const nx=(Number(x)-ISLAND_CX)/Math.max(1,MAIN_WORLD_W*.5),ny=(Number(y)-ISLAND_CY)/Math.max(1,MAIN_WORLD_H*.5),out={};for(const id of BIOME_ORDER){const q=BIOME_SCORE_SHAPES[id],dx=(nx-q.cx)/q.sx,dy=(ny-q.cy)/q.sy;out[id]=-(dx*dx+dy*dy)+q.bias+biomeOrganicNoise(nx,ny,q.seed);}return out;}
@@ -1679,6 +1684,19 @@ export class WorldRoom extends Room {
     }
     return true;
   }
+  canPlaceOuterIsland(spec,x,y,r){
+    if(!spec||!isInsideOuterIsland(spec,x,y,Math.max(26,(Number(r)||0)+18)))return false;
+    if(x<80+r||x>WORLD_W-80-r||y<80+r||y>WORLD_H-80-r)return false;
+    for(const s of this.nearbySolids(x,y,r+150)){
+      if(s.kind==="resource"){
+        const rr=this.state.resources.get(s.id);if(!rr||!rr.alive)continue;
+        if(rr.type==="oceanRock"||BIOME_RESOURCE_INFO[rr.type]?.biome==="ocean")continue;
+      }else if(s.kind==="gold"){const gg=this.state.gold.get(s.id);if(!gg||(!gg.infinite&&gg.goldLeft<=0))continue;}
+      else if(s.kind==="chest"){const cc=this.state.chests.get(s.id);if(!cc||cc.opened)continue;}
+      if(dist(x,y,s.x,s.y)<r+s.r+6)return false;
+    }
+    return true;
+  }
   resolveStatic(obj,radius) {
     if(!obj)return;
     const isCreature=!!(PET_TYPES[obj.type]&&obj.stage);
@@ -1720,7 +1738,7 @@ export class WorldRoom extends Room {
         for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,w.x,w.y),overlap=h.r+w.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}
         if(best&&best.d>.1){const a=angTo(w.x,w.y,best.h.x,best.h.y);obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}
       }
-      obj.x=clamp(obj.x,20,WORLD_W-20);obj.y=clamp(obj.y,20,WORLD_H-20);if(!obj.ownerId)keepObjectOnIsland(obj,Math.max(22,(Number(obj.r)||18)*.78));return;
+      obj.x=clamp(obj.x,20,WORLD_W-20);obj.y=clamp(obj.y,20,WORLD_H-20);if(!obj.ownerId)keepObjectOnLandmass(obj,Math.max(22,(Number(obj.r)||18)*.78));return;
     }
 
     if(isPlayer){
@@ -2186,14 +2204,15 @@ export class WorldRoom extends Room {
     for(let i=0;i<82;i++)for(let t=0;t<55;t++){const pos=randomLandPoint(170);if(!this.canPlace(pos.x,pos.y,16,0))continue;this.addGold(pos.x,pos.y,"small",16,6);break;}
     for(let i=0;i<48;i++)for(let t=0;t<65;t++){const pos=randomLandPoint(180),x=pos.x,y=pos.y;if(dist(x,y,WORLD_W/2,WORLD_H/2)<280||!this.canPlace(x,y,20,0))continue;this.addChest(x,y);break;}
     const randomGroupStage=()=>{const roll=Math.random();return roll<.50?"baby":roll<.90?"adult":roll<.98?"boss":"superboss";};
-    const spawnWild=(forced=null,typeOverride=null,anchor=null,biomeOverride=null)=>{
-      const biomeHint=anchor?biomeBaseId(worldBiomeAt(anchor.x,anchor.y)):(biomeOverride?biomeBaseId(biomeOverride):(typeOverride?speciesHomeBiome(typeOverride):randomBiomeZoneId()));
+    const spawnWild=(forced=null,typeOverride=null,anchor=null,biomeOverride=null,outerSpec=null)=>{
+      const biomeHint=anchor?biomeBaseId(worldBiomeAt(anchor.x,anchor.y)):(outerSpec?biomeBaseId(outerSpec.biome):(biomeOverride?biomeBaseId(biomeOverride):(typeOverride?speciesHomeBiome(typeOverride):randomBiomeZoneId())));
       const species=(BIOME_PROFILES[biomeHint]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type));
       const type=typeOverride||randomWildSpecies(species);let stage=forced;if(!stage){const roll=Math.random();stage=roll<.46?"baby":roll<.84?"adult":roll<.95?"boss":"superboss";}
       const footprint=animalSpawnFootprint(type,stage);
-      for(let t=0;t<(anchor?110:80);t++){let x,y;if(anchor){const aa=rand(0,TAU),anchorR=animalSpawnFootprint(anchor.type,anchor.stage),minD=Math.max(78,footprint+anchorR+18),maxD=Math.max(minD+28,Math.min(310,minD+170)),dd=rand(minD,maxD);x=anchor.x+Math.cos(aa)*dd;y=anchor.y+Math.sin(aa)*dd;const cp=islandConstrainedPoint(x,y,footprint+45);x=cp.x;y=cp.y;}else{const pos=randomPointInBiome(biomeHint,footprint+60);x=pos.x;y=pos.y;}if(!this.canPlace(x,y,footprint,0))continue;let crowded=false;for(const[,a]of this.state.animals){if(!a||a.hp<=0)continue;const gap=anchor?8:36;if(dist(x,y,a.x,a.y)<footprint+animalSpawnFootprint(a.type,a.stage)+gap){crowded=true;break;}}if(crowded)continue;const id=this.addAnimal(type,stage,x,y);return this.state.animals.get(id)||null;}return null;
+      for(let t=0;t<(outerSpec?115:(anchor?110:80));t++){let x,y;if(anchor){const aa=rand(0,TAU),anchorR=animalSpawnFootprint(anchor.type,anchor.stage),minD=Math.max(78,footprint+anchorR+18),maxD=Math.max(minD+28,Math.min(310,minD+170)),dd=rand(minD,maxD);x=anchor.x+Math.cos(aa)*dd;y=anchor.y+Math.sin(aa)*dd;const cp=islandConstrainedPoint(x,y,footprint+45);x=cp.x;y=cp.y;}else if(outerSpec){const pos=randomPointOnOuterIsland(outerSpec,footprint+34);x=pos.x;y=pos.y;}else{const pos=randomPointInBiome(biomeHint,footprint+60);x=pos.x;y=pos.y;}if(outerSpec?!this.canPlaceOuterIsland(outerSpec,x,y,footprint):!this.canPlace(x,y,footprint,0))continue;let crowded=false;for(const[,a]of this.state.animals){if(!a||a.hp<=0)continue;const gap=outerSpec?16:(anchor?8:36);if(dist(x,y,a.x,a.y)<footprint+animalSpawnFootprint(a.type,a.stage)+gap){crowded=true;break;}}if(crowded)continue;const id=this.addAnimal(type,stage,x,y,{biome:biomeHint}),made=this.state.animals.get(id);if(made&&outerSpec)made._outerIslandId=outerSpec.id;return made||null;}return null;
     };
-    const STARTING_WILD_PER_SPECIES_BY_BIOME={forest:7,rainforest:9,arctic:12,desert:10,mountains:12};
+    // Much denser wildlife across the enormous main island.
+    const STARTING_WILD_PER_SPECIES_BY_BIOME={forest:12,rainforest:16,arctic:22,desert:18,mountains:20};
     const STARTING_STAGE_PLAN=["baby","baby","adult","adult","adult","boss","superboss"];
     const EXTRA_STAGE_PLAN=["baby","adult","adult","baby","adult"];
     const BIG_MOMMA_SPECIES_INDEXES=new Set([0,7,14,21,28]);
@@ -2206,7 +2225,7 @@ export class WorldRoom extends Room {
         const wantsBigMomma=BIG_MOMMA_SPECIES_INDEXES.has(speciesOrdinal);
         if(wantsBigMomma)bigMommaTargets.push({type,biome});
         const stages=[...STARTING_STAGE_PLAN];if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-        const basePerSpecies=type==="fennec"?18:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||7),targetPerSpecies=Math.max(STARTING_STAGE_PLAN.length,scaledBiomeSpawnCount(basePerSpecies,biome,STARTING_STAGE_PLAN.length));
+        const basePerSpecies=type==="fennec"?28:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||12),targetPerSpecies=Math.max(STARTING_STAGE_PLAN.length,scaledBiomeSpawnCount(basePerSpecies,biome,STARTING_STAGE_PLAN.length));
         let made=0;
         for(const stage of stages){let spawned=false;for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWild(stage,type,null,biome);if(spawned)made++;}
         for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length),stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];if(spawnWild(stage,type,null,biome))made++;}
@@ -2215,6 +2234,18 @@ export class WorldRoom extends Room {
     }
     let bigMommaCount=Array.from(this.state.animals.values()).filter(a=>a&&a.hp>0&&a.type!=="queenbee"&&a.stage==="bigmomma").length;
     for(let pass=0;bigMommaCount<5&&pass<25;pass++){const target=bigMommaTargets[pass%Math.max(1,bigMommaTargets.length)]||{type:"bear",biome:"forest"};if(spawnWild("bigmomma",target.type,null,target.biome))bigMommaCount++;}
+
+    // The outer islands are no longer empty. Give each island a dense local
+    // population using species that already belong to that island's biome.
+    const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:18};
+    for(const spec of OUTER_ISLANDS){
+      const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!this.isWildBeeType(type));
+      const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;let made=0;
+      for(let attempt=0;attempt<target*10&&made<target;attempt++){
+        const type=randomWildSpecies(pool),roll=Math.random(),stage=roll<.52?"baby":roll<.93?"adult":roll<.995?"boss":"superboss";
+        if(spawnWild(stage,type,null,spec.biome,spec))made++;
+      }
+    }
     console.log(`Island world generated: ${this.state.resources.size} resources, ${this.state.gold.size} gold, ${this.state.chests.size} chests, ${this.state.animals.size} wildlife`);
   }
 
@@ -2782,9 +2813,9 @@ export class WorldRoom extends Room {
   handlePlayFlute(client,data={}){
     const p=this.state.players.get(client.sessionId),s=this.skillState(client.sessionId);if(!p||p.dead||p.heldSpecial!=="Flute"||!buildKnownFromSkill(s,"Flute"))return;
     const now=this.state.worldTime,next=this.playerAttackCd.get(client.sessionId)||0;if(now<next)return;this.playerAttackCd.set(client.sessionId,now+1.05);
-    const tier=clamp(Math.floor(Number(data.tier)||0),0,2),range=[260,340,430][tier],duration=[7,9,11][tier];let affected=0;
+    const tier=Math.min(clamp(Math.floor(Number(data.tier)||0),0,2),this.buildTierForOwner(client.sessionId,"Flute")),range=[360,500,650][tier],duration=[7,9,11][tier];let affected=0;
     for(const[id,a]of this.state.animals){if(!a||a.hp<=0||a.owned||dist(p.x,p.y,a.x,a.y)>range)continue;affected++;
-      if(a.type==="snake"){a._fluteCalmUntil=now+duration;a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;a.fleeUntil=0;this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.broadcastFx({kind:"hit",x:a.x,y:a.y-(a.r||18),text:"calm",color:"#a0e0ff"});}
+      if(a.type==="snake"){a._fluteTier=tier;a._fluteCalmUntil=now+duration;a.sleeping=false;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;a.fleeUntil=0;this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.broadcastFx({kind:"hit",x:a.x,y:a.y-(a.r||18),text:"calm",color:"#a0e0ff"});}
       else{a.sleeping=true;a.enraged=false;a.tameFailedAggro=false;a.desperateAggro=false;a.combat=0;a.recentHit=0;a.fleeUntil=0;a._stayAwakeUntil=0;this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.broadcastFx({kind:"hit",x:a.x,y:a.y-(a.r||18),text:"zzz",color:"#a0e0ff"});}
     }
     client.send("fluteResult",{affected});this.broadcast("playerAction",{playerId:client.sessionId,action:"flute",tool:"Flute",angle:p.angle,heldSpecial:"Flute"});
@@ -2877,34 +2908,35 @@ export class WorldRoom extends Room {
     s[item.cat]=id;client.send("runShopResult",{success:true,id,gold:p.gold||0});
   }
   tameChanceFor(ownerId,type){const held=String(this.state.players.get(ownerId)?.heldSpecial||"");const inv=this.playerBiomeMaterials?.get(ownerId)||{};const combReady=this.isWildBeeType(type)&&held==="HoneyComb"&&(inv.honeycomb||0)>0;const combBonus=combReady ? (type==="queenbee"?.10:.22) : 0;return clamp((TAME_BASE_CHANCE[type]??.38)+this.runPerks(ownerId).tameBonus+combBonus,.08,.95);}
+  tameInteractionRange(a){if(!a)return 82;const footprint=animalSpawnFootprint(a.type,a.stage),speciesBonus=a.type==="fennec"?24:0;return clamp(Math.max(88,PLAYER_R+footprint+28+speciesBonus),88,128);}
   handleTame(client,data){
     const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;
     if(this.tamePendingPlayers.has(client.sessionId)){client.send("tameResult",{pending:true,reason:"busy"});return;}
     const id=String(data.id||""),a=this.state.animals.get(id);
-    if(!a||a.stage!=="baby"||!a.sleeping||dist(p.x,p.y,a.x,a.y)>78)return;
+    if(!a||a.stage!=="baby"||!a.sleeping||dist(p.x,p.y,a.x,a.y)>this.tameInteractionRange(a))return;
     let count=0;for(const[,pet]of this.state.pets)if(pet.ownerId===client.sessionId&&!pet.dead&&!pet.bredChild)count++;
     if(count>=4){client.send("tameResult",{success:false,reason:"max"});return;}
     const chance=this.tameChanceFor(client.sessionId,a.type),inv=this.playerBiomeMaterials?.get(client.sessionId)||{};
     const usedComb=this.isWildBeeType(a.type)&&String(p.heldSpecial||"")==="HoneyComb"&&(inv.honeycomb||0)>0;
     if(usedComb){inv.honeycomb=Math.max(0,(inv.honeycomb||0)-1);this.playerBiomeMaterials.set(client.sessionId,inv);if(inv.honeycomb<=0)p.heldSpecial="";}
     this.tamePendingPlayers.add(client.sessionId);
-    client.send("tameResult",{pending:true,type:a.type,chance,usedComb,honeycomb:Math.max(0,inv.honeycomb||0)});
+    client.send("tameResult",{pending:true,type:a.type,animalId:id,x:a.x,y:a.y,r:a.r,chance,usedComb,honeycomb:Math.max(0,inv.honeycomb||0)});
     this.clock.setTimeout(()=>{
       this.tamePendingPlayers.delete(client.sessionId);
       const current=this.state.animals.get(id),owner=this.state.players.get(client.sessionId);
-      if(!current||!owner||current.stage!=="baby"||dist(owner.x,owner.y,current.x,current.y)>100){client.send("tameResult",{success:false,reason:"moved",type:a.type,honeycomb:Math.max(0,inv.honeycomb||0)});return;}
+      if(!current||!owner||current.stage!=="baby"||dist(owner.x,owner.y,current.x,current.y)>this.tameInteractionRange(current)+28){client.send("tameResult",{success:false,reason:"moved",type:a.type,animalId:id,x:current?.x??a.x,y:current?.y??a.y,r:current?.r??a.r,honeycomb:Math.max(0,inv.honeycomb||0)});return;}
       if(Math.random()<chance){
         this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);
         const bonusXp=usedComb&&this.isWildBeeType(current.type)?30:0;
         const petId=this.addPet(client.sessionId,current.type,current.stage,current.x,current.y,{hp:current.maxHp,coat:current.coat,spotCol:current.spotCol,spotsJson:current.spotsJson,petName:current.type,gender:current.gender,exp:bonusXp,level:1});
-        client.send("tameResult",{success:true,type:current.type,petId,chance,usedComb,bonusXp,honeycomb:Math.max(0,inv.honeycomb||0)});
+        client.send("tameResult",{success:true,type:current.type,animalId:id,x:current.x,y:current.y,r:current.r,petId,chance,usedComb,bonusXp,honeycomb:Math.max(0,inv.honeycomb||0)});
         this.addSkillXp(client.sessionId,25);
         this.sendReward(client.sessionId,{kind:"cards",species:current.type,amount:TAME_SPECIES_CARD_REWARD},{x:current.x,y:current.y,tame:true,guaranteed:true});
         this.recordAccountAchievement(client.sessionId,"first_tame",{species:current.type});this.recordAccountAchievement(client.sessionId,`tame_${current.type}`,{species:current.type});
       }else{
         current.sleeping=false;current.enraged=true;current.tameFailedAggro=true;current.desperateAggro=false;current.fleeUntil=0;current.combat=9999;
         this.animalAggro.set(id,{kind:"player",id:client.sessionId});
-        client.send("tameResult",{success:false,type:current.type,chance,usedComb,honeycomb:Math.max(0,inv.honeycomb||0)});
+        client.send("tameResult",{success:false,type:current.type,animalId:id,x:current.x,y:current.y,r:current.r,chance,usedComb,honeycomb:Math.max(0,inv.honeycomb||0)});
       }
     },600);
   }
@@ -3175,7 +3207,7 @@ export class WorldRoom extends Room {
   nearestPlayerOrPet(x,y,range=Infinity){let best=null,bestD=range;for(const[id,p]of this.state.players){if(p.dead||!this.isPlayerCombatReady(id))continue;const d=dist(x,y,p.x,p.y);if(d<bestD){best={kind:"player",id,obj:p,d};bestD=d;}}for(const[id,p]of this.state.pets){if(p.dead||!this.isPlayerCombatReady(p.ownerId))continue;const d=dist(x,y,p.x,p.y);if(d<bestD){best={kind:"pet",id,obj:p,d};bestD=d;}}return best;}
   nearestPlayer(x,y,range=Infinity){let best=null,bestD=range;for(const[id,p]of this.state.players){if(p.dead||!this.isPlayerCombatReady(id))continue;const d=dist(x,y,p.x,p.y);if(d<bestD){best={kind:"player",id,obj:p,d};bestD=d;}}return best;}
 
-  snakeFluteCalmActive(a){if(!a||a.type!=="snake")return false;if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.25){a._fluteCalmUntil=0;return false;}return(Number(a._fluteCalmUntil)||0)>this.state.worldTime;}
+  snakeFluteCalmActive(a){if(!a||a.type!=="snake")return false;const tier=clamp(Math.floor(Number(a._fluteTier)||0),0,2),minSafeHp=[.25,.10,.03][tier];if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=minSafeHp){a._fluteCalmUntil=0;return false;}return(Number(a._fluteCalmUntil)||0)>this.state.worldTime;}
   markWildStayAwake(a,seconds=6){if(a)a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,this.state.worldTime+Math.max(0,Number(seconds)||0));}
   wildCanSleepNow(id,a){if(!a||a.hp<=0)return false;if(this.animalAggro.has(id))return false;if((Number(a.recentHit)||0)>0||a.enraged||a.tameFailedAggro||a.desperateAggro||(Number(a.combat)||0)>0)return false;if(a.fleeUntil&&this.state.worldTime<a.fleeUntil)return false;if((Number(a._stayAwakeUntil)||0)>this.state.worldTime)return false;return true;}
   setWildReactionToAttacker(id,a,ref){
@@ -3493,7 +3525,14 @@ export class WorldRoom extends Room {
       if(female&&male){
         const mx=(female.x+male.x)*.5,my=(female.y+male.y)*.5,babyCount=this.wildBreedingBabyCount(female,male);
         this.wildLastBreedDay.set(id,this.state.dayCount);this.wildLastBreedDay.set(mateId,this.state.dayCount);
-        for(let n=0;n<babyCount;n++){const babyId=this.addAnimal(a.type,"baby",clamp(mx+rand(-24,24),24,WORLD_W-24),clamp(my+rand(-24,24),24,WORLD_H-24),{gender:canonicalAnimalGender(a.type),motherId:a.gender==="Female"?id:mateId,fatherId:a.gender==="Male"?id:mateId,bredChild:true,sleeping:false});const baby=this.state.animals.get(babyId);if(baby){this.broadcastFx({kind:"familyBirth",x:baby.x,y:baby.y});this.broadcastFx({kind:"hit",x:baby.x,y:baby.y,text:`Baby ${PET_TYPES[a.type]?.name||a.type}!`,color:"#ffd9e6"});}}
+        const outerId=a._outerIslandId||mate._outerIslandId||"";
+        const outerSpec=outerId?outerIslandById(outerId):null;
+        for(let n=0;n<babyCount;n++){
+          let bx=clamp(mx+rand(-24,24),24,WORLD_W-24),by=clamp(my+rand(-24,24),24,WORLD_H-24);
+          if(outerSpec){const fixed=outerIslandConstrainedPoint(outerSpec,bx,by,30);bx=fixed.x;by=fixed.y;}
+          const babyId=this.addAnimal(a.type,"baby",bx,by,{gender:canonicalAnimalGender(a.type),motherId:a.gender==="Female"?id:mateId,fatherId:a.gender==="Male"?id:mateId,bredChild:true,sleeping:false});
+          const baby=this.state.animals.get(babyId);if(baby){if(outerId)baby._outerIslandId=outerId;this.broadcastFx({kind:"familyBirth",x:baby.x,y:baby.y});this.broadcastFx({kind:"hit",x:baby.x,y:baby.y,text:`Baby ${PET_TYPES[a.type]?.name||a.type}!`,color:"#ffd9e6"});}
+        }
       }
       this.clearWildMate(id);
     }
