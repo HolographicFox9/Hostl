@@ -246,6 +246,12 @@
   #hydrationTrack{position:relative;width:100%;height:9px;border-radius:999px;overflow:hidden;background:#2d4551;border:2px solid #172b34;box-shadow:inset 0 2px 3px rgba(0,0,0,.3),0 2px 0 rgba(255,255,255,.16);}
   #hydrationFill{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(180deg,#d8fbff 0%,#79d9ef 45%,#3ca6cf 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.58),2px 0 8px rgba(100,211,244,.4);transition:width .18s ease-out;}
   #hydrationHud.low #hydrationFill{filter:saturate(.72) brightness(.88);}
+  #oxygenHud{width:100%;min-width:0;pointer-events:none;padding:1px 2px 0;box-sizing:border-box;display:none;}
+  #oxygenHud.show{display:block;}
+  #oxygenHudTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px;color:#17202a;font-size:10px;font-weight:900;letter-spacing:.05em;}
+  #oxygenTrack{position:relative;width:100%;height:9px;border-radius:999px;overflow:hidden;background:#253942;border:2px solid #172b34;box-shadow:inset 0 2px 3px rgba(0,0,0,.3),0 2px 0 rgba(255,255,255,.16);}
+  #oxygenFill{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(180deg,#f3fdff 0%,#a8e9f5 45%,#4eb8d2 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.66),2px 0 8px rgba(111,220,242,.42);transition:width .12s linear;}
+  #oxygenHud.low #oxygenFill{background:linear-gradient(180deg,#ffe5ad,#ffb75d 55%,#e16d3f);}
 #skillHud{width:100%;min-width:0;pointer-events:none;padding:1px 2px 0;box-sizing:border-box;}
   #skillHudTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;
     color:#182018;font-size:10px;font-weight:900;letter-spacing:.06em;text-shadow:0 1px rgba(240,235,198,.48);}
@@ -5519,8 +5525,8 @@ button:focus-visible{
 
 <style id="hostl-update-663-hud">
 /* 663 compact translucent bottom HUD */
-#bottomDock{bottom:6px;display:grid;grid-template-columns:28px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources" ". skill" "hydration hotbar";column-gap:7px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(99vw,780px);}
-#resourceStrip{grid-area:resources;gap:5px;padding-left:31px;justify-content:center;overflow:visible;}
+#bottomDock{bottom:6px;display:grid;grid-template-columns:28px 28px auto;grid-template-rows:auto auto auto;grid-template-areas:"resources resources resources" ". . skill" "hydration oxygen hotbar";column-gap:7px;row-gap:3px;align-items:end;background:transparent;border:0;box-shadow:none;padding:0;min-width:0;max-width:min(99vw,820px);}
+#resourceStrip{grid-area:resources;gap:5px;padding-left:62px;justify-content:center;overflow:visible;}
 .dock-res{font-size:10px;padding:2px 6px;border-width:2px;background:rgba(226,215,173,.76);}
 #skillHud{grid-area:skill;width:min(230px,58vw);justify-self:center;padding:0;}
 #skillHudTop{margin-bottom:1px;font-size:8px;}#skillHudTop b{font-size:9px;}#skillTrack{height:7px;border-width:1px;}
@@ -5528,6 +5534,11 @@ button:focus-visible{
 #hydrationHudTop{width:100%;height:10px;justify-content:center;margin:0 0 1px;font-size:7px;line-height:8px;}#hydrationHudTop b{display:none;}
 #hydrationTrack{width:19px;height:45px;border-radius:7px;border-width:2px;}
 #hydrationFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .18s ease-out;background:linear-gradient(180deg,#8ce9ff 0%,#42bce4 52%,#258cc1 100%);}
+#oxygenHud{grid-area:oxygen;width:26px;height:58px;padding:0;display:none;flex-direction:column;align-items:center;justify-content:flex-end;}
+#oxygenHud.show{display:flex;}
+#oxygenHudTop{width:100%;height:10px;justify-content:center;margin:0 0 1px;font-size:7px;line-height:8px;}#oxygenHudTop b{display:none;}
+#oxygenTrack{width:19px;height:45px;border-radius:7px;border-width:2px;}
+#oxygenFill{left:0;right:0;top:auto;bottom:0;width:100%!important;height:100%;transition:height .12s linear;background:linear-gradient(180deg,#eefdff 0%,#91e7f5 52%,#3ba8c8 100%);}
 #hotbar{grid-area:hotbar;gap:6px;padding:5px 6px;border-radius:14px;background:rgba(30,42,31,.40);border:1px solid rgba(222,235,198,.18);box-shadow:0 4px 12px rgba(0,0,0,.18);}
 .slot{width:66px;height:66px;border-width:2px;border-radius:12px;background:rgba(86,107,75,.68);box-shadow:inset 0 1px 0 rgba(231,239,198,.15),0 2px 0 rgba(53,65,46,.78);}
 .slot:hover{background:rgba(101,124,87,.78)}.slot .ico{width:34px;height:34px}.slot .key{font-size:12px}.slot .qty{font-size:12px}.slot .label{font-size:9px}.slot .cost{font-size:9px}
@@ -5536,9 +5547,9 @@ button:focus-visible{
 #waterFillBtn:active{transform:translateX(-50%) translateY(2px);background:linear-gradient(180deg,#249dcc,#12669f);}
 #tameBtn{bottom:104px;}
 .inv-hotbar-title,.inv-swap-title{grid-column:1/-1;background:rgba(72,94,69,.56)!important;border-color:rgba(221,194,100,.4)!important}.inv-hotbar-item:hover,.inv-swap-slot:hover{border-color:#d6b058!important;background:rgba(90,112,78,.42)!important}
-body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-width:calc(100vw - 12px);grid-template-columns:22px minmax(0,1fr);column-gap:3px;}
-body.mobile-performance #resourceStrip{padding-left:24px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
-body.mobile-performance #hydrationHud{width:21px;height:45px}body.mobile-performance #hydrationTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop{font-size:6px}
+body.mobile-performance #bottomDock{bottom:calc(var(--phone-bottom) + 2px);max-width:calc(100vw - 12px);grid-template-columns:22px 22px minmax(0,1fr);column-gap:3px;}
+body.mobile-performance #resourceStrip{padding-left:48px;gap:3px;}body.mobile-performance .dock-res{font-size:8px;padding:1px 4px;}
+body.mobile-performance #hydrationHud,body.mobile-performance #oxygenHud{width:21px;height:45px}body.mobile-performance #hydrationTrack,body.mobile-performance #oxygenTrack{width:15px;height:34px}body.mobile-performance #hydrationHudTop,body.mobile-performance #oxygenHudTop{font-size:6px}
 body.mobile-performance #skillHud{width:min(190px,56vw)}body.mobile-performance #hotbar{gap:3px;padding:3px 4px;width:max-content;max-width:calc(100vw - 24px);justify-self:center;}
 body.mobile-performance .slot{width:54px;height:54px;border-width:2px}body.mobile-performance .slot .ico{width:28px;height:28px}body.mobile-performance .slot .key{font-size:10px}body.mobile-performance .slot .qty{font-size:10px}
 body.mobile-performance #waterFillBtn,body.mobile-performance #tameBtn{bottom:calc(var(--phone-bottom) + 91px);}
@@ -5623,6 +5634,10 @@ body.mobile-performance #vehicleEnterBtn{bottom:calc(var(--phone-bottom) + 139px
     <div id="hydrationHud" aria-label="Hydration">
       <div id="hydrationHudTop"><b>💧 HYDRATION</b><span id="hydrationText">100%</span></div>
       <div id="hydrationTrack"><div id="hydrationFill"></div></div>
+    </div>
+    <div id="oxygenHud" aria-label="Scuba oxygen">
+      <div id="oxygenHudTop"><b>🫧 OXYGEN</b><span id="oxygenText">100%</span></div>
+      <div id="oxygenTrack"><div id="oxygenFill"></div></div>
     </div>
     <div id="skillHud" aria-label="Player skill progress">
       <div id="skillHudTop"><b>SKILL <span id="skillLevelHud">0</span></b><span id="skillXpHud">0 / 25 XP</span></div>
@@ -6454,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "730";
+const CUBE_SHARED_RULES_VERSION = "732";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6481,7 +6496,7 @@ const STARTER_WEAPON_CHOICES = [
   {id:"weaponAxe",weapon:"Axe",icon:"🪓",name:"Axe",desc:"Strong chopping and solid close-range damage."},
   {id:"weaponSword",weapon:"Sword",icon:"⚔️",name:"Sword",desc:"Balanced melee damage and reach."},
   {id:"weaponPickaxe",weapon:"Pickaxe",icon:"⛏️",name:"Pickaxe",desc:"Strong mining with dependable melee damage."},
-  {id:"weaponBow",weapon:"Bow",icon:"🏹",name:"Bow & Arrows",desc:"Ranged attacks. Arrows use wood."},
+  {id:"weaponBow",weapon:"Bow",icon:"🏹",name:"Bow & Arrows",desc:"Ranged attacks with unlimited arrows. Arrows can harvest resources they hit."},
   {id:"weaponTigerClaws",weapon:"TigerClaws",icon:"🐯",name:"Tiger's Claws",desc:"Fast slashing attacks at close range."},
   {id:"weaponBoxingGloves",weapon:"BoxingGloves",icon:"🥊",name:"Boxing Gloves",desc:"Fast heavy punches with good knock pressure."}
 ];
@@ -6527,10 +6542,10 @@ const BUILD_TIER_META={
     {name:"Golden Flute",cost:{wood:4,gold:4},desc:"Very strong flute effect."},
     {name:"Gem Flute",cost:{wood:4,stone:6,gold:9},desc:"Final Flute. Ruby has the widest range, Emerald keeps animals asleep longest, Diamond lets calm snakes be weakened closest to death."}],
   DivingSuit:[
-    {name:"Diving Suit",cost:{wood:6,stone:12,gold:4},desc:"Wearable diving gear. Once crafted, you can travel the deep ocean without a Boat or Sub and without deep-water damage."},
-    {name:"Reinforced Diving Suit",cost:{stone:16,gold:6},desc:"Safer diving gear with better underwater movement."},
-    {name:"Iron Diving Suit",cost:{stone:18,gold:9},desc:"Heavy deep-ocean suit with near-normal underwater movement."},
-    {name:"Gem Diving Suit",cost:{stone:20,gold:13},desc:"Final suit. Ruby is fastest underwater, Emerald conserves hydration, Diamond gives the strongest underwater protection."}],
+    {name:"Scuba Suit",cost:{wood:6,stone:12,gold:4},desc:"Scuba gear with an oxygen tank. Oxygen drains while you are underwater; reach shore before it reaches 0."},
+    {name:"Reinforced Scuba Suit",cost:{stone:16,gold:6},desc:"A larger oxygen tank plus better underwater movement."},
+    {name:"Iron Scuba Suit",cost:{stone:18,gold:9},desc:"A much larger tank with near-normal underwater movement."},
+    {name:"Gem Scuba Suit",cost:{stone:20,gold:13},desc:"Final scuba suit. Ruby is fastest, Emerald makes oxygen last longest, Diamond gives a larger tank and better protection while suffocating."}],
   BattleBot:[
     {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A very durable combat robot that follows you and attacks enemies."},
     {name:"Reinforced Battle Bot",cost:{stone:24,gold:10},desc:"More health, stronger attacks, and better combat range."},
@@ -6582,9 +6597,9 @@ const BUILD_FINAL_BRANCHES={
     {variant:"emerald",icon:"◆",name:"Emerald Flute",desc:"Longest sleep/calm duration."},
     {variant:"diamond",icon:"◇",name:"Diamond Flute",desc:"Lets calm snakes be weakened almost to zero health."}],
   DivingSuit:[
-    {variant:"ruby",icon:"♦",name:"Ruby Diving Suit",desc:"Fastest movement while travelling on the ocean floor."},
-    {variant:"emerald",icon:"◆",name:"Emerald Diving Suit",desc:"Full deep-water protection with reduced hydration drain while underwater."},
-    {variant:"diamond",icon:"◇",name:"Diamond Diving Suit",desc:"Full deep-water protection plus extra damage resistance while underwater."}],
+    {variant:"ruby",icon:"♦",name:"Ruby Scuba Suit",desc:"Fastest underwater movement; uses the normal gem-tier oxygen tank."},
+    {variant:"emerald",icon:"◆",name:"Emerald Scuba Suit",desc:"Oxygen drains much more slowly, giving the longest dive time."},
+    {variant:"diamond",icon:"◇",name:"Diamond Scuba Suit",desc:"A larger oxygen tank and less suffocation damage after the tank reaches 0."}],
   PetArmor:[
     {variant:"ruby",icon:"♦",name:"Ruby Pet Armor",desc:"The armored pet deals 25% more attack damage."},
     {variant:"emerald",icon:"◆",name:"Emerald Pet Armor",desc:"Each damaging pet attack heals that pet for part of the damage."},
@@ -11137,6 +11152,9 @@ function syncNetworkFullWorld(force = false) {
     const serverGold = Number(own.gold);
     if (Number.isFinite(serverGold)) applyServerGoldSnapshot(serverGold);
     if(Number.isFinite(Number(own.hydration)))player.hydration=clamp(Number(own.hydration),0,100);
+    if(Number.isFinite(Number(own.oxygenMax)))player.oxygenMax=Math.max(0,Number(own.oxygenMax));
+    if(Number.isFinite(Number(own.oxygen)))player.oxygen=clamp(Number(own.oxygen),0,Math.max(1,Number(player.oxygenMax)||1));
+    updateOxygenHud();
     if(Number.isFinite(Number(own.bucketSips)))player.bucketSips=clamp(Math.floor(Number(own.bucketSips)),0,BUCKET_MAX_SIPS);
     else if(own.bucketWater&&!(player.bucketSips>0))player.bucketSips=BUCKET_MAX_SIPS;
     player.bucketWater=(player.bucketSips||0)>0||!!own.bucketWater;updateHydrationHud();
@@ -11393,7 +11411,7 @@ function applyNetworkHarvestReward(data = {}) {
   }
   if (kind === "biomeMaterial") {
     const material=String(data.material||""),metaInfo=BIOME_MATERIAL_META[material];
-    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");if(material==="honeycomb")registerHotbarItem("Honey Comb");if(material==="honey")registerHotbarItem("Honey");if(material==="seaFruit")registerHotbarItem("Sea Fruit");if(material==="blueSeaweed")registerHotbarItem("Seaweed");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
+    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");if(material==="honeycomb")registerHotbarItem("Honey Comb");if(material==="honey")registerHotbarItem("Honey");if(material==="seaFruit")registerHotbarItem("Sea Fruit");if(material==="blueSeaweed")registerHotbarItem("Blue Seaweed");if(material==="greenSeaweed")registerHotbarItem("Green Seaweed");if(material==="celestFruit")registerHotbarItem("Celest Fruit");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
     return;
   }
   if (kind === "wood" || kind === "stone" || kind === "berries" || kind === "gold") {
@@ -11576,7 +11594,7 @@ async function connectMultiplayer(options={}) {
       updateHydrationHud();syncHotbar();syncMobilePrimaryButton();
       if(data?.message)banner(String(data.message),data.ok===false);
     });
-    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||""),mounted=!!data?.mounted;if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(!mounted&&food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(!mounted&&food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(!mounted&&food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit"&&!data?.blocked){if(mounted&&data?.mountId){const sm=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(sm&&Number.isFinite(Number(data?.petStoneStacks)))sm.stoneFruitStacks=Math.max(0,Math.floor(Number(data.petStoneStacks)));}else{if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);if(Number.isFinite(Number(data?.stoneStacks))){const n=Math.max(0,Math.floor(Number(data.stoneStacks)));while(player._stoneFruitStacks.length>n)player._stoneFruitStacks.shift();while(player._stoneFruitStacks.length<n)player._stoneFruitStacks.push(game.time+20);}}}if(food==="honey"&&!data?.blocked){player._honeyRushUntil=game.time+12;if(!mounted)player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}if(food==="seaFruit")registerHotbarItem("Sea Fruit");if(food==="blueSeaweed"&&!data?.blocked){player._blueSeaweedUntil=game.time+Math.max(1,Number(data?.duration)||BLUE_SEAWEED_DURATION);registerHotbarItem("Seaweed");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(mounted&&data?.mountId){const m=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(m&&Number.isFinite(Number(data?.mountHp)))m.hp=clamp(Number(data.mountHp),0,Math.max(1,Number(data?.mountMaxHp)||m.maxHp||1));}if(data?.message)banner(String(data.message),!!data?.blocked);if(data?.blocked){syncHud();syncHotbar();syncMobilePrimaryButton();return;}restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||""),mounted=!!data?.mounted;if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(!mounted&&food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(!mounted&&food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(!mounted&&food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit"&&!data?.blocked){if(mounted&&data?.mountId){const sm=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(sm&&Number.isFinite(Number(data?.petStoneStacks)))sm.stoneFruitStacks=Math.max(0,Math.floor(Number(data.petStoneStacks)));}else{if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);if(Number.isFinite(Number(data?.stoneStacks))){const n=Math.max(0,Math.floor(Number(data.stoneStacks)));while(player._stoneFruitStacks.length>n)player._stoneFruitStacks.shift();while(player._stoneFruitStacks.length<n)player._stoneFruitStacks.push(game.time+20);}}}if(food==="honey"&&!data?.blocked){player._honeyRushUntil=game.time+12;if(!mounted)player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}if(food==="seaFruit")registerHotbarItem("Sea Fruit");if(food==="greenSeaweed")registerHotbarItem("Green Seaweed");if(food==="celestFruit")registerHotbarItem("Celest Fruit");if((food==="blueSeaweed"||food==="celestFruit")&&!data?.blocked&&Number(data?.duration)>0){player._blueSeaweedUntil=Math.max(Number(player._blueSeaweedUntil)||0,game.time+Math.max(1,Number(data.duration)));if(food==="blueSeaweed")registerHotbarItem("Blue Seaweed");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(mounted&&data?.mountId){const m=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(m&&Number.isFinite(Number(data?.mountHp)))m.hp=clamp(Number(data.mountHp),0,Math.max(1,Number(data?.mountMaxHp)||m.maxHp||1));}if(data?.message)banner(String(data.message),!!data?.blocked);if(data?.blocked){syncHud();syncHotbar();syncMobilePrimaryButton();return;}restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
     room.onMessage("fluteResult", data=>{const n=Math.max(0,Math.floor(Number(data?.affected)||0));banner(n?`Flute affected ${n} nearby animal${n===1?"":"s"}`:"No animals close enough");});
     room.onMessage("revived", (data={}) => { finishRewardedRevive(data); });
     room.onMessage("reviveDenied", () => { game.revivePending=false; updateReviveDeathUi("The server could not authorize that revive."); });
@@ -16412,20 +16430,22 @@ const ISLAND_SHORE_WIDTH = 230;
 // use existing biome terrain; fantasy/secret biomes and new island-only animals
 // are intentionally left for the later content pass instead of being invented here.
 const OUTER_ISLANDS = Object.freeze([
-  // A loose ring of reachable islands now surrounds the mainland instead of
-  // leaving most directions as uninterrupted empty ocean.
-  {id:"reef_isle",cx:ISLAND_CX+29000,cy:ISLAND_CY-7000,r:1080,biome:"rainforest",seed:.73},
+  // Two of the ordinary islands sit much closer to the mainland now, while the
+  // enormous Galaxaytropic occupies the far west as its own distinct biome.
+  {id:"reef_isle",cx:ISLAND_CX+22000,cy:ISLAND_CY-4200,r:1080,biome:"rainforest",seed:.73},
   {id:"sunbar_isle",cx:ISLAND_CX+26000,cy:ISLAND_CY+27000,r:920,biome:"desert",seed:1.91},
   {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:820,biome:"arctic",seed:3.17},
-  {id:"westwood_isle",cx:ISLAND_CX-29500,cy:ISLAND_CY+1500,r:980,biome:"forest",seed:4.23},
+  {id:"westwood_isle",cx:ISLAND_CX-21000,cy:ISLAND_CY+11200,r:980,biome:"forest",seed:4.23},
   {id:"southwest_isle",cx:ISLAND_CX-25000,cy:ISLAND_CY+24500,r:900,biome:"desert",seed:5.31},
   {id:"southcap_isle",cx:ISLAND_CX-2500,cy:ISLAND_CY+29200,r:850,biome:"desert",seed:6.47},
   {id:"northeast_isle",cx:ISLAND_CX+24500,cy:ISLAND_CY-23500,r:960,biome:"rainforest",seed:7.53},
-  {id:"northwest_isle",cx:ISLAND_CX-24500,cy:ISLAND_CY-23000,r:930,biome:"mountains",seed:8.69}
+  {id:"northwest_isle",cx:ISLAND_CX-24500,cy:ISLAND_CY-23000,r:930,biome:"mountains",seed:8.69},
+  {id:"galaxaytropic",cx:ISLAND_CX-30500,cy:ISLAND_CY-1200,r:6200,biome:"galaxytropic",seed:9.77,huge:true}
 ]);
 const OCEAN_DIVE_START = 360;
 const OCEAN_SURFACE_NEAR_SHORE = 245;
 const BLUE_SEAWEED_DURATION = 20;
+const CELEST_FRUIT_DURATION = 300;
 const OCEAN_DEEP_DAMAGE_START = 820;
 const OCEAN_DEEP_DAMAGE_FULL = 2200;
 const OCEAN_DEEP_DAMAGE_MIN = 4;
@@ -16443,7 +16463,8 @@ const BIOME_PROFILES = {
   arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["rabbit"] },
   desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","snake","dragon","boar"] },
   mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["dog","wolf","saber","queenbee","workerbee","dronebee"] },
-  ocean:{ id:"ocean", name:"Ocean", tint:"rgba(0,0,0,0)", edge:"rgba(0,0,0,0)", minimap:"#2f83a7", species:[] }
+  ocean:{ id:"ocean", name:"Ocean", tint:"rgba(0,0,0,0)", edge:"rgba(0,0,0,0)", minimap:"#2f83a7", species:[] },
+  galaxytropic:{ id:"galaxytropic", name:"Galaxaytropic", tint:"rgba(116,49,170,.20)", edge:"rgba(81,24,130,.32)", minimap:"#713aa5", species:[] }
 };
 const BIOME_RESOURCE_INFO = Object.freeze({
   forestHerb:{biome:"forest",material:"wildHerb",name:"Wild Herb",color:"#8dcf68",category:"soft",hp:3},
@@ -16464,12 +16485,16 @@ const BIOME_RESOURCE_INFO = Object.freeze({
   rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#f2bf35",category:"soft",hp:14},
   oceanUrchin:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#d58bd7",category:"soft",hp:4},
   oceanAnemone:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#ef8fae",category:"soft",hp:5},
-  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Seaweed",color:"#59c7de",category:"soft",hp:4}
+  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Blue Seaweed",color:"#59c7de",category:"soft",hp:4},
+  oceanGreenSeaweed:{biome:"ocean",material:"greenSeaweed",name:"Green Seaweed",color:"#54c878",category:"soft",hp:4},
+  galaxyCelestFruit:{biome:"galaxytropic",material:"celestFruit",name:"Celest Fruit",color:"#d9a6ff",category:"soft",hp:5}
 });
 const BIOME_MATERIAL_META = Object.fromEntries(Object.values(BIOME_RESOURCE_INFO).map(v=>[v.material,{name:v.name,color:v.color,biome:v.biome}]));
 BIOME_MATERIAL_META.honey={name:"Honey",color:"#f4bd42",biome:"rainforest"};
 BIOME_MATERIAL_META.seaFruit={name:"Sea Fruit",color:"#e58eb0",biome:"ocean"};
-BIOME_MATERIAL_META.blueSeaweed={name:"Seaweed",color:"#59c7de",biome:"ocean"};
+BIOME_MATERIAL_META.blueSeaweed={name:"Blue Seaweed",color:"#59c7de",biome:"ocean"};
+BIOME_MATERIAL_META.greenSeaweed={name:"Green Seaweed",color:"#54c878",biome:"ocean"};
+BIOME_MATERIAL_META.celestFruit={name:"Celest Fruit",color:"#d9a6ff",biome:"galaxytropic"};
 const BIOME_ORDER = ["forest","rainforest","arctic","desert","mountains"];
 function biomeBaseId(id){ return String(id||CURRENT_BIOME_ID).replace(/_edge$/,'') || CURRENT_BIOME_ID; }
 function biomeProfileAt(x,y){ return BIOME_PROFILES[biomeBaseId(worldBiomeAt(x,y))] || BIOME_PROFILES.forest; }
@@ -16549,6 +16574,16 @@ function underwaterFloorActive(){return (Number(player?._underwaterBlend)||0)>.4
 function blueSeaweedProtectionActive(){return (Number(player?._blueSeaweedUntil)||0)>game.time;}
 function divingSuitActive(){return buildIsKnown("DivingSuit")&&craftedItemCount("DivingSuit")>0;}
 function divingSuitUnderwaterMoveMul(){if(!divingSuitActive())return 1;const t=craftedBuildTier("DivingSuit"),v=craftedBuildVariant("DivingSuit");let m=[.86,.93,1.0,1.05][clamp(t,0,3)]||1;if(t>=3&&v==="ruby")m=1.14;return m;}
+function divingSuitOxygenMaxSeconds(){if(!divingSuitActive())return 0;const t=clamp(craftedBuildTier("DivingSuit"),0,3),v=craftedBuildVariant("DivingSuit");let sec=[45,60,80,100][t]||45;if(t>=3&&v==="diamond")sec=120;return sec;}
+function divingSuitOxygenDrainMul(){if(!divingSuitActive())return 1;const t=clamp(craftedBuildTier("DivingSuit"),0,3),v=craftedBuildVariant("DivingSuit");return t>=3&&v==="emerald"?.65:1;}
+function divingSuitSuffocationMul(){if(!divingSuitActive())return 1;const t=clamp(craftedBuildTier("DivingSuit"),0,3),v=craftedBuildVariant("DivingSuit");return t>=3&&v==="diamond"?.68:1;}
+function updateOxygenHud(){
+  const active=divingSuitActive(),hud=el("oxygenHud"),fill=el("oxygenFill"),txt=el("oxygenText");
+  const max=Math.max(0,Number(player.oxygenMax)||divingSuitOxygenMaxSeconds()),cur=clamp(Number(player.oxygen)||0,0,Math.max(1,max||1)),pct=max>0?clamp(cur/max*100,0,100):0;
+  if(hud){hud.classList.toggle("show",active);hud.classList.toggle("low",active&&pct<=25);}
+  if(fill){fill.style.width="100%";fill.style.height=pct.toFixed(1)+"%";}
+  if(txt)txt.textContent=Math.round(pct)+"%";
+}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){
   const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));
@@ -16862,7 +16897,7 @@ const player = {
   buildUnlockTiers:Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0])), craftedTiers:Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0])), craftedCounts:Object.fromEntries(BUILDABLE_IDS.map(b=>[b,0])), craftedVariants:{}, buildVariants:{}, craftBonuses:{gather:1,buildCost:1,combat:1},
   pets: [], // max 4
   riding: null,
-  vehicleType: "", vehicleTier:0, vehicleVariant:"", _vehicleMoveSoundAt:0, _wakeEmitAt:0, _underwaterBlend:0, _oceanDamageWarnAt:0, _blueSeaweedUntil:0,
+  vehicleType: "", vehicleTier:0, vehicleVariant:"", _vehicleMoveSoundAt:0, _wakeEmitAt:0, _underwaterBlend:0, _oceanDamageWarnAt:0, _blueSeaweedUntil:0, oxygen:0, oxygenMax:0, _oxygenWarnAt:0,
 };
 
 let game = {
@@ -17487,7 +17522,7 @@ function placeUnderwaterFeatures() {
         let blocked=false;
         for(const r of queryStaticNearby("resources",pos.x,pos.y,72)){
           if(!r||!r.alive)continue;
-          const oceanThing=r.type==="oceanRock"||r.type==="oceanUrchin"||r.type==="oceanAnemone"||r.type==="oceanBlueSeaweed";
+          const oceanThing=r.type==="oceanRock"||BIOME_RESOURCE_INFO[r.type]?.biome==="ocean";
           if(oceanThing&&dist(pos.x,pos.y,r.x,r.y)<solid+(Number(r.solidR)||7)+18){blocked=true;break;}
         }
         if(blocked)continue;
@@ -17496,12 +17531,38 @@ function placeUnderwaterFeatures() {
       }
     }
   };
-  // Keep the interactive seafloor population moderate; decorative detail is
-  // procedural and view-local so this does not turn into a per-frame lag source.
-  add("oceanRock",320,4,10,.82,1.55);
-  add("oceanUrchin",130,4,6.5,.82,1.24);
-  add("oceanAnemone",120,5,5.5,.88,1.34);
-  add("oceanBlueSeaweed",180,4,5,.85,1.30);
+  // The ocean floor is intentionally resource-dense. Rocks use a broad scale
+  // range so the seafloor contains obvious small rubble and large boulders.
+  add("oceanRock",1450,4,10,.48,2.65);
+  add("oceanUrchin",190,4,6.5,.88,1.35);
+  add("oceanAnemone",180,5,5.5,.94,1.45);
+  add("oceanBlueSeaweed",300,4,6,1.35,2.25);
+  add("oceanGreenSeaweed",360,4,6,1.45,2.45);
+}
+
+
+function placeGalaxaytropicFeatures(){
+  const spec=outerIslandById("galaxaytropic");if(!spec)return;
+  const occupied=[];
+  const clear=(x,y,r)=>{for(const q of occupied)if(dist(x,y,q.x,q.y)<r+q.r+18)return false;return true;};
+  const placeBasic=(type,count,hp,minScale,maxScale)=>{
+    for(let i=0;i<count;i++)for(let tries=0;tries<90;tries++){
+      const scale=rand(minScale,maxScale),solid=type==="tree"?8.8*scale:type==="rock"?26.5*scale:10.8*scale,canopy=type==="tree"?46*scale:type==="bush"?24*scale:0,pos=randomPointOnOuterIsland(spec,Math.max(90,solid+55));
+      if(!clear(pos.x,pos.y,solid))continue;
+      const r={type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:canopy,scale,rot:0,_outerIslandId:spec.id};
+      addGeneratedResource(r);occupied.push({x:pos.x,y:pos.y,r:solid});break;
+    }
+  };
+  placeBasic("tree",250,9,1.15,2.1);
+  placeBasic("rock",210,4,.85,1.95);
+  placeBasic("bush",185,8,1.0,1.65);
+  const info=BIOME_RESOURCE_INFO.galaxyCelestFruit;
+  for(let i=0;i<72;i++)for(let tries=0;tries<90;tries++){
+    const scale=rand(1.05,1.55),solid=11*scale,pos=randomPointOnOuterIsland(spec,100);
+    if(!clear(pos.x,pos.y,solid))continue;
+    addGeneratedResource({type:"galaxyCelestFruit",x:pos.x,y:pos.y,hp:info.hp,maxHp:info.hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35),_outerIslandId:spec.id});
+    occupied.push({x:pos.x,y:pos.y,r:solid});break;
+  }
 }
 
 function scatter(type, count, hp, minDistFromCenter, rSolid) {
@@ -18110,6 +18171,7 @@ function initWorld() {
   placePonds();
   placeBiomeFeatures();
   placeUnderwaterFeatures();
+  placeGalaxaytropicFeatures();
   // The giant world should feel full instead of sparse: many more, larger resources.
   // Dense-world pass: basic resources are intentionally much more common.
   // randomLandPoint is biome-area weighted, so physically larger biomes naturally
@@ -18169,6 +18231,7 @@ function initWorld() {
   // Keep island populations mostly baby/adult so the smaller islands stay navigable.
   const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:20,westwood_isle:24,southwest_isle:22,southcap_isle:21,northeast_isle:24,northwest_isle:23};
   for(const spec of OUTER_ISLANDS){
+    if(spec.id==="galaxaytropic")continue;
     const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!isWildBeeType(type));
     const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;
     let made=0;
@@ -18526,7 +18589,7 @@ function subClawAttack(){
   const tier=clamp(Math.floor(Number(player.vehicleTier)||0),0,3),info=BIOME_RESOURCE_INFO[best.type];
   best.pulse=1;
   if(best.type==="oceanRock"){const dmg=1.65+tier*.42;best.hp=Math.max(0,best.hp-dmg);const amount=1+(tier>=2?1:0);player.stone+=amount;floatText(best.x,best.y-18,`+${amount} stone`,"#a9b3bd");spark(best.x,best.y,"#a9b3bd",6,72);sfx.stoneHit();}
-  else if(info){const dmg=1.45+tier*.34;best.hp=Math.max(0,best.hp-dmg);const amount=1+(tier>=3?1:0);player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[info.material]=(player.biomeMaterials[info.material]||0)+amount;if(info.material==="seaFruit")registerHotbarItem("Sea Fruit");if(info.material==="blueSeaweed")registerHotbarItem("Seaweed");floatText(best.x,best.y-18,`+${amount} ${info.name}`,info.color);spark(best.x,best.y,info.color,6,72);sfx.logHit();}
+  else if(info){const dmg=1.45+tier*.34;best.hp=Math.max(0,best.hp-dmg);const amount=1+(tier>=3?1:0);player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[info.material]=(player.biomeMaterials[info.material]||0)+amount;if(info.material==="seaFruit")registerHotbarItem("Sea Fruit");if(info.material==="blueSeaweed")registerHotbarItem("Blue Seaweed");if(info.material==="greenSeaweed")registerHotbarItem("Green Seaweed");if(info.material==="celestFruit")registerHotbarItem("Celest Fruit");floatText(best.x,best.y-18,`+${amount} ${info.name}`,info.color);spark(best.x,best.y,info.color,6,72);sfx.logHit();}
   if(best.hp<=0){best.alive=false;best.respawnAt=game.time+rand(16,28);}
   syncHud();syncHotbar();return true;
 }
@@ -18592,6 +18655,8 @@ function handleHotkey(key) {
   } else if(item.special==="Honey"){selectBiomeFood("honey");
   } else if(item.special==="SeaFruit"){selectBiomeFood("seaFruit");
   } else if(item.special==="BlueSeaweed"){selectBiomeFood("blueSeaweed");
+  } else if(item.special==="GreenSeaweed"){selectBiomeFood("greenSeaweed");
+  } else if(item.special==="CelestFruit"){selectBiomeFood("celestFruit");
   } else if (item.special === "Saddle" || item.label === "Saddle") {
     if (!player.hasSaddle) return;
     if (TOOLS[player.tool] && player.owned[player.tool]) player.lastWeaponTool = player.tool;
@@ -18957,8 +19022,8 @@ function meleeAttack(preciseResolve=null) {
     if (player.heldSpecial === "HoneyComb") { return; }
     if (player.heldSpecial === "Bucket") { useBucket(); return; }
     if (player.heldSpecial === "Berry") { if (player.attackCd > 0) return;eatBerry();return; }
-    if (["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","Honey","SeaFruit","BlueSeaweed"].includes(player.heldSpecial)) {
-      if(player.attackCd>0)return;const foodMap={JungleBerry:"jungleBerry",FrostBerry:"frostBerry",GoodCactus:"goodCactus",BadCactus:"badCactus",StoneFruit:"stoneFruit",Honey:"honey",SeaFruit:"seaFruit",BlueSeaweed:"blueSeaweed"};eatBiomeFood(foodMap[player.heldSpecial]);return;
+    if (["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","Honey","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(player.heldSpecial)) {
+      if(player.attackCd>0)return;const foodMap={JungleBerry:"jungleBerry",FrostBerry:"frostBerry",GoodCactus:"goodCactus",BadCactus:"badCactus",StoneFruit:"stoneFruit",Honey:"honey",SeaFruit:"seaFruit",BlueSeaweed:"blueSeaweed",GreenSeaweed:"greenSeaweed",CelestFruit:"celestFruit"};eatBiomeFood(foodMap[player.heldSpecial]);return;
     }
     if (player.heldSpecial === "Wall") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeWall(); return; }
     if (player.heldSpecial === "Tower") { if (player.attackCd > 0) return; player.attackCd = 0.24; placeTower(); return; }
@@ -19217,11 +19282,11 @@ function meleeAttack(preciseResolve=null) {
   if(resolvingPrecise)player._preciseMeleePacket=null;
 }
 
-function gatherResource(r, t, toolOverride=null) {
+function gatherResource(r, t, toolOverride=null, options={}) {
   if (!r || !r.alive || r.type === "pond" || r.type === "river") return;
   const toolName = toolOverride || player.tool || "Fist";
   if(!net.room&&isBeeFlowerResource(r)){r.pulse=1;spark(r.x,r.y,BIOME_RESOURCE_INFO[r.type]?.color||"#ef8ac4",5,48);return;}
-  if(!net.room){gainSkillXp(1,"resource-hit"); consumeHydration(r.type === "bush" ? 0.65 : 1.2);}
+  if(!net.room){gainSkillXp(1,"resource-hit"); if(!options.skipHydration) consumeHydration(r.type === "bush" ? 0.65 : 1.2);}
   const isWood = r.type === "tree" || r.type === "log";
 
   if (net.room && r.netId) {
@@ -19244,10 +19309,23 @@ function gatherResource(r, t, toolOverride=null) {
     }
     const correct=(biomeInfo.category==="wood"&&toolName==="Axe")||(biomeInfo.category==="stone"&&toolName==="Pickaxe")||(biomeInfo.category==="soft"&&(toolName==="Fist"||toolName==="Axe"));
     let dmg=(t.resourcePower==null?1:t.resourcePower)*(correct?1.25:.68); if(toolName==="Sword")dmg*=.35;
-    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");if(biomeInfo.material==="goodCactus")registerHotbarItem("Cactus A");if(biomeInfo.material==="badCactus")registerHotbarItem("Cactus B");if(biomeInfo.material==="stoneFruit")registerHotbarItem("Stone Fruit");if(biomeInfo.material==="honeycomb")registerHotbarItem("Honey Comb");if(biomeInfo.material==="honey")registerHotbarItem("Honey");if(biomeInfo.material==="seaFruit")registerHotbarItem("Sea Fruit");if(biomeInfo.material==="blueSeaweed")registerHotbarItem("Seaweed");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);
+    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");if(biomeInfo.material==="goodCactus")registerHotbarItem("Cactus A");if(biomeInfo.material==="badCactus")registerHotbarItem("Cactus B");if(biomeInfo.material==="stoneFruit")registerHotbarItem("Stone Fruit");if(biomeInfo.material==="honeycomb")registerHotbarItem("Honey Comb");if(biomeInfo.material==="honey")registerHotbarItem("Honey");if(biomeInfo.material==="seaFruit")registerHotbarItem("Sea Fruit");if(biomeInfo.material==="blueSeaweed")registerHotbarItem("Blue Seaweed");if(biomeInfo.material==="greenSeaweed")registerHotbarItem("Green Seaweed");if(biomeInfo.material==="celestFruit")registerHotbarItem("Celest Fruit");gainSkillXp(.7*yieldAmt,"gather");if(!options.skipHydration)consumeHydration(.9);
     floatText(r.x,r.y-20,`+${yieldAmt} ${biomeInfo.name}`,biomeInfo.color);spark(r.x,r.y,biomeInfo.color,correct?7:4,correct?90:55);syncHud();syncHotbar();
     if(biomeInfo.category==="stone")sfx.stoneHit();else sfx.logHit();
     if(r.hp<=0){r.hp=0;r.alive=false;r.respawnAt=game.time+rand(18,30);spark(r.x,r.y,biomeInfo.color,10,100);}
+    return;
+  }
+  // A ranged Bow hit on a normal berry bush gathers berries, never stone.
+  if (r.type === "bush" && toolName === "Bow") {
+    r.hp -= Math.max(0.5, Number(t.resourcePower)||0.18);
+    r.pulse = 1;
+    const berries = randi(1, 2);
+    player.berries = (player.berries || 0) + berries;
+    floatText(r.x, r.y - 20, `+${berries} berries`, "#f283a6");
+    spark(r.x, r.y, "#d1315c", 5, 65);
+    sfx.bushHit();
+    if (r.hp <= 0) { r.alive=false; r.respawnAt=game.time+rand(14,22); spark(r.x,r.y,"#7be08a",7,80); }
+    syncHud(); syncHotbar();
     return;
   }
   const correctAxe = toolName === "Axe" && isWood;
@@ -19275,7 +19353,7 @@ function gatherResource(r, t, toolOverride=null) {
   else if (correctPick) yieldAmount = t.gather;   // much more stone with pickaxe
   else if (toolName === "Fist") yieldAmount = t.gather; // tiny hand-harvest yield
   else if (toolName === "Sword") yieldAmount = 0.12; // intentionally awful harvesting
-  else if (toolName === "Bow") yieldAmount = 0.35;
+  else if (toolName === "Bow") yieldAmount = 1;
   else if (toolName === "Axe" || toolName === "Pickaxe") yieldAmount = 0.45;
 
   // Fractional poor-tool yields accumulate on the resource and only pay out whole materials.
@@ -19415,11 +19493,11 @@ function eatBerry() {
 
 function selectBiomeFood(food){
   const material=food,count=Math.max(0,Math.floor(Number(player.biomeMaterials?.[material])||0));
-  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus",stoneFruit:"Stone Fruit",honey:"Honey",seaFruit:"Sea Fruit",blueSeaweed:"Seaweed"};
+  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus",stoneFruit:"Stone Fruit",honey:"Honey",seaFruit:"Sea Fruit",blueSeaweed:"Blue Seaweed",greenSeaweed:"Green Seaweed",celestFruit:"Celest Fruit"};
   if(count<1){banner(`No ${names[material]||"food"}!`,true);return;}
   if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;
-  player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":material==="badCactus"?"BadCactus":material==="honey"?"Honey":material==="seaFruit"?"SeaFruit":material==="blueSeaweed"?"BlueSeaweed":"StoneFruit";
-  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — -20 rider hydration; +20% strength/-10% speed goes to you on foot or your mount while riding":material==="honey"?"Honey equipped — heals and boosts speed":material==="seaFruit"?"Sea Fruit equipped — restores health and hydration":material==="blueSeaweed"?"Seaweed equipped — 20 seconds of deep-ocean protection":"Cactus equipped — eat to find out");
+  player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":material==="badCactus"?"BadCactus":material==="honey"?"Honey":material==="seaFruit"?"SeaFruit":material==="blueSeaweed"?"BlueSeaweed":material==="greenSeaweed"?"GreenSeaweed":material==="celestFruit"?"CelestFruit":"StoneFruit";
+  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — -20 rider hydration; +20% strength/-10% speed goes to you on foot or your mount while riding":material==="honey"?"Honey equipped — heals and boosts speed":material==="seaFruit"?"Sea Fruit equipped — restores health and hydration":material==="blueSeaweed"?"Blue Seaweed equipped — 20 seconds of deep-ocean protection":material==="greenSeaweed"?"Green Seaweed equipped — powerful healing":material==="celestFruit"?"Celest Fruit equipped — 50/50: 5 minutes underwater or death":"Cactus equipped — eat to find out");
   syncHotbar();syncMobilePrimaryButton();
 }
 function eatBiomeFood(food){
@@ -19427,11 +19505,12 @@ function eatBiomeFood(food){
   if(count<1){restoreLastWeaponAfterSpecial();syncHotbar();return;}
   const mount=player.riding&&!player.riding.dead?player.riding:null;
   const hpFull=player.health>=player.maxHealth-.01,hydrationFull=(Number(player.hydration)||0)>=99.99;
-  const mountedHealingFood=!!mount&&["jungleBerry","frostBerry","goodCactus","seaFruit","honey"].includes(food);
+  const mountedHealingFood=!!mount&&["jungleBerry","frostBerry","goodCactus","seaFruit","greenSeaweed","honey"].includes(food);
 
   // While riding, healing food is for the mount. If the mount is full, save it.
   // Rider hydration is still allowed only for foods whose actual job includes it.
   if(mountedHealingFood&&mount.hp>=mount.maxHp-.01){banner("Your mounted pet is already at full health",true);return;}
+  if(!mount&&food==="greenSeaweed"&&hpFull){banner("You are already at full health",true);return;}
   if(!mount&&(food==="frostBerry"||food==="goodCactus"||food==="badCactus"||food==="seaFruit")&&hpFull&&hydrationFull){banner(food==="frostBerry"||food==="seaFruit"?"You are already full health and hydration":"You are already full health and hydration — save the cactus",true);return;}
 
   player.attackCd=.32;player.punchTimer=.22;player.swingWeapon="Fist";
@@ -19479,8 +19558,17 @@ function eatBiomeFood(food){
       if(mount.hp>before+.01)floatText(mount.x,mount.y-mount.r-18,`+${Math.round(mount.hp-before)}`,"#7be08a");
       banner("Sea Fruit — pet +12 HP, rider +10 hydration");updateHydrationHud();
     }
+    else if(food==="greenSeaweed"){
+      const before=mount.hp;mount.hp=clamp(mount.hp+30,0,mount.maxHp);
+      if(mount.hp>before+.01)floatText(mount.x,mount.y-mount.r-18,`+${Math.round(mount.hp-before)}`,"#67e58a");
+      banner("Green Seaweed — powerful healing for your mounted pet");
+    }
     else if(food==="blueSeaweed"){
-      player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Seaweed — deep-ocean protection for ${BLUE_SEAWEED_DURATION} seconds`);
+      player._blueSeaweedUntil=Math.max(Number(player._blueSeaweedUntil)||0,game.time+BLUE_SEAWEED_DURATION);banner(`Blue Seaweed — deep-ocean protection for ${BLUE_SEAWEED_DURATION} seconds`);
+    }
+    else if(food==="celestFruit"){
+      if(Math.random()<.5){player.riding=null;killPlayerFromDeepOcean();banner("Celest Fruit backfired — it killed you!",true);}
+      else{player._blueSeaweedUntil=Math.max(Number(player._blueSeaweedUntil)||0,game.time+CELEST_FRUIT_DURATION);banner("Celest Fruit succeeded — underwater protection for 5 minutes!");}
     }
   }else{
     if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;banner("Jungle Fruit — healing over time");}
@@ -19490,15 +19578,18 @@ function eatBiomeFood(food){
     else if(food==="stoneFruit"){player.hydration=clamp((Number(player.hydration)||0)-20,0,100);if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);const n=activeStoneFruitStacks();banner(`Stone Fruit ×${n} — -20 hydration, +${n*20}% strength, -${n*10}% speed; this stack lasts 20s`);updateHydrationHud();}
     else if(food==="honey"){player.health=clamp(player.health+20,0,player.maxHealth);player._honeyRushUntil=game.time+12;player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;banner("Honey — +20 HP, healing over time, and faster movement");}
     else if(food==="seaFruit"){player.health=clamp(player.health+12,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)+10,0,100);banner("Sea Fruit — +12 HP, +10 hydration");updateHydrationHud();}
-    else if(food==="blueSeaweed"){player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Seaweed — protected underwater for ${BLUE_SEAWEED_DURATION} seconds`);}
+    else if(food==="greenSeaweed"){const before=player.health;player.health=clamp(player.health+30,0,player.maxHealth);floatText(player.x,player.y-28,`+${Math.round(player.health-before)}`,"#67e58a");banner("Green Seaweed — +30 HP");}
+    else if(food==="blueSeaweed"){player._blueSeaweedUntil=Math.max(Number(player._blueSeaweedUntil)||0,game.time+BLUE_SEAWEED_DURATION);banner(`Blue Seaweed — protected underwater for ${BLUE_SEAWEED_DURATION} seconds`);}
+    else if(food==="celestFruit"){if(Math.random()<.5){player.riding=null;killPlayerFromDeepOcean();banner("Celest Fruit backfired — it killed you!",true);}else{player._blueSeaweedUntil=Math.max(Number(player._blueSeaweedUntil)||0,game.time+CELEST_FRUIT_DURATION);banner("Celest Fruit succeeded — underwater protection for 5 minutes!");}}
   }
   sfx.eat();restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();
 }
 
 function fireBow() {
   if (player.vehicleType) return;
-  if (game.over || !game.started || player.heldSpecial || player.tool !== "Bow" || player.shootCd > 0 || player.wood < 1) return;
-  player.wood -= 1; player.shootCd = 0.45;
+  // Bow arrows are reusable/infinite ammunition. Firing never consumes Wood.
+  if (game.over || !game.started || player.heldSpecial || player.tool !== "Bow" || player.shootCd > 0) return;
+  player.shootCd = Math.max(.12, Number(TOOLS.Bow?.cadence)||0.45);
   player.punchTimer = 0.18; player.swingWeapon = "Bow";
   const a = player.angle;
   if (net.room) {
@@ -19508,6 +19599,7 @@ function fireBow() {
     projectiles.push({
       x: player.x + Math.cos(a) * 26, y: player.y + Math.sin(a) * 26,
       vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, life: 1.15, r: 5,
+      kind:"arrow", color:"#7ec0ee", ownerId:"local", toolTier:clamp(Math.floor(Number(player.toolTiers?.Bow)||0),0,2),
       dmg: TOOLS.Bow.dmg * runDamageMul(),
     });
   }
@@ -20528,10 +20620,11 @@ function updateProjectiles(dt) {
         if(p.hostile) damageCreatureFromEnemy(wa,p.source,p.dmg||8);
         else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else{wa.enraged=true;wa.hostileTarget=player;}if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
       }
-      // A thrown axe is still an axe: it harvests the resource it physically strikes,
-      // then starts its automatic return. Do this only offline; multiplayer is server-authoritative.
-      if(!net.room&&p.kind==="throwAxe"&&best.type==="solid"&&best.obj?.type&&best.obj.alive&&best.obj.type!=="pond"&&best.obj.type!=="river"){
-        gatherResource(best.obj,TOOLS.Axe,"Axe");
+      // Physical projectile tools gather the resource they actually strike.
+      // Arrows are unlimited and behave like ranged gathering hits; Throwing Axe keeps axe gathering.
+      if(!net.room&&best.type==="solid"&&best.obj?.type&&best.obj.alive&&best.obj.type!=="pond"&&best.obj.type!=="river"){
+        if(p.kind==="throwAxe") gatherResource(best.obj,TOOLS.Axe,"Axe");
+        else if(p.kind==="arrow") gatherResource(best.obj,TOOLS.Bow,"Bow",{projectile:true,skipHydration:true});
       }
       if(p.kind==="chakram"&&(best.type==="enemy"||best.type==="wild")){
         if(p.chakramVariant==="emerald"){const h=Math.max(1,(Number(p.dmg)||0)*.22);player.health=clamp(player.health+h,0,player.maxHealth);floatText(player.x,player.y-28,`+${Math.round(h)}`,"#65df8d");}
@@ -20673,9 +20766,10 @@ function relocateOfflineResourceSpawn(r) {
   const pad = Math.max(120, solid + 90);
   const info = BIOME_RESOURCE_INFO[r.type];
   const oceanFloor = r.type === "oceanRock" || info?.biome === "ocean";
-  const biome = info && info.category !== "flower" && info.biome !== "ocean" ? biomeBaseId(info.biome) : "";
+  const originOuter=outerIslandAt(oldX,oldY,0),galaxyOuter=originOuter?.id==="galaxaytropic"?originOuter:null;
+  const biome = info && info.category !== "flower" && info.biome !== "ocean" && info.biome !== "galaxytropic" ? biomeBaseId(info.biome) : "";
   for (let tries = 0; tries < 120; tries++) {
-    const pos = oceanFloor ? randomOceanFloorPoint(OCEAN_DIVE_START+35,1900) : (biome ? randomPointInBiome(biome, pad) : randomLandPoint(pad));
+    const pos = oceanFloor ? randomOceanFloorPoint(OCEAN_DIVE_START+35,1900) : (galaxyOuter ? randomPointOnOuterIsland(galaxyOuter,pad) : (biome ? randomPointInBiome(biome, pad) : randomLandPoint(pad)));
     if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue;
     // A harvested object never simply grows back on the exact old tile.
     if (dist(pos.x, pos.y, oldX, oldY) < 760) continue;
@@ -20685,6 +20779,9 @@ function relocateOfflineResourceSpawn(r) {
     if (nearPet) continue;
     if(oceanFloor){
       let blocked=false;for(const q of queryStaticNearby("resources",pos.x,pos.y,solid+75)){if(!q||q===r||!q.alive)continue;const qOcean=q.type==="oceanRock"||BIOME_RESOURCE_INFO[q.type]?.biome==="ocean";if(qOcean&&dist(pos.x,pos.y,q.x,q.y)<solid+(Number(q.solidR)||8)+16){blocked=true;break;}}if(blocked)continue;
+    }else if(galaxyOuter){
+      if(!isInsideOuterIsland(galaxyOuter,pos.x,pos.y,solid+24))continue;
+      let blocked=false;for(const q of queryStaticNearby("resources",pos.x,pos.y,solid+80)){if(!q||q===r||!q.alive)continue;if(dist(pos.x,pos.y,q.x,q.y)<solid+(Number(q.solidR)||10)+12){blocked=true;break;}}if(blocked)continue;
     }else if (solidOverlaps(pos.x, pos.y, solid + 10)) continue;
     r.x = pos.x; r.y = pos.y;
     if (r.type === "log") r.rot = rand(0, TAU);
@@ -23250,7 +23347,7 @@ function useBucket(){
 }
 function killPlayerFromDeepOcean(){
   if(player.dead||game.over)return;
-  player.health=0;player.dead=true;player.splitT=0;player.vehicleType="";player.vehicleTier=0;player.vehicleVariant="";player._underwaterBlend=0;player._blueSeaweedUntil=0;
+  player.health=0;player.dead=true;player.splitT=0;player.vehicleType="";player.vehicleTier=0;player.vehicleVariant="";player._underwaterBlend=0;player._blueSeaweedUntil=0;player.oxygen=0;player.oxygenMax=0;updateOxygenHud();
   clearSkillChoiceUi();unlockAchievement("first_death");game.firstLightReady=false;
   setKilledBy(player,null);beginDeathCamera(null);sfx.die();
 }
@@ -23264,15 +23361,31 @@ function updateOceanTravelState(dt){
   const floorTarget=(walkingFloor||subFloor)?clamp((depth-OCEAN_SURFACE_NEAR_SHORE)/(OCEAN_DIVE_START-OCEAN_SURFACE_NEAR_SHORE),0,1):0;
   player._underwaterBlend+=(floorTarget-(Number(player._underwaterBlend)||0))*Math.min(1,dt*3.2);
   if(nearShore&&player._underwaterBlend<.025)player._underwaterBlend=0;
-  if(!net.room&&!player.dead&&!player.vehicleType&&biome==="ocean"&&!blueSeaweedProtectionActive()&&!divingSuitActive()){
-    const rate=oceanDepthDamageRateAt(player.x,player.y);
+
+  // Scuba oxygen is a finite tank. Shore/shallow water is the refill point;
+  // Blue/Celest water powers pause tank use. A Sub never consumes suit oxygen.
+  if(divingSuitActive()){
+    const max=divingSuitOxygenMaxSeconds();
+    if(!(Number(player.oxygenMax)>0)||Math.abs((Number(player.oxygenMax)||0)-max)>.01){
+      const oldMax=Math.max(0,Number(player.oxygenMax)||0),old=Math.max(0,Number(player.oxygen)||0);
+      player.oxygenMax=max;player.oxygen=oldMax>0?clamp(old/oldMax*max,0,max):max;
+    }
+    const breathing=biome!=="ocean"||depth<=OCEAN_SURFACE_NEAR_SHORE+24;
+    if(breathing)player.oxygen=Math.min(max,(Number(player.oxygen)||0)+Math.max(10,max*.24)*dt);
+    else if(walkingFloor&&!blueSeaweedProtectionActive())player.oxygen=Math.max(0,(Number(player.oxygen)||0)-divingSuitOxygenDrainMul()*dt);
+  }else{player.oxygen=0;player.oxygenMax=0;}
+  updateOxygenHud();
+
+  if(!net.room&&!player.dead&&!player.vehicleType&&biome==="ocean"&&!blueSeaweedProtectionActive()){
+    const suit=divingSuitActive(),outOfAir=suit&&walkingFloor&&(Number(player.oxygen)||0)<=.001;
+    let rate=suit?(outOfAir?Math.max(6,oceanDepthDamageRateAt(player.x,player.y))*divingSuitSuffocationMul():0):oceanDepthDamageRateAt(player.x,player.y);
     if(rate>0){
       player.health=Math.max(0,player.health-rate*dt*runDefenseMul());
       player._oceanDamageFxCd=Math.max(0,(Number(player._oceanDamageFxCd)||0)-dt);
       if(player._oceanDamageFxCd<=0){
         player._oceanDamageFxCd=.72;player.hurtFlash=.18;game.shake=Math.max(game.shake||0,3.2);
-        floatText(player.x,player.y-34,`-${Math.max(1,Math.round(rate*.72))} DEEP WATER`,"#8edbff");
-        const now=performance.now();if(now-(Number(player._oceanDamageWarnAt)||0)>3200){player._oceanDamageWarnAt=now;banner("Deep water hurts — eat Seaweed, wear a Diving Suit, or use a Sub!",true);}
+        floatText(player.x,player.y-34,outOfAir?`-${Math.max(1,Math.round(rate*.72))} NO OXYGEN`:`-${Math.max(1,Math.round(rate*.72))} DEEP WATER`,outOfAir?"#ffd08a":"#8edbff");
+        const now=performance.now();if(now-(Number(player._oceanDamageWarnAt)||0)>3200){player._oceanDamageWarnAt=now;banner(outOfAir?"OXYGEN EMPTY — get back to shore for air!":"Deep water hurts — eat Blue Seaweed, use a Diving Suit, or use a Sub!",true);}
       }
       if(player.health<=0)killPlayerFromDeepOcean();
     }
@@ -23528,8 +23641,9 @@ const HOTBAR_MAX_SLOTS = 10;
 function ensureHotbarInventoryState(){
   if(!Array.isArray(player.hotbarOrder))player.hotbarOrder=["Fist","Bucket"];
   if(!Array.isArray(player.inventoryOrder))player.inventoryOrder=[];
-  const sourceHot=player.hotbarOrder.map(v=>v==="Jungle Berry"?"Jungle Fruit":v).filter(Boolean);
-  const sourceInv=player.inventoryOrder.map(v=>v==="Jungle Berry"?"Jungle Fruit":v).filter(Boolean);
+  const normalizeLegacyHotbarLabel=v=>v==="Jungle Berry"?"Jungle Fruit":v==="Seaweed"?"Blue Seaweed":v;
+  const sourceHot=player.hotbarOrder.map(normalizeLegacyHotbarLabel).filter(Boolean);
+  const sourceInv=player.inventoryOrder.map(normalizeLegacyHotbarLabel).filter(Boolean);
   const hot=[],overflow=[],seenHot=new Set();
   for(const label of sourceHot){if(seenHot.has(label))continue;seenHot.add(label);if(hot.length<HOTBAR_MAX_SLOTS)hot.push(label);else overflow.push(label);}
   player.hotbarOrder=hot;
@@ -23560,7 +23674,9 @@ function ensureHotbarAcquisitionOrder() {
   if((player.biomeMaterials?.honeycomb||0)>0)registerHotbarItem("Honey Comb");
   if((player.biomeMaterials?.honey||0)>0)registerHotbarItem("Honey");
   if((player.biomeMaterials?.seaFruit||0)>0)registerHotbarItem("Sea Fruit");
-  if((player.biomeMaterials?.blueSeaweed||0)>0)registerHotbarItem("Seaweed");
+  if((player.biomeMaterials?.blueSeaweed||0)>0)registerHotbarItem("Blue Seaweed");
+  if((player.biomeMaterials?.greenSeaweed||0)>0)registerHotbarItem("Green Seaweed");
+  if((player.biomeMaterials?.celestFruit||0)>0)registerHotbarItem("Celest Fruit");
 
 }
 function hotbarLabelAvailable(label){
@@ -23568,11 +23684,11 @@ function hotbarLabelAvailable(label){
   if(STARTER_WEAPON_IDS.includes(label))return !!player.owned[label]&&label===primaryWeaponLabel();
   if(HOTBAR_CRAFT_IDS.includes(label))return craftedItemCount(label)>0;
   if(label==="Berry")return (player.berries||0)>0;
-  const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey","Sea Fruit":"seaFruit","Seaweed":"blueSeaweed"}[label];
+  const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey","Sea Fruit":"seaFruit","Blue Seaweed":"blueSeaweed","Green Seaweed":"greenSeaweed","Celest Fruit":"celestFruit"}[label];
   if(mat)return (player.biomeMaterials?.[mat]||0)>0;
   return false;
 }
-function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",SeaFruit:"Sea Fruit",BlueSeaweed:"Seaweed",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill",Boat:"Boat",Sub:"Sub",Chakrams:"Chakrams",Flute:"Flute",BattleBot:"BattleBot",PetArmor:"PetArmor",RepairBuilding:"RepairBuilding"})[special]||"";}
+function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",SeaFruit:"Sea Fruit",BlueSeaweed:"Blue Seaweed",GreenSeaweed:"Green Seaweed",CelestFruit:"Celest Fruit",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill",Boat:"Boat",Sub:"Sub",Chakrams:"Chakrams",Flute:"Flute",BattleBot:"BattleBot",PetArmor:"PetArmor",RepairBuilding:"RepairBuilding"})[special]||"";}
 function swapInventoryIntoHotbar(inLabel,outLabel){
   ensureHotbarInventoryState();
   const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel===primaryWeaponLabel()||!player.inventoryOrder.includes(inLabel))return false;
@@ -23602,7 +23718,9 @@ function getHotbarItems() {
     else if (label === "Honey Comb") entry={tool:null,label:"Honey Comb",special:"HoneyComb",qty:player.biomeMaterials?.honeycomb||0};
     else if (label === "Honey") entry={tool:null,label:"Honey",special:"Honey",qty:player.biomeMaterials?.honey||0};
     else if (label === "Sea Fruit") entry={tool:null,label:"Sea Fruit",special:"SeaFruit",qty:player.biomeMaterials?.seaFruit||0};
-    else if (label === "Seaweed") entry={tool:null,label:"Seaweed",special:"BlueSeaweed",qty:player.biomeMaterials?.blueSeaweed||0};
+    else if (label === "Blue Seaweed") entry={tool:null,label:"Blue Seaweed",special:"BlueSeaweed",qty:player.biomeMaterials?.blueSeaweed||0};
+    else if (label === "Green Seaweed") entry={tool:null,label:"Green Seaweed",special:"GreenSeaweed",qty:player.biomeMaterials?.greenSeaweed||0};
+    else if (label === "Celest Fruit") entry={tool:null,label:"Celest Fruit",special:"CelestFruit",qty:player.biomeMaterials?.celestFruit||0};
     else if (label === "Wall" && craftedItemCount("Wall")>0) entry={tool:null,label:"Wall",special:"Wall",qty:craftedItemCount("Wall")};
     else if (label === "Tower" && craftedItemCount("Tower")>0) entry={tool:null,label:"Tower",special:"Tower",qty:craftedItemCount("Tower")};
     else if (label === "Windmill" && craftedItemCount("Windmill")>0) entry={tool:null,label:"Windmill",special:"Windmill",qty:craftedItemCount("Windmill")};
@@ -23662,7 +23780,9 @@ function iconSvg(name) {
     Berry: '<circle cx="9" cy="15" r="5" fill="#d83d68"/><circle cx="17" cy="15" r="5" fill="#e65a80"/><circle cx="13" cy="10" r="4" fill="#c92e5c"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#6ab04c"/>',
     "Jungle Fruit": '<g><ellipse cx="13" cy="14" rx="8" ry="6.5" fill="#f07a42" stroke="#7c3c20" stroke-width="1.3"/><ellipse cx="10.5" cy="11.5" rx="2.2" ry="1.4" fill="#ffc16c" opacity=".8"/><path d="M13 7 Q16 2 22 5 Q18 9 13 9Z" fill="#3d8a45" stroke="#24572c" stroke-width="1"/></g>',
     "Sea Fruit": '<g><circle cx="13" cy="14" r="7.5" fill="#d58bd7" stroke="#6e3d73" stroke-width="1.4"/><circle cx="10.5" cy="11" r="2.2" fill="#f2c3ee"/><path d="M13 7 Q16 3 20 6" fill="none" stroke="#4f9c72" stroke-width="2" stroke-linecap="round"/></g>',
-    "Seaweed": '<g fill="none" stroke-linecap="round"><path d="M8 23 Q5 16 10 10 Q14 6 10 2" stroke="#48a9c8" stroke-width="3"/><path d="M14 24 Q18 17 14 12 Q10 8 16 4" stroke="#70d7e8" stroke-width="3.2"/><path d="M20 23 Q16 16 21 9" stroke="#3194b8" stroke-width="3"/></g>',
+    "Blue Seaweed": '<g fill="none" stroke-linecap="round"><path d="M8 23 Q5 16 10 10 Q14 6 10 2" stroke="#48a9c8" stroke-width="3"/><path d="M14 24 Q18 17 14 12 Q10 8 16 4" stroke="#70d7e8" stroke-width="3.2"/><path d="M20 23 Q16 16 21 9" stroke="#3194b8" stroke-width="3"/></g>',
+    "Green Seaweed": '<g fill="none" stroke-linecap="round"><path d="M8 23 Q5 16 10 10 Q14 6 10 2" stroke="#3eaa61" stroke-width="3"/><path d="M14 24 Q18 17 14 12 Q10 8 16 4" stroke="#70df89" stroke-width="3.2"/><path d="M20 23 Q16 16 21 9" stroke="#238b4c" stroke-width="3"/></g>',
+    "Celest Fruit": '<g><path d="M14 3 L17 9 L24 10 L19 15 L20 22 L14 19 L8 22 L9 15 L4 10 L11 9 Z" fill="#c584ff" stroke="#5d2c8d" stroke-width="1.4"/><circle cx="12" cy="10" r="2.2" fill="#f4dcff"/></g>',
     "Frost Berry": '<g><circle cx="9" cy="15" r="5" fill="#89b8f2"/><circle cx="17" cy="15" r="5" fill="#b9dcff"/><circle cx="13" cy="10" r="4.2" fill="#76a5e3"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#d9fbff"/><path d="M4 13 L8 11 M18 9 L22 6 M15 20 L19 23" stroke="#effcff" stroke-width="1.4" stroke-linecap="round"/></g>',
     "Cactus A": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
     "Cactus B": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
@@ -23714,7 +23834,7 @@ function syncHotbar() {
     const bucketActive = item.special === "Bucket" && player.heldSpecial === "Bucket";
     const berryActive = item.special === "Berry" && player.heldSpecial === "Berry";
     const honeyCombActive = item.special === "HoneyComb" && player.heldSpecial === "HoneyComb";
-    const biomeFoodActive = (["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","Honey","SeaFruit","BlueSeaweed"].includes(item.special)) && player.heldSpecial === item.special;
+    const biomeFoodActive = (["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","Honey","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(item.special)) && player.heldSpecial === item.special;
     const wallActive = item.label === "Wall" && player.heldSpecial === "Wall";
     const saddleActive = item.label === "Saddle" && player.heldSpecial === "Saddle";
     const towerActive = item.label === "Tower" && player.heldSpecial === "Tower";
@@ -23730,8 +23850,8 @@ function syncHotbar() {
       s.title=sips>0?`Bucket — ${sips} sip${sips===1?"":"s"} left`:"Bucket (empty) — fill it at water";
     } else if (item.special === "Berry") {
       const q = s.querySelector(".qty");if (q) q.textContent = player.berries || 0;s.title = `Berry ×${player.berries || 0} — select it, then click to eat`;
-    } else if(["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","HoneyComb","Honey","SeaFruit","BlueSeaweed"].includes(item.special)){
-      const key={JungleBerry:"jungleBerry",FrostBerry:"frostBerry",GoodCactus:"goodCactus",BadCactus:"badCactus",StoneFruit:"stoneFruit",Honey:"honey",HoneyComb:"honeycomb",SeaFruit:"seaFruit",BlueSeaweed:"blueSeaweed"}[item.special],q=s.querySelector(".qty");if(q)q.textContent=player.biomeMaterials?.[key]||0;
+    } else if(["JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","HoneyComb","Honey","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(item.special)){
+      const key={JungleBerry:"jungleBerry",FrostBerry:"frostBerry",GoodCactus:"goodCactus",BadCactus:"badCactus",StoneFruit:"stoneFruit",Honey:"honey",HoneyComb:"honeycomb",SeaFruit:"seaFruit",BlueSeaweed:"blueSeaweed",GreenSeaweed:"greenSeaweed",CelestFruit:"celestFruit"}[item.special],q=s.querySelector(".qty");if(q)q.textContent=player.biomeMaterials?.[key]||0;
       if(item.special==="GoodCactus"||item.special==="BadCactus")s.title=`Cactus ×${player.biomeMaterials?.[key]||0} — eat to find out`;
       if(item.special==="StoneFruit")s.title=`Stone Fruit ×${player.biomeMaterials?.stoneFruit||0} — -20 hydration; stacks +20% strength and -10% speed for 20s each`;
       if(item.special==="HoneyComb")s.title=`Honey Comb ×${player.biomeMaterials?.honeycomb||0} — hold it for a better tame chance`;
@@ -24413,7 +24533,9 @@ function doCraft(c) {
   pay(c.cost);player.craftedCounts=player.craftedCounts||{};player.craftedTiers=player.craftedTiers||{};player.craftedVariants=player.craftedVariants||{};
   player.craftedCounts[c.id]=craftedItemCount(c.id)+1;player.craftedTiers[c.id]=Math.max(craftedBuildTier(c.id),clamp(Number(c.tier)||0,0,buildMaxTier(c.id)));if(c.variant)player.craftedVariants[c.id]=String(c.variant);
   if(c.id==="Wall")player.wallTier=player.craftedTiers.Wall;if(c.id==="Tower")player.towerTier=player.craftedTiers.Tower;if(c.id==="Saddle"){player.saddleTier=player.craftedTiers.Saddle;player.hasSaddle=true;}if(c.id==="Windmill")player.windmillTier=player.craftedTiers.Windmill;
-  if(HOTBAR_CRAFT_IDS.includes(c.id))registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"||c.id==="BattleBot"?6:4,"craft");sfx.craft();banner(c.id==="DivingSuit"?`Crafted ${buildTierMeta(c.id,c.tier,c.variant).name} — it is equipped automatically for deep-ocean swimming.`:`Crafted 1 ${buildTierMeta(c.id,c.tier,c.variant).name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
+  if(HOTBAR_CRAFT_IDS.includes(c.id))registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"||c.id==="BattleBot"?6:4,"craft");sfx.craft();
+  if(c.id==="DivingSuit"){player.oxygenMax=divingSuitOxygenMaxSeconds();player.oxygen=player.oxygenMax;updateOxygenHud();}
+  banner(c.id==="DivingSuit"?`Crafted ${buildTierMeta(c.id,c.tier,c.variant).name} — oxygen tank full. Return to shore whenever it runs out.`:`Crafted 1 ${buildTierMeta(c.id,c.tier,c.variant).name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
 }
 el("closeCraft").addEventListener("click", () => el("craftOverlay").classList.remove("show"));
 el("craftList").addEventListener("wheel",e=>{e.stopPropagation();},{passive:true});
@@ -24804,11 +24926,11 @@ function drawBackground() {
     ctx.strokeStyle="rgba(169,231,239,.22)";ctx.lineWidth=70;{const p=cachedOuterIslandPath(spec,-30);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,-30);ctx.stroke();}}
     ctx.save();{const p=cachedOuterIslandPath(spec,0);if(p)ctx.clip(p);else{traceOuterIslandPath(spec,0);ctx.clip();}}
     const r=(Number(spec.r)||700)+120,tx0=Math.floor((spec.cx-r)/tile)*tile,tx1=Math.ceil((spec.cx+r)/tile)*tile,ty0=Math.floor((spec.cy-r)/tile)*tile,ty1=Math.ceil((spec.cy+r)/tile)*tile;
-    for(let yy=ty0;yy<=ty1;yy+=tile)for(let xx=tx0;xx<=tx1;xx+=tile){const cx=xx+tile*.5,cy=yy+tile*.5;if(!isInsideOuterIsland(spec,cx,cy,tile*.75))continue;ctx.fillStyle=cachedGroundTileColor(xx,yy,tile);ctx.fillRect(xx,yy,tile+1,tile+1);}
-    for(let yy=ty0;yy<=ty1;yy+=decorStep)for(let xx=tx0;xx<=tx1;xx+=decorStep){const px=xx+decorStep*.5,py=yy+decorStep*.5;if(groundNoise(xx,yy,99)<.30||!isInsideOuterIsland(spec,px,py,145))continue;drawBiomeGroundDecor(px,py,xx,yy);}
+    for(let yy=ty0;yy<=ty1;yy+=tile)for(let xx=tx0;xx<=tx1;xx+=tile){const cx=xx+tile*.5,cy=yy+tile*.5;if(!isInsideOuterIsland(spec,cx,cy,tile*.75))continue;if(spec.biome==="galaxytropic"){const n=groundNoise(xx,yy,731);ctx.fillStyle=n>.66?"#6b3b94":n>.32?"#59317d":"#472461";}else ctx.fillStyle=cachedGroundTileColor(xx,yy,tile);ctx.fillRect(xx,yy,tile+1,tile+1);}
+    if(spec.biome==="galaxytropic"){ctx.fillStyle="rgba(235,205,255,.55)";for(let yy=ty0;yy<=ty1;yy+=150)for(let xx=tx0;xx<=tx1;xx+=150){const px=xx+groundNoise(xx,yy,733)*120,py=yy+groundNoise(xx,yy,739)*120;if(!isInsideOuterIsland(spec,px,py,100)||groundNoise(xx,yy,743)<.42)continue;ctx.beginPath();ctx.arc(px,py,1.5+groundNoise(xx,yy,751)*2.2,0,TAU);ctx.fill();}}else for(let yy=ty0;yy<=ty1;yy+=decorStep)for(let xx=tx0;xx<=tx1;xx+=decorStep){const px=xx+decorStep*.5,py=yy+decorStep*.5;if(groundNoise(xx,yy,99)<.30||!isInsideOuterIsland(spec,px,py,145))continue;drawBiomeGroundDecor(px,py,xx,yy);}
     ctx.restore();
     ctx.strokeStyle="#c7b77b";ctx.lineWidth=110;{const p=cachedOuterIslandPath(spec,52);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,52);ctx.stroke();}}
-    ctx.strokeStyle="rgba(57,91,52,.42)";ctx.lineWidth=25;{const p=cachedOuterIslandPath(spec,110);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,110);ctx.stroke();}}
+    ctx.strokeStyle=spec.biome==="galaxytropic"?"rgba(113,58,165,.62)":"rgba(57,91,52,.42)";ctx.lineWidth=25;{const p=cachedOuterIslandPath(spec,110);if(p)ctx.stroke(p);else{traceOuterIslandPath(spec,110);ctx.stroke();}}
   }
   ctx.restore();
 }
@@ -24846,10 +24968,10 @@ function resourceBiomeStyle(r){
   const biome=biomeBaseId(worldBiomeAt(r.x,r.y));
   return {
     biome,
-    tree: biome==="desert"?{dark:"#7f6a39",mid:"#b8914e",light:"#d6c173"}:biome==="arctic"?{dark:"#476b62",mid:"#7eaa98",light:"#e8f4ff"}:biome==="mountains"?{dark:"#355043",mid:"#567a65",light:"#7ea688"}:biome==="rainforest"?{dark:"#12522a",mid:"#1f803f",light:"#5dd06e"}:{dark:"#1e5d2d",mid:"#2f7c3e",light:"#49a35a"},
-    bush: biome==="desert"?{dark:"#6b873b",mid:"#9bb154",light:"#d64d65"}:biome==="arctic"?{dark:"#6c8aa0",mid:"#93b6ca",light:"#8bb9ff"}:biome==="mountains"?{dark:"#456a58",mid:"#6f967f",light:"#bb4a78"}:biome==="rainforest"?{dark:"#1d6a33",mid:"#2f9a46",light:"#ff7f49"}:{dark:"#286e34",mid:"#4aa858",light:"#d1315c"},
-    rock: biome==="desert"?{base:"#b39164",light:"#d1b58e",dark:"#8b6d4a"}:biome==="arctic"?{base:"#9dc6d6",light:"#def6ff",dark:"#6d95a3"}:biome==="mountains"?{base:"#8f979f",light:"#b9c0c8",dark:"#727981"}:biome==="rainforest"?{base:"#738a77",light:"#9db7a4",dark:"#516457"}:{base:"#8f979f",light:"#aab1b8",dark:"#727981"},
-    log: biome==="desert"?{base:"#9a7547",light:"#c5a06a",dark:"#674b2d"}:biome==="arctic"?{base:"#536d68",light:"#78958e",dark:"#344943"}:biome==="mountains"?{base:"#5c5148",light:"#817166",dark:"#3d3631"}:biome==="rainforest"?{base:"#4a3c24",light:"#665432",dark:"#2b2719"}:{base:"#6a4326",light:"#835334",dark:"#3d2417"}
+    tree: biome==="galaxytropic"?{dark:"#32124b",mid:"#713b9d",light:"#c48cff"}:biome==="desert"?{dark:"#7f6a39",mid:"#b8914e",light:"#d6c173"}:biome==="arctic"?{dark:"#476b62",mid:"#7eaa98",light:"#e8f4ff"}:biome==="mountains"?{dark:"#355043",mid:"#567a65",light:"#7ea688"}:biome==="rainforest"?{dark:"#12522a",mid:"#1f803f",light:"#5dd06e"}:{dark:"#1e5d2d",mid:"#2f7c3e",light:"#49a35a"},
+    bush: biome==="galaxytropic"?{dark:"#3e175f",mid:"#763ea3",light:"#f27cff"}:biome==="desert"?{dark:"#6b873b",mid:"#9bb154",light:"#d64d65"}:biome==="arctic"?{dark:"#6c8aa0",mid:"#93b6ca",light:"#8bb9ff"}:biome==="mountains"?{dark:"#456a58",mid:"#6f967f",light:"#bb4a78"}:biome==="rainforest"?{dark:"#1d6a33",mid:"#2f9a46",light:"#ff7f49"}:{dark:"#286e34",mid:"#4aa858",light:"#d1315c"},
+    rock: biome==="galaxytropic"?{base:"#4a3562",light:"#9c78bd",dark:"#281c39"}:biome==="desert"?{base:"#b39164",light:"#d1b58e",dark:"#8b6d4a"}:biome==="arctic"?{base:"#9dc6d6",light:"#def6ff",dark:"#6d95a3"}:biome==="mountains"?{base:"#8f979f",light:"#b9c0c8",dark:"#727981"}:biome==="rainforest"?{base:"#738a77",light:"#9db7a4",dark:"#516457"}:{base:"#8f979f",light:"#aab1b8",dark:"#727981"},
+    log: biome==="galaxytropic"?{base:"#493052",light:"#8d5fa0",dark:"#28182e"}:biome==="desert"?{base:"#9a7547",light:"#c5a06a",dark:"#674b2d"}:biome==="arctic"?{base:"#536d68",light:"#78958e",dark:"#344943"}:biome==="mountains"?{base:"#5c5148",light:"#817166",dark:"#3d3631"}:biome==="rainforest"?{base:"#4a3c24",light:"#665432",dark:"#2b2719"}:{base:"#6a4326",light:"#835334",dark:"#3d2417"}
   };
 }
 
@@ -24994,8 +25116,11 @@ function drawResource(r) {
       ctx.strokeStyle="#6f3b70";ctx.lineWidth=2.2;for(let i=0;i<14;i++){const a=i/14*TAU;ctx.beginPath();ctx.moveTo(Math.cos(a)*7,Math.sin(a)*7);ctx.lineTo(Math.cos(a)*18,Math.sin(a)*18);ctx.stroke();}ctx.fillStyle="#9b579b";circ(0,0,10);ctx.fillStyle="#e5a1d8";circ(-2,-2,4);
     }else if(r.type==="oceanAnemone"){
       const phase=game.time*2+(r.x+r.y)*.005;ctx.strokeStyle="#e58aa2";ctx.lineWidth=4;ctx.lineCap="round";for(let i=0;i<9;i++){const a=i/9*TAU,w=2+Math.sin(phase+i)*2;ctx.beginPath();ctx.moveTo(Math.cos(a)*4,Math.sin(a)*4);ctx.quadraticCurveTo(Math.cos(a)*12-Math.sin(a)*w,Math.sin(a)*12+Math.cos(a)*w,Math.cos(a)*19,Math.sin(a)*19);ctx.stroke();}ctx.fillStyle="#8e526f";circ(0,0,7);ctx.fillStyle="#f7bfcb";circ(0,0,3);
-    }else if(r.type==="oceanBlueSeaweed"){
-      const phase=game.time*2.1+r.x*.01;ctx.lineCap="round";for(let i=-2;i<=2;i++){ctx.strokeStyle=i%2?"#63d5e4":"#399fbe";ctx.lineWidth=4-Math.abs(i)*.35;ctx.beginPath();ctx.moveTo(i*4,11);ctx.bezierCurveTo(i*5+Math.sin(phase+i)*6,3,i*3-Math.sin(phase*.8+i)*5,-8,i*4+Math.sin(phase+i*.8)*4,-20-Math.abs(i)*2);ctx.stroke();}ctx.fillStyle="#2b7d91";ctx.beginPath();ctx.ellipse(0,10,12,5,0,0,TAU);ctx.fill();
+    }else if(r.type==="oceanBlueSeaweed"||r.type==="oceanGreenSeaweed"){
+      const green=r.type==="oceanGreenSeaweed",phase=game.time*2.1+r.x*.01;ctx.lineCap="round";for(let i=-2;i<=2;i++){ctx.strokeStyle=green?(i%2?"#72df8e":"#369f5f"):(i%2?"#63d5e4":"#399fbe");ctx.lineWidth=4-Math.abs(i)*.35;ctx.beginPath();ctx.moveTo(i*4,11);ctx.bezierCurveTo(i*5+Math.sin(phase+i)*6,3,i*3-Math.sin(phase*.8+i)*5,-8,i*4+Math.sin(phase+i*.8)*4,-20-Math.abs(i)*2);ctx.stroke();}ctx.fillStyle=green?"#287c4b":"#2b7d91";ctx.beginPath();ctx.ellipse(0,10,12,5,0,0,TAU);ctx.fill();
+    }else if(r.type==="galaxyCelestFruit"){
+      ctx.fillStyle="#542277";ctx.strokeStyle="#21122f";ctx.lineWidth=2;for(let i=0;i<6;i++){const a=i/6*TAU;ctx.beginPath();ctx.ellipse(Math.cos(a)*10,Math.sin(a)*10,10,4.5,a,0,TAU);ctx.fill();ctx.stroke();}
+      ctx.fillStyle="#c584ff";ctx.strokeStyle="#5d2c8d";ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?7:14,x=Math.cos(a)*rr,y=Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle="#fff0ff";circ(-3,-4,2.2);
     }else if(r.type==="desertCactusGood"||r.type==="desertCactusBad"){
       const flower=r.type==="desertCactusGood"?"#7a4ab1":"#ff5ac7";
       ctx.fillStyle="#5f9d51";ctx.strokeStyle=ink;ctx.lineWidth=2.5;circ(0,0,13);ctx.stroke();
@@ -25093,7 +25218,7 @@ function drawResource(r) {
       ctx.closePath(); ctx.fill(); ctx.strokeStyle="#20251c";ctx.lineWidth=1.2;ctx.stroke();
       ctx.fillStyle = style.light;
       circ(-11, -14, 10); circ(12, -10, 9); circ(13, 10, 8); circ(-14, 9, 8); circ(0, 2, 12);
-      if(resourceBiomeStyle(r).biome==="arctic"){ctx.fillStyle="#f6fcff";circ(-7,-18,4.2);circ(8,-14,4);circ(6,9,3.8);} else {ctx.fillStyle = "rgba(255,255,255,0.16)"; ctx.beginPath(); ctx.ellipse(-10, -16, 12, 5.4, -0.32, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(10, -9, 9, 4.2, 0.24, 0, TAU); ctx.fill();}
+      if(resourceBiomeStyle(r).biome==="galaxytropic"){ctx.fillStyle="#f5ddff";circ(-9,-15,2.2);circ(11,-8,1.6);circ(5,12,1.8);ctx.fillStyle="#8fe7ff";circ(-13,7,1.4);} else if(resourceBiomeStyle(r).biome==="arctic"){ctx.fillStyle="#f6fcff";circ(-7,-18,4.2);circ(8,-14,4);circ(6,9,3.8);} else {ctx.fillStyle = "rgba(255,255,255,0.16)"; ctx.beginPath(); ctx.ellipse(-10, -16, 12, 5.4, -0.32, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(10, -9, 9, 4.2, 0.24, 0, TAU); ctx.fill();}
     }
   } else if (r.type === "oceanRock") {
     poly([[-20,8],[-15,-10],[-2,-18],[18,-11],[22,6],[10,16],[-12,15]],"#657985","#24333a");ctx.fillStyle="#8fa5aa";ctx.beginPath();ctx.ellipse(-5,-6,9,4,-.25,0,TAU);ctx.fill();ctx.fillStyle="#536b73";ctx.beginPath();ctx.ellipse(8,6,6,3,.3,0,TAU);ctx.fill();
@@ -25111,6 +25236,7 @@ function drawResource(r) {
     if(rb==="desert"){ctx.strokeStyle="#7d5f3e";ctx.lineWidth=2;for(const yy of [-5,4,12]){ctx.beginPath();ctx.moveTo(-17,yy);ctx.quadraticCurveTo(0,yy+3,18,yy-1);ctx.stroke();}}
     else if(rb==="arctic"){ctx.fillStyle="rgba(239,250,255,.92)";ctx.beginPath();ctx.moveTo(-18,-12);ctx.quadraticCurveTo(-4,-27,14,-15);ctx.lineTo(8,-8);ctx.quadraticCurveTo(-4,-14,-18,-6);ctx.closePath();ctx.fill();}
     else if(rb==="mountains"){ctx.strokeStyle="#d8d2e7";ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(-8,-11);ctx.lineTo(-1,-2);ctx.lineTo(-5,8);ctx.moveTo(8,-14);ctx.lineTo(4,-4);ctx.lineTo(13,4);ctx.stroke();}
+    else if(rb==="galaxytropic"){ctx.fillStyle="#e8c8ff";circ(-10,-8,2.1);circ(9,7,1.7);ctx.fillStyle="#74d8ff";circ(3,-13,1.4);}
     else if(rb==="rainforest"){ctx.fillStyle="#4d8a4f";ctx.beginPath();ctx.ellipse(-10,-8,9,5,-.4,0,TAU);ctx.fill();ctx.beginPath();ctx.ellipse(9,9,8,4,.35,0,TAU);ctx.fill();}
     else{ctx.fillStyle="#6e875e";ctx.beginPath();ctx.ellipse(-12,10,6,3,-.2,0,TAU);ctx.fill();}
   } else if (r.type === "log") {
@@ -27211,7 +27337,8 @@ function hostlDrawBucketIcon(full) {
 }
 function hostlDrawBerryIcon(kind="Berry") {
   if(kind==="SeaFruit"){ctx.fillStyle="#d58bd7";ctx.strokeStyle="#6e3d73";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#f2c3ee";ctx.beginPath();ctx.arc(-2.5,-2.5,2,0,TAU);ctx.fill();return;}
-  if(kind==="BlueSeaweed"){ctx.strokeStyle="#59c7de";ctx.lineWidth=3.2;ctx.lineCap="round";for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*4,7);ctx.quadraticCurveTo(i*5+Math.sin(game.time*3+i)*3,0,i*3,-8);ctx.stroke();}return;}
+  if(kind==="BlueSeaweed"||kind==="GreenSeaweed"){ctx.strokeStyle=kind==="GreenSeaweed"?"#54c878":"#59c7de";ctx.lineWidth=3.2;ctx.lineCap="round";for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*4,7);ctx.quadraticCurveTo(i*5+Math.sin(game.time*3+i)*3,0,i*3,-8);ctx.stroke();}return;}
+  if(kind==="CelestFruit"){ctx.fillStyle="#c584ff";ctx.strokeStyle="#5d2c8d";ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?5:10,x=Math.cos(a)*rr,y=Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();ctx.stroke();return;}
   ctx.save();ctx.translate(0,18);
   if(kind==="JungleBerry"){ctx.fillStyle="#f07a42";ctx.strokeStyle="#7c3c20";ctx.lineWidth=1.7;ctx.beginPath();ctx.ellipse(0,0,7.2,5.8,.12,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#3d8a45";ctx.beginPath();ctx.ellipse(3,-6,5,2,-.3,0,TAU);ctx.fill();}
   else if(kind==="FrostBerry"){ctx.fillStyle="#88b8f2";ctx.strokeStyle="#365c8b";ctx.lineWidth=1.2;circ(-3.4,1.5,4.6);ctx.stroke();ctx.fillStyle="#b8dcff";circ(3.3,1.4,4.6);ctx.stroke();ctx.fillStyle="#76a5e3";circ(0,-2.4,4.2);ctx.stroke();}
@@ -27253,6 +27380,32 @@ function hostlDrawSwimmingIconPose(iconFn, swimPhase){
   hostlDrawSwimmingBaseArms(pose, swimPhase, false);
   hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
 }
+function hostlDrawCurrentBow(actor, attackT=0, walkAmt=0, swimming=false, swimPhase=0){
+  const pose=HOSTL_PLAYER_POSES.player,arms=pose.arms,tier=clamp(Math.floor(Number(actor?.toolTiers?.Bow)||0),0,2);
+  const mat=toolMaterialPalette(tier>=1?2:0);
+  const shot=clamp(Number(attackT)||0,0,1),pulse=shot>0?Math.sin(shot*Math.PI):0;
+  const bob=swimming?(4.5+Math.cos(swimPhase)*1.2):walkAmt*.55;
+  // Local +Y is the player's forward direction. The bow is sized around the
+  // CURRENT 40px cube body and current separated blue arm sprites.
+  ctx.save();ctx.translate(0,bob);
+  ctx.strokeStyle="#191817";ctx.lineWidth=5.4;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-22,24);ctx.quadraticCurveTo(0,35,22,24);ctx.stroke();
+  ctx.strokeStyle=mat.base;ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(-22,24);ctx.quadraticCurveTo(0,35,22,24);ctx.stroke();
+  const pullY=8+pulse*5;
+  ctx.strokeStyle=tier>=1?mat.light:"#e8d5a5";ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(-22,24);ctx.lineTo(4,pullY);ctx.lineTo(22,24);ctx.stroke();
+  // Nocked arrow: infinite ammo, fitted between the current hands/body.
+  ctx.strokeStyle="#76502f";ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(4,pullY-1);ctx.lineTo(2,39);ctx.stroke();
+  ctx.fillStyle=tier>=2?"#d9eef5":"#d7d0bb";ctx.strokeStyle="#29343a";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(2,43);ctx.lineTo(-2,35);ctx.lineTo(6,36);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+
+  // Use the player's CURRENT separated arms only. Re-aim those exact arm pieces
+  // around their real shoulders so one hand holds the bow and one pulls string.
+  const left=arms[0],right=arms[1],lp=hostlPoseShoulder(left,-1),rp=hostlPoseShoulder(right,1);
+  const swimBob=swimming?Math.cos(swimPhase*.55)*.5:0;
+  hostlDrawPosePiece(left,6,bob+(swimming?1:0),-.34,lp.x,lp.y);
+  hostlDrawPosePiece(right,-5,bob-4-pulse*3,.42,rp.x,rp.y);
+  hostlDrawPosePiece(pose.body,0,swimBob);
+}
+
 function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
   const poseKey=hostlWeaponPoseKey(actor,holding), pose=HOSTL_PLAYER_POSES[poseKey];
   if(!pose){
@@ -27308,7 +27461,7 @@ function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
 function hostlDrawSwimmingPose(actor, holding, attackT=0){
   const swimPhase=game.time*4.1 + (actor?.x||0)*0.01 + (actor?.y||0)*0.008 + attackT*0.4;
   if(holding==="Bucket") return hostlDrawSwimmingIconPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
-  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed"].includes(holding)) return hostlDrawSwimmingIconPose(()=>hostlDrawBerryIcon(holding),swimPhase);
+  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)) return hostlDrawSwimmingIconPose(()=>hostlDrawBerryIcon(holding),swimPhase);
   if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(()=>hostlDrawHoneyIcon(holding),swimPhase);
   if(holding==="Chakrams") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},swimPhase);
   if(holding==="Flute") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
@@ -27320,6 +27473,7 @@ function hostlDrawSwimmingPose(actor, holding, attackT=0){
     hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
     return;
   }
+  if(holding==="Bow"){hostlDrawCurrentBow(actor,attackT,0,true,swimPhase);return;}
   hostlDrawSwimmingWeaponPose(actor, holding, swimPhase);
 }
 function hostlDrawDaggers(pose, attackT, walkAmt){
@@ -27403,12 +27557,13 @@ function hostlRenderModernPlayer(actor,opts={}){
     hostlDrawPosePiece(pose.body);return;
   }
   if(holding==="Bucket"){hostlDrawPlayerItemPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),walkAmt);return;}
-  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed"].includes(holding)){hostlDrawPlayerItemPose(()=>hostlDrawBerryIcon(holding),walkAmt);return;}
+  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)){hostlDrawPlayerItemPose(()=>hostlDrawBerryIcon(holding),walkAmt);return;}
   if(holding==="HoneyComb"||holding==="Honey"){hostlDrawPlayerItemPose(()=>hostlDrawHoneyIcon(holding),walkAmt);return;}
   if(holding==="Chakrams"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},walkAmt);return;}
   if(holding==="Flute"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},walkAmt);return;}
   if(holding==="Wall"||holding==="Tower"||holding==="Windmill"){hostlDrawPlayerItemPose(hostlDrawWallIcon,walkAmt);return;}
   if(holding==="Saddle"){hostlDrawPlayerItemPose(hostlDrawSaddleIcon,walkAmt);return;}
+  if(holding==="Bow"){hostlDrawCurrentBow(actor,attackT,walkAmt,false,0);return;}
   const poseKey=hostlWeaponPoseKey(actor,holding),pose=HOSTL_PLAYER_POSES[poseKey];
   if((holding==="Axe"||holding==="Sword")&&pose){
     if(poseKey==="axeThrow"&&throwingAxeOutForActor(actor)){hostlDrawPoseBase("player",walkAmt);return;}
@@ -27417,8 +27572,8 @@ function hostlRenderModernPlayer(actor,opts={}){
     if(poseKey==="axeDouble"){hostlDrawDoubleAxe(pose,attackT,walkAmt);return;}
     hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt);return;
   }
-  // Pickaxe/Bow and other lines that did not receive new Sep art keep their old tool drawing,
-  // but tools still render under the hands.
+  // Pickaxe and other lines that did not receive new Sep art keep their old tool drawing.
+  // Bow has its own current-player pose above, so the old procedural arms are never used for it.
   const base=HOSTL_PLAYER_POSES.player;
   drawTwoHandWeapon(holding,HOSTL_LOCKED_PLAYER_COLOR,opts.swingEase||0,walkAmt*2.2,actor);
   for(let i=0;i<base.arms.length;i++)hostlDrawPosePiece(base.arms[i],0,(i%2?-walkAmt:walkAmt));
@@ -28929,7 +29084,7 @@ function resetGame(options = {}) {
   player.tool = "Fist";
   player.lastWeaponTool = "Fist";
   player.heldSpecial = null;
-  player.vehicleType="";player._vehicleExitRequestedAt=0;player._underwaterBlend=0;player._oceanDamageWarnAt=0;player._blueSeaweedUntil=0;
+  player.vehicleType="";player._vehicleExitRequestedAt=0;player._underwaterBlend=0;player._oceanDamageWarnAt=0;player._blueSeaweedUntil=0;player.oxygen=0;player.oxygenMax=0;player._oxygenWarnAt=0;updateOxygenHud();
   player.owned={Fist:true,Axe:false,Pickaxe:false,Sword:false,Bow:false,TigerClaws:false,BoxingGloves:false};
   player.hotbarOrder=["Fist","Bucket"];player.inventoryOrder=[];player._inventorySwapCandidate="";
   if (player.berries > 0) registerHotbarItem("Berry");

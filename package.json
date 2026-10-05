@@ -1,6 +1,6 @@
 {
   "name": "hostl-full-multiplayer-server",
-  "version": "0.16.86",
+  "version": "0.16.87",
   "private": true,
   "type": "module",
   "scripts": {
