@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "729";
+const CUBE_SHARED_RULES_VERSION = "730";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1100,11 +1100,14 @@ function animalPhysicalCirclesBase(a){
     const cutBack={baby:.16,adult:.18,boss:.20,superboss:.22,bigmomma:.24}[collisionAnimal.stage]||.18;
     const mounted=a?._mountedCollision?0.92:1;
     return [
-      {x:body.x,y:body.y,r:Math.max(3,r*stageBody*mounted)},
-      {x:skull.x-Math.cos(ang)*r*cutBack,y:skull.y-Math.sin(ang)*r*cutBack,r:Math.max(2.4,r*stageHead*mounted)}
+      {x:body.x,y:body.y,r:Math.max(3,r*stageBody*mounted)}
     ];
   }
-  const physical=hits.length>1?hits.slice(0,hits.length-1):hits.slice();
+  // Torso collision only; animalPhysicalCircles() adds the exact visible-head
+  // copy afterward so there is never a second hidden skull hitbox.
+  const hasUploadedHead=!!uploadedAnimalVisibleDimensions(collisionAnimal?.type,collisionAnimal?.stage);
+  const headPartCount=Math.min(hits.length,hasUploadedHead?2:3);
+  const physical=hits.length>headPartCount?hits.slice(0,hits.length-headPartCount):hits.slice(0,1);
   // Movement collision hugs the visible silhouette; the omitted last circle is
   // the muzzle tip, and the remaining skull is pulled back slightly below.
   let radiusMul=.94;
@@ -1176,7 +1179,7 @@ function animalPhysicalCircles(a){
   const hits=animalPhysicalCirclesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=a?.hostileRiderMount?Object.assign({},a,{type:"wolf"}):a;
-  // Mounting never changes the rule: full-size visible-head copy shifted 4 px backward.
+  // Head collision is the exact visible-head copy at the exact visible-head position.
   for(const head of animalSolidHeadGeometries(collisionAnimal))hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   return hits;
 }
@@ -1190,32 +1193,38 @@ function animalProjectileTouch(a,x,y,radius=0){
   for(const h of animalTargetDamageCircles({kind:"animal"},a))if(dist(x,y,h.x,h.y)<radius+h.r)return true;
   return false;
 }
-function animalFaceGeometry(a){
+function animalVisibleHeadGeometries(a){
+  // Exact-position visible-head copy: same size and same position as the head
+  // geometry used by the client. No shrink and no four-pixel offset.
+  if(!a)return[];
+  const ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),r=Math.max(4,Number(a.r)||18);
+  if(a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee"){
+    const queen=a.type==="queenbee",worker=a.type==="workerbee";
+    const bodyLen=queen?r*1.60:worker?r*1.36:r*1.18;
+    const headR=queen?r*.34:worker?r*.30:r*.27;
+    const headForward=-r*.04+bodyLen*.42;
+    return[{x:(Number(a.x)||0)+ca*headForward,y:(Number(a.y)||0)+sa*headForward,r:headR}];
+  }
   const hits=animalHitCircles(a);
   if(hits.length){
-    const nose=hits[hits.length-1],scale=animalHeadHitboxScale(a?.type);
-    return{x:nose.x,y:nose.y,r:Math.max(animalHitboxMinRadius(a)*.72,nose.r*scale)};
+    const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage),count=Math.min(hits.length,hasUploaded?2:3);
+    return hits.slice(hits.length-count).map(h=>({x:h.x,y:h.y,r:h.r}));
   }
-  const r=Math.max(4,Number(a?.r)||18),angle=Number(a?.angle)||0,scale=animalHeadHitboxScale(a?.type);
-  return{x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
+  return[{x:(Number(a.x)||0)+ca*r*.92,y:(Number(a.y)||0)+sa*r*.92,r:Math.max(3,r*.34)}];
 }
-function animalSolidHeadGeometries(a){
-  // Universal collision rule: full-size copy of the visible head shifted exactly
-  // four world pixels backward. No species/stage/mounted scaling exceptions.
-  if(!a)return[];
-  const ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),back=4,r=Math.max(4,Number(a.r)||18);
-  const shift=h=>({x:h.x-ca*back,y:h.y-sa*back,r:h.r});
-  const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
-  if(bee){
-    const profiles={queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}};
-    const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60],side=pr[1]*r,skullForward=pr[0]*r,skullR=Math.max(4,r*pr[2]);
-    const skull=shift({x:(Number(a.x)||0)+ca*skullForward-sa*side,y:(Number(a.y)||0)+sa*skullForward+ca*side,r:skullR});
-    const front=shift({x:(Number(a.x)||0)+ca*(skullForward+skullR*.44)-sa*side,y:(Number(a.y)||0)+sa*(skullForward+skullR*.44)+ca*side,r:Math.max(3,skullR*.56)});
-    return[skull,front];
+function animalSolidHeadGeometries(a){return animalVisibleHeadGeometries(a);}
+function animalFaceGeometry(a){
+  // Bite/attack range is a separate contact zone immediately in front of the
+  // solid head copy, never a replacement for the head collision itself.
+  const heads=animalVisibleHeadGeometries(a),ang=Number(a?.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang);
+  if(heads.length){
+    const ax=Number(a?.x)||0,ay=Number(a?.y)||0;let front=heads[0],frontEdge=-Infinity;
+    for(const h of heads){const along=(h.x-ax)*ca+(h.y-ay)*sa+h.r;if(along>frontEdge){frontEdge=along;front=h;}}
+    const attackR=Math.max(2.2,front.r*.34),forward=front.r+attackR*.72;
+    return{x:front.x+ca*forward,y:front.y+sa*forward,r:attackR};
   }
-  const hits=animalHitCircles(a);
-  if(hits.length){const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage),count=Math.min(hits.length,hasUploaded?2:3);return hits.slice(hits.length-count).map(shift);}
-  const face=animalFaceGeometry(a);return face?[shift({...face,r:Math.max(3.2,face.r)})]:[];
+  const r=Math.max(4,Number(a?.r)||18);
+  return{x:(Number(a?.x)||0)+ca*r*1.28,y:(Number(a?.y)||0)+sa*r*1.28,r:Math.max(2.2,r*.14)};
 }
 function animalSolidHeadGeometry(a){const hs=animalSolidHeadGeometries(a);if(!hs.length)return null;return hs.reduce((best,h)=>!best||h.r>best.r?h:best,null);}
 function animalTargetDamageCircles(ref,target){

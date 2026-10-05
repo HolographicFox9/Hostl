@@ -6454,7 +6454,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "729";
+const CUBE_SHARED_RULES_VERSION = "730";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -9251,56 +9251,64 @@ function animalAttackCooldown(type, stage, owned = false) {
 
 // Physical animal melee only connects when the attacker's HEAD overlaps the target.
 // This mirrors the visible head geometry closely enough that bites feel contact-based.
-function animalHeadHitbox(a) {
-  // Bite contact uses only the species-sized face/muzzle area. Different animals
-  // have different head proportions; there is no shared generic bite bubble.
-  const hits=animalBodyHitboxes(a);
-  if(hits.length){
-    const nose=hits[hits.length-1];
-    const scale=animalHeadHitboxScale(a?.type);
-    return {x:nose.x,y:nose.y,r:Math.max(animalHitboxMinRadius(a)*.72,nose.r*scale)};
-  }
-  const r=Math.max(4,Number(a?.r)||18),angle=Number(a?.angle)||0;
-  const scale=animalHeadHitboxScale(a?.type);
-  return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
-}
-function animalSolidHeadHitboxes(a) {
-  // One rule for every species/stage, including bees: the solid head collision
-  // is a FULL-SIZE copy of the visible head geometry shifted 4 world pixels
-  // backward along the animal's facing direction. Nothing is scaled smaller.
+function animalVisibleHeadHitboxes(a) {
+  // The solid head is the same head geometry the animal is built from, at the
+  // same position and size. No shrinking and no forward/backward offset.
   if (!a) return [];
   const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
-  const back=4;
-  const shift=(h)=>({x:h.x-ca*back,y:h.y-sa*back,r:h.r});
   const r=Math.max(4,Number(a.r)||18);
-  const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
 
-  // Bee heads use their uploaded-art proportions, but no size reduction.
-  if (bee) {
-    const profiles={
-      queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
-      workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},
-      dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}
-    };
-    const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60];
-    const side=pr[1]*r, skullR=Math.max(4,r*pr[2]), skullForward=pr[0]*r;
-    const skull=shift({x:(Number(a.x)||0)+ca*skullForward-sa*side,y:(Number(a.y)||0)+sa*skullForward+ca*side,r:skullR});
-    const frontForward=skullForward+skullR*.44;
-    const front=shift({x:(Number(a.x)||0)+ca*frontForward-sa*side,y:(Number(a.y)||0)+sa*frontForward+ca*side,r:Math.max(3,skullR*.56)});
-    return [skull,front];
+  // Bees are drawn with one round head part. Match that exact head part rather
+  // than borrowing a generic muzzle circle from another animal.
+  if (a.type==="queenbee" || a.type==="workerbee" || a.type==="dronebee") {
+    const queen=a.type==="queenbee", worker=a.type==="workerbee";
+    const bodyLen=queen?r*1.60:worker?r*1.36:r*1.18;
+    const headR=queen?r*.34:worker?r*.30:r*.27;
+    const headForward=-r*.04+bodyLen*.42;
+    return [{
+      x:(Number(a.x)||0)+ca*headForward,
+      y:(Number(a.y)||0)+sa*headForward,
+      r:headR
+    }];
   }
 
   const hits=animalBodyHitboxes(a);
   if (hits.length) {
-    // Separated-art animals use the actual front/head circles for that stage;
-    // procedural animals use the front three head sections. Keep their full size.
+    // The front circles are the collision copy of the same head/front pieces
+    // used by the renderer. Uploaded/separated animals use their final two head
+    // sections; procedural animals use the final three sections that build the head.
     const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage);
     const count=Math.min(hits.length,hasUploaded?2:3);
-    return hits.slice(hits.length-count).map(shift);
+    return hits.slice(hits.length-count).map(h=>({x:h.x,y:h.y,r:h.r}));
   }
 
-  const face=animalHeadHitbox(a);
-  return face?[shift({...face,r:Math.max(3.2,face.r)})]:[];
+  return [{
+    x:(Number(a.x)||0)+ca*r*.92,
+    y:(Number(a.y)||0)+sa*r*.92,
+    r:Math.max(3,r*.34)
+  }];
+}
+function animalSolidHeadHitboxes(a) {
+  return animalVisibleHeadHitboxes(a);
+}
+function animalHeadHitbox(a) {
+  // Attack/bite range is a separate small contact zone directly in front of
+  // the real solid head copy. It does not replace or resize the head hitbox.
+  const heads=animalVisibleHeadHitboxes(a);
+  const ang=Number(a?.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
+  if(heads.length){
+    let front=heads[0],frontEdge=-Infinity;
+    const ax=Number(a?.x)||0, ay=Number(a?.y)||0;
+    for(const h of heads){
+      const along=(h.x-ax)*ca+(h.y-ay)*sa+h.r;
+      if(along>frontEdge){frontEdge=along;front=h;}
+    }
+    const attackR=Math.max(2.2,front.r*.34);
+    const forward=front.r+attackR*.72;
+    return {x:front.x+ca*forward,y:front.y+sa*forward,r:attackR};
+  }
+  const r=Math.max(4,Number(a?.r)||18);
+  return {x:(Number(a?.x)||0)+ca*r*1.28,y:(Number(a?.y)||0)+sa*r*1.28,r:Math.max(2.2,r*.14)};
 }
 function animalSolidHeadHitbox(a) {
   // Compatibility helper for code that needs one representative head circle.
@@ -13018,16 +13026,19 @@ function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
     px: tailPivotX,
     py: centerY
   };
+  const foxHeadSeamOverlap = a.type === "fox" ? 0 : overlap;
   const bodyPart = {
     sx: Math.max(box.x, Math.round(tailEnd - overlap)),
     sy: box.y,
-    sw: Math.max(1, Math.round((headStart - tailEnd) + overlap * 2)),
+    // Fox attacks move the head forward. Do not leave any stationary copy of
+    // the fox head inside the torso crop or it looks like a second head.
+    sw: Math.max(1, Math.round((headStart - tailEnd) + overlap + foxHeadSeamOverlap)),
     sh: box.h
   };
   const headPart = {
-    sx: Math.max(box.x, Math.round(headStart - overlap)),
+    sx: Math.max(box.x, Math.round(headStart - foxHeadSeamOverlap)),
     sy: box.y,
-    sw: Math.max(1, Math.round((box.x + box.w) - (headStart - overlap))),
+    sw: Math.max(1, Math.round((box.x + box.w) - (headStart - foxHeadSeamOverlap))),
     sh: box.h,
     px: headPivotX,
     py: centerY
@@ -17120,14 +17131,15 @@ function animalPhysicalHitboxesBase(a) {
     const cutBack = ({baby:0.16,adult:0.18,boss:0.20,superboss:0.22,bigmomma:0.24})[collisionAnimal.stage] || 0.18;
     const mountedMul = (typeof player !== "undefined" && player?.riding === a) ? 0.92 : 1;
     return [
-      { x:body.x, y:body.y, r:Math.max(3, r * bodyMul * mountedMul) },
-      { x:skull.x - Math.cos(ang)*r*cutBack, y:skull.y - Math.sin(ang)*r*cutBack, r:Math.max(2.4, r * headMul * mountedMul) }
+      { x:body.x, y:body.y, r:Math.max(3, r * bodyMul * mountedMul) }
     ];
   }
 
-  // Drop only the final nose/muzzle-tip circle. The circle directly behind it is
-  // the solid head/skull zone and is kept at a reduced radius.
-  const physical = hits.length > 1 ? hits.slice(0, hits.length - 1) : hits.slice();
+  // Torso collision is handled here; the exact visible-head copy is added by
+  // animalPhysicalHitboxes() below. Do not leave a second hidden skull bubble.
+  const hasUploadedHead = !!uploadedAnimalVisibleDimensions(collisionAnimal?.type, collisionAnimal?.stage);
+  const headPartCount = Math.min(hits.length, hasUploadedHead ? 2 : 3);
+  const physical = hits.length > headPartCount ? hits.slice(0, hits.length - headPartCount) : hits.slice(0, 1);
 
   // Multi-circle movement collision now hugs the visible animal silhouette.
   // The muzzle-tip circle is omitted so the snout can poke through slightly.
@@ -17229,7 +17241,7 @@ function animalPhysicalHitboxes(a){
   const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
-  // Mounting never changes the rule: full-size visible-head copy, shifted 4 px backward.
+  // The head collision is the exact visible-head copy at the exact visible-head position.
   for(const head of animalSolidHeadHitboxes(collisionAnimal)){
     hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   }
@@ -25946,16 +25958,19 @@ function drawCustomDesignedPet(a) {
     px: tailPivotX,
     py: centerY
   };
+  const foxHeadSeamOverlap = a.type === "fox" ? 0 : overlap;
   const bodyPart = {
     sx: Math.max(box.x, Math.round(tailEnd - overlap)),
     sy: box.y,
-    sw: Math.max(1, Math.round((headStart - tailEnd) + overlap * 2)),
+    // Keep the moving Fox head out of the stationary torso crop so attacking
+    // never reveals a second head underneath it.
+    sw: Math.max(1, Math.round((headStart - tailEnd) + overlap + foxHeadSeamOverlap)),
     sh: box.h
   };
   const headPart = {
-    sx: Math.max(box.x, Math.round(headStart - overlap)),
+    sx: Math.max(box.x, Math.round(headStart - foxHeadSeamOverlap)),
     sy: box.y,
-    sw: Math.max(1, Math.round((box.x + box.w) - (headStart - overlap))),
+    sw: Math.max(1, Math.round((box.x + box.w) - (headStart - foxHeadSeamOverlap))),
     sh: box.h,
     px: headPivotX,
     py: centerY
