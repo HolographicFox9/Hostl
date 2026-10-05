@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "727";
+const CUBE_SHARED_RULES_VERSION = "728";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1176,8 +1176,8 @@ function animalPhysicalCircles(a){
   const hits=animalPhysicalCirclesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=a?.hostileRiderMount?Object.assign({},a,{type:"wolf"}):a;
-  const mounted=a?._mountedCollision?.94:1;
-  for(const head of animalSolidHeadGeometries(collisionAnimal))hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mounted)});
+  // Mounting never changes head size; keep the same universal 98% copy.
+  for(const head of animalSolidHeadGeometries(collisionAnimal))hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   return hits;
 }
 function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
@@ -1200,11 +1200,12 @@ function animalFaceGeometry(a){
   return{x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
 function animalHeadCopyStageSqueeze(stage){
-  return ({baby:{length:.940,radius:.950},adult:{length:.950,radius:.960},boss:{length:.955,radius:.965},superboss:{length:.960,radius:.970},bigmomma:{length:.965,radius:.975}})[stage]||{length:.950,radius:.960};
+  // Universal rule: every visible animal head uses a 98% solid copy.
+  return {length:.980,radius:.980};
 }
 function animalSolidHeadGeometries(a){
-  // Server-authoritative copy of the client's slightly squeezed visible head.
-  // This replaces the old species/stage exceptions that made some heads tiny.
+  // Server-authoritative 98% copy of the client's visible head geometry.
+  // No species/stage/mounted size exceptions.
   if(!a)return[];
   const sq=animalHeadCopyStageSqueeze(a.stage),ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),r=Math.max(4,Number(a.r)||18);
   const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
@@ -1219,7 +1220,7 @@ function animalSolidHeadGeometries(a){
   const hits=animalHitCircles(a);
   if(hits.length){
     const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage),count=Math.min(hits.length,hasUploaded?2:3),src=hits.slice(hits.length-count),anchor=src[0];
-    return src.map((h,i)=>{const t=src.length<=1?1:i/(src.length-1),localLength=1-(1-sq.length)*t,tipRadiusTrim=1-.035*t;return{x:anchor.x+(h.x-anchor.x)*localLength,y:anchor.y+(h.y-anchor.y)*localLength,r:Math.max(animalHitboxMinRadius(a)*.92,h.r*sq.radius*tipRadiusTrim)};});
+    return src.map((h,i)=>{const t=src.length<=1?1:i/(src.length-1),localLength=1-(1-sq.length)*t;return{x:anchor.x+(h.x-anchor.x)*localLength,y:anchor.y+(h.y-anchor.y)*localLength,r:Math.max(2,h.r*sq.radius)};});
   }
   const face=animalFaceGeometry(a);return face?[{...face,r:Math.max(3.2,face.r*sq.radius)}]:[];
 }

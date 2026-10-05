@@ -6454,7 +6454,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "727";
+const CUBE_SHARED_RULES_VERSION = "728";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -9265,21 +9265,13 @@ function animalHeadHitbox(a) {
   return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
 function animalHeadCopyStageSqueeze(stage) {
-  // Invisible copy of the rendered head. Only a LITTLE smaller than the art so
-  // the very end of the snout can pass an obstacle while the actual skull/head
-  // remains solid. Each growth stage keeps its own proportional copy.
-  return ({
-    baby:      { length:0.940, radius:0.950 },
-    adult:     { length:0.950, radius:0.960 },
-    boss:      { length:0.955, radius:0.965 },
-    superboss: { length:0.960, radius:0.970 },
-    bigmomma:  { length:0.965, radius:0.975 }
-  })[stage] || { length:0.950, radius:0.960 };
+  // One rule for every species and every growth stage: the solid invisible
+  // head copy is exactly 2% smaller than the visible head geometry.
+  return { length:0.980, radius:0.980 };
 }
 function animalSolidHeadHitboxes(a) {
-  // Build the movement/damage head collision from a slightly squeezed COPY of
-  // the same front/head geometry used by this exact species + stage. This is
-  // intentionally much fuller than the old tiny skull bubble.
+  // Build movement/damage head collision from a 98%-scale invisible COPY of
+  // the same front/head geometry used by this exact species + stage.
   if (!a) return [];
   const stageSq = animalHeadCopyStageSqueeze(a.stage);
   const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
@@ -9287,8 +9279,7 @@ function animalSolidHeadHitboxes(a) {
   const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
 
   // Bee Sep art has a much larger head than the old generic radius-chain nose.
-  // Keep the uploaded-art proportions, then squeeze the invisible copy only a
-  // few percent and add a smaller front lobe for the muzzle/front of the head.
+  // Keep the uploaded-art proportions and apply the same universal 98% copy.
   if (bee) {
     const profiles={
       queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
@@ -9324,15 +9315,12 @@ function animalSolidHeadHitboxes(a) {
     const anchor=src[0];
     return src.map((h,i)=>{
       const t=src.length<=1?1:i/(src.length-1);
-      // Squeeze the copy toward the back of the head instead of deleting the
-      // snout. The tip gets only a tiny additional trim so players can pass the
-      // outermost nose pixels, but not the whole head.
+      // Uniform 2% scale-down of the whole head copy; no extra snout/stage trim.
       const localLength=1-(1-stageSq.length)*t;
-      const tipRadiusTrim=1-.035*t;
       return {
         x:anchor.x+(h.x-anchor.x)*localLength,
         y:anchor.y+(h.y-anchor.y)*localLength,
-        r:Math.max(animalHitboxMinRadius(a)*.92,h.r*stageSq.radius*tipRadiusTrim)
+        r:Math.max(2,h.r*stageSq.radius)
       };
     });
   }
@@ -17164,9 +17152,9 @@ function animalPhysicalHitboxes(a){
   const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
-  const mountedMul=(typeof player!=="undefined"&&player?.riding===a)?.94:1;
+  // Mounting never changes head size. The same 98% head copy is used always.
   for(const head of animalSolidHeadHitboxes(collisionAnimal)){
-    hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mountedMul)});
+    hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   }
   return hits;
 }
