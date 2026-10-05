@@ -14,7 +14,8 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "717";
+const CUBE_SHARED_RULES_VERSION = "719";
+function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
   if (typeof hooks.resolveSession === "function") HOSTL_ACCOUNT_HOOKS.resolveSession = hooks.resolveSession;
@@ -31,6 +32,22 @@ export function configureHostlAccountHooks(hooks={}) {
 
 
 // ---------- Game 388 multiplayer chat safety ----------
+
+// Invisible duplicate hitboxes traced from the same five uploaded biome rock SVG silhouettes.
+// Keep this geometry in sync with the browser client so multiplayer correction never
+// snaps a player back to the old oversized circular rock collision.
+const BASIC_ROCK_HITBOX_POLYS = Object.freeze({
+  forest:[[8.17,-24.04],[-14.45,-18.42],[-26.58,-1.67],[-8.58,22.33],[19.92,15.08],[26.67,-10.67]],
+  rainforest:[[18.56,-19.38],[8.18,-23.13],[-5.69,-22.88],[-14.69,-17.50],[-22.32,-15.88],[-26.57,-0.38],[-19.94,13.00],[-8.82,23.00],[5.56,22.75],[19.68,15.87],[25.68,4.62],[26.43,-9.75]],
+  mountains:[[-11.53,-26.39],[-23.90,-10.89],[-28.15,2.49],[-15.28,20.49],[3.10,27.61],[26.10,16.49],[28.85,-7.39],[17.72,-22.26]],
+  desert:[[-32.77,2.86],[-17.64,15.99],[-8.39,15.86],[7.23,22.11],[18.98,21.24],[23.73,18.24],[26.48,-5.51],[16.73,-20.76],[11.11,-14.39],[3.36,-23.14],[-14.02,-24.51],[-22.77,-7.89]],
+  arctic:[[9.43,-29.23],[3.56,-23.36],[-10.07,-25.48],[-22.19,-11.36],[-26.94,2.64],[-15.94,14.39],[-11.82,30.02],[0.43,27.14],[17.93,27.14],[25.68,16.64],[21.93,9.89],[23.93,-14.48]]
+});
+function rockPointInsidePoly(px,py,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/((yj-yi)||1e-9)+xi))inside=!inside;}return inside;}
+function rockCirclePolyPenetration(cx,cy,cr,poly){let bestD2=Infinity,bx=0,by=0;for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],vx=b[0]-a[0],vy=b[1]-a[1],den=vx*vx+vy*vy,t=den>1e-9?clamp(((cx-a[0])*vx+(cy-a[1])*vy)/den,0,1):0,qx=a[0]+vx*t,qy=a[1]+vy*t,dx=cx-qx,dy=cy-qy,d2=dx*dx+dy*dy;if(d2<bestD2){bestD2=d2;bx=qx;by=qy;}}const inside=rockPointInsidePoly(cx,cy,poly),d=Math.sqrt(Math.max(0,bestD2));if(!inside&&d>=cr)return null;let nx=1,ny=0,overlap=0;if(inside){if(d>1e-6){nx=(bx-cx)/d;ny=(by-cy)/d;}overlap=cr+d;}else{if(d>1e-6){nx=(cx-bx)/d;ny=(cy-by)/d;}overlap=cr-d;}return{nx,ny,overlap:Math.max(0,overlap),distance:d,inside};}
+function basicRockCirclePenetration(r,x,y,radius=0){if(!r||r.type!=="rock")return null;const poly=BASIC_ROCK_HITBOX_POLYS[biomeBaseId(worldBiomeAt(r.x,r.y))];if(!poly)return null;const sc=Math.max(.01,Number(r.scale)||1),p=rockCirclePolyPenetration((x-r.x)/sc,(y-r.y)/sc,Math.max(0,Number(radius)||0)/sc,poly);return p?{nx:p.nx,ny:p.ny,overlap:p.overlap*sc,distance:p.distance*sc,inside:p.inside}:null;}
+function basicRockBoundRadius(r){if(!r||r.type!=="rock")return Math.max(8,Number(r?.solidR)||12);return 34*Math.max(.01,Number(r.scale)||1);}
+
 const CHAT_MAX_LENGTH = 120;
 const CHAT_COOLDOWN_MS = 650;
 
@@ -830,6 +847,11 @@ function preciseShapeTouchesCircle(shape,x,y,r=0){if(!shape)return false;for(con
 function preciseShapeTouchesAnimal(shape,a){for(const h of animalTargetDamageCircles({kind:"animal"},a))if(preciseShapeTouchesCircle(shape,h.x,h.y,h.r))return true;return false;}
 function preciseShapeTouchesResource(shape,r){
   if(!shape||!r)return false;
+  if(r.type==="rock"){
+    for(const c of shape.circles||[])if(basicRockCirclePenetration(r,c.x,c.y,c.r||0))return true;
+    for(const s of shape.segments||[]){const len=Math.hypot(s.bx-s.ax,s.by-s.ay),steps=Math.max(1,Math.ceil(len/4));for(let i=0;i<=steps;i++){const t=i/steps;if(basicRockCirclePenetration(r,s.ax+(s.bx-s.ax)*t,s.ay+(s.by-s.ay)*t,s.r||0))return true;}}
+    return false;
+  }
   if(r.type==="log"){
     const sc=Number(r.scale)||1,ang=Number(r.rot)||0,ca=Math.cos(ang),sa=Math.sin(ang),half=27*sc,rr=8.8*sc;
     for(const t of[-.82,-.41,0,.41,.82])if(preciseShapeTouchesCircle(shape,r.x+ca*(half*t),r.y+sa*(half*t),rr))return true;
@@ -1637,7 +1659,7 @@ export class WorldRoom extends Room {
     const key=this.gridKey(Math.floor((Number(oldX)||0)/GRID_CELL),Math.floor((Number(oldY)||0)/GRID_CELL)),bucket=this.solidGrid.get(key);
     if(bucket){for(let i=bucket.length-1;i>=0;i--){const s=bucket[i];if(s&&s.id===id&&(s.kind==="resource"||s.kind==="water"))bucket.splice(i,1);}if(!bucket.length)this.solidGrid.delete(key);}
     if(r.type==="pond"||r.type==="river")this.addSolid(r.x,r.y,r.solidR+(r.type==="pond"?58:30),"water",id);
-    else this.addSolid(r.x,r.y,r.type==="log"?r.solidR*1.35:r.solidR,"resource",id);
+    else this.addSolid(r.x,r.y,r.type==="log"?r.solidR*1.35:(r.type==="rock"?basicRockBoundRadius(r):r.solidR),"resource",id);
   }
   respawnResourceElsewhere(id,r){
     if(!r||r.alive||r.type==="pond"||r.type==="river"||r.type==="rainforestHive"||this.isBeeFlowerResource(r))return false;
@@ -1728,6 +1750,9 @@ export class WorldRoom extends Room {
             const body=animalPhysicalCircles(obj);
             for(const h of body)for(const q of logParts(r)){const d=dist(h.x,h.y,q.x,q.y),overlap=h.r*.9+q.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,q,d,overlap};}}
             if(best&&best.d>.1){const a=angTo(best.q.x,best.q.y,best.h.x,best.h.y);obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;obj._lastResourceContactId=solid.id;}
+          }else if(r.type==="rock"){
+            let best=null;for(const h of animalPhysicalCircles(obj)){const p=basicRockCirclePenetration(r,h.x,h.y,h.r*.9);if(p&&(!best||p.overlap>best.overlap))best=p;}
+            if(best){obj.x+=best.nx*best.overlap;obj.y+=best.ny*best.overlap;obj._lastResourceContactId=solid.id;}
           }else{const c=resourceCenter(r);if(pushCreatureFrom(c.x,c.y,r.solidR))obj._lastResourceContactId=solid.id;}
         }else if(solid.kind==="gold"){const g=this.state.gold.get(solid.id);if(!g||(!g.infinite&&g.goldLeft<=0))continue;const h=goldHit(g);pushCreatureFrom(h.x,h.y,h.r);}
         else if(solid.kind==="chest"){const c=this.state.chests.get(solid.id);if(!c||c.opened)continue;const h=chestHit(c);pushCreatureFrom(h.x,h.y,h.r);}
@@ -1751,6 +1776,8 @@ export class WorldRoom extends Room {
           if(r.type==="log"){
             let best=null,bestOverlap=0;for(const q of logParts(r)){const d=dist(obj.x,obj.y,q.x,q.y),overlap=PLAYER_R+q.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={q,d,overlap};}}
             if(best&&best.d>.1){const a=angTo(best.q.x,best.q.y,obj.x,obj.y);obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}
+          }else if(r.type==="rock"){
+            const hit=basicRockCirclePenetration(r,obj.x,obj.y,PLAYER_R);if(hit){obj.x+=hit.nx*hit.overlap;obj.y+=hit.ny*hit.overlap;}
           }else{
             const c=resourceCenter(r),pr=(r.type==="tree"||r.type==="bush")?PLAYER_R*.7:PLAYER_R;
             const d=dist(obj.x,obj.y,c.x,c.y),min=r.solidR+pr;if(d<min&&d>.01){const a=angTo(c.x,c.y,obj.x,obj.y);obj.x=c.x+Math.cos(a)*min;obj.y=c.y+Math.sin(a)*min;}
@@ -1764,7 +1791,7 @@ export class WorldRoom extends Room {
 
     for(const solid of this.nearbySolids(obj.x,obj.y,radius+100)){
       if(solid.kind==="water")continue;
-      if(solid.kind==="resource"){const r=this.state.resources.get(solid.id);if(r&&!r.alive)continue;}
+      if(solid.kind==="resource"){const r=this.state.resources.get(solid.id);if(r&&!r.alive)continue;if(r?.type==="rock"){const hit=basicRockCirclePenetration(r,obj.x,obj.y,radius);if(hit){obj.x+=hit.nx*hit.overlap;obj.y+=hit.ny*hit.overlap;}continue;}}
       if(solid.kind==="gold"){const g=this.state.gold.get(solid.id);if(g&&!g.infinite&&g.goldLeft<=0)continue;}
       if(solid.kind==="chest"){const c=this.state.chests.get(solid.id);if(c?.opened)continue;}
       const d=dist(obj.x,obj.y,solid.x,solid.y),min=radius+solid.r;if(d<min){const a=d>.01?angTo(solid.x,solid.y,obj.x,obj.y):(obj.angle||0);obj.x=solid.x+Math.cos(a)*min;obj.y=solid.y+Math.sin(a)*min;}
@@ -1892,7 +1919,7 @@ export class WorldRoom extends Room {
     return{x:clamp(x+70,40,WORLD_W-40),y};
   }
 
-  addResource(type,x,y,hp,solidR,canopyR,scale,rot){const r=new ResourceState();Object.assign(r,{type,x,y,hp,maxHp:hp,alive:true,solidR,canopyR,scale,rot});const id=`r${this.nextResourceId++}`;this.state.resources.set(id,r);if(type==="pond"||type==="river")this.addSolid(x,y,solidR+(type==="pond"?58:30),"water",id);else this.addSolid(x,y,type==="log"?solidR*1.35:solidR,"resource",id);}
+  addResource(type,x,y,hp,solidR,canopyR,scale,rot){const r=new ResourceState();Object.assign(r,{type,x,y,hp,maxHp:hp,alive:true,solidR,canopyR,scale,rot});const id=`r${this.nextResourceId++}`;this.state.resources.set(id,r);if(type==="pond"||type==="river")this.addSolid(x,y,solidR+(type==="pond"?58:30),"water",id);else this.addSolid(x,y,type==="log"?solidR*1.35:(type==="rock"?basicRockBoundRadius(r):solidR),"resource",id);}
   addGold(x,y,size,r,goldLeft,infinite=false,pure=false){const g=new GoldState();Object.assign(g,{x,y,size,r,goldLeft:infinite?999999999:goldLeft,infinite,pure});const id=`g${this.nextGoldId++}`;this.state.gold.set(id,g);this.addSolid(x,y+(pure?r*.06:r*.03),r*(pure?.78:size==="huge"?.75:.72),"gold",id);}
   addChest(x,y){const c=new ChestState();Object.assign(c,{x,y,r:18,hp:4,maxHp:4,opened:false,pulse:0,shine:rand(0,TAU),chipSide:Math.random()<.5?"wood":"stone"});const id=`c${this.nextChestId++}`;this.state.chests.set(id,c);this.chestRewards.set(id,this.makeChestReward());this.addSolid(x,y+8,18,"chest",id);}
 
