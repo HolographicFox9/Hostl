@@ -1663,8 +1663,8 @@ function applyVerifiedAchievement(a,id,context={}){
   if(reward.goldCubits)addGoldCubits(a,reward.goldCubits);
   if(reward.cards&&reward.species){ensurePetProgressState(a);a.speciesCards[reward.species]=Math.max(0,Math.floor(Number(a.speciesCards[reward.species])||0)+reward.cards);}
   const bits=[];if(reward.goldCubits)bits.push(`+${reward.goldCubits} Gold Cubits`);if(reward.cards&&reward.species)bits.push(`+${reward.cards} ${reward.species} Cards`);
-  const record={at:Date.now(),species:safeText(context?.species||reward.species||"",24).toLowerCase(),rewardSummary:bits.join(" · ")||"Achievement unlocked",serverVerified:true};
-  a.achievements[id]=record;return {id,rewardSummary:record.rewardSummary,species:record.species};
+  const record={at:Date.now(),species:safeText(context?.species||reward.species||"",24).toLowerCase(),rewardSummary:bits.join(" · ")||"Achievement unlocked",serverVerified:true,rewardApplied:true,goldCubitsGranted:Math.max(0,Math.floor(Number(reward.goldCubits)||0)),cardsGranted:Math.max(0,Math.floor(Number(reward.cards)||0))};
+  a.achievements[id]=record;return {id,rewardSummary:record.rewardSummary,species:record.species,goldCubitsGranted:record.goldCubitsGranted,cardsGranted:record.cardsGranted};
 }
 async function recordVerifiedAchievement(userId,id,context={}){
   const a=accountDb.byId[String(userId||"")];if(!a)return {granted:false};
@@ -1676,8 +1676,9 @@ async function recordVerifiedAchievement(userId,id,context={}){
   if(sid.startsWith("breed_")&&sid!=="breed_three"){
     const n=[...ACCOUNT_PET_TYPES].filter(sp=>!!a.achievements[`breed_${sp}`]).length;if(n>=3){const bonus=applyVerifiedAchievement(a,"breed_three",{});if(bonus)granted.push(bonus);}
   }
-  if(!granted.length)return {granted:false,account:publicAccount(a)};
-  a.updatedAt=new Date().toISOString();await saveAccounts();return {granted:true,achievements:granted,account:publicAccount(a)};
+  if(!granted.length)return {granted:false,account:publicAccount(a),goldCubitsGranted:0};
+  const goldCubitsGranted=granted.reduce((n,g)=>n+Math.max(0,Math.floor(Number(g?.goldCubitsGranted)||0)),0);
+  a.updatedAt=new Date().toISOString();await saveAccounts();return {granted:true,achievements:granted,goldCubitsGranted,account:publicAccount(a)};
 }
 
 async function grantWorldAccountReward(userId,reward,source={}){

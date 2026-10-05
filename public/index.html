@@ -5802,7 +5802,7 @@ body.mobile-performance #vehicleEnterBtn{bottom:calc(var(--phone-bottom) + 139px
 <div id="achievementOverlay" aria-hidden="true">
   <div class="achievement-card game-scroll">
     <div class="achievement-head">
-      <div><div class="home-section-label">Progress</div><h2>Achievements</h2><p>Guests can unlock achievements for the current session. Log in to save them and claim rewards once per account.</p><div class="achievement-progress" id="achievementProgressText">0 / 0 unlocked</div></div>
+      <div><div class="home-section-label">Progress</div><h2>Achievements</h2><p>Achievements pay their listed Gold Cubits when they unlock. Account players save them permanently; guest rewards stay in the local guest save.</p><div class="achievement-progress" id="achievementProgressText">0 / 0 unlocked</div></div>
       <button class="btn secondary" id="closeAchievementOverlay" type="button">Close</button>
     </div>
     <div class="achievement-grid" id="achievementGrid"></div>
@@ -6454,7 +6454,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "728";
+const CUBE_SHARED_RULES_VERSION = "729";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -9264,22 +9264,18 @@ function animalHeadHitbox(a) {
   const scale=animalHeadHitboxScale(a?.type);
   return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
-function animalHeadCopyStageSqueeze(stage) {
-  // One rule for every species and every growth stage: the solid invisible
-  // head copy is exactly 2% smaller than the visible head geometry.
-  return { length:0.980, radius:0.980 };
-}
 function animalSolidHeadHitboxes(a) {
-  // Build movement/damage head collision from a 98%-scale invisible COPY of
-  // the same front/head geometry used by this exact species + stage.
+  // One rule for every species/stage, including bees: the solid head collision
+  // is a FULL-SIZE copy of the visible head geometry shifted 4 world pixels
+  // backward along the animal's facing direction. Nothing is scaled smaller.
   if (!a) return [];
-  const stageSq = animalHeadCopyStageSqueeze(a.stage);
   const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
+  const back=4;
+  const shift=(h)=>({x:h.x-ca*back,y:h.y-sa*back,r:h.r});
   const r=Math.max(4,Number(a.r)||18);
   const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
 
-  // Bee Sep art has a much larger head than the old generic radius-chain nose.
-  // Keep the uploaded-art proportions and apply the same universal 98% copy.
+  // Bee heads use their uploaded-art proportions, but no size reduction.
   if (bee) {
     const profiles={
       queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
@@ -9287,46 +9283,24 @@ function animalSolidHeadHitboxes(a) {
       dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}
     };
     const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60];
-    const baseForward=pr[0]*r, side=pr[1]*r;
-    const skullR=Math.max(4,r*pr[2]*stageSq.radius);
-    const skullForward=baseForward*stageSq.length;
-    const skull={
-      x:(Number(a.x)||0)+ca*skullForward-sa*side,
-      y:(Number(a.y)||0)+sa*skullForward+ca*side,
-      r:skullR
-    };
-    const frontForward=skullForward+skullR*.44*stageSq.length;
-    const front={
-      x:(Number(a.x)||0)+ca*frontForward-sa*side,
-      y:(Number(a.y)||0)+sa*frontForward+ca*side,
-      r:Math.max(3,skullR*.56)
-    };
+    const side=pr[1]*r, skullR=Math.max(4,r*pr[2]), skullForward=pr[0]*r;
+    const skull=shift({x:(Number(a.x)||0)+ca*skullForward-sa*side,y:(Number(a.y)||0)+sa*skullForward+ca*side,r:skullR});
+    const frontForward=skullForward+skullR*.44;
+    const front=shift({x:(Number(a.x)||0)+ca*frontForward-sa*side,y:(Number(a.y)||0)+sa*frontForward+ca*side,r:Math.max(3,skullR*.56)});
     return [skull,front];
   }
 
   const hits=animalBodyHitboxes(a);
   if (hits.length) {
-    // Uploaded separated animals use the last two circles as the actual head;
-    // procedural/radius animals use the last three front circles. Those circles
-    // already grow with every species and every stage, so the invisible copy does too.
+    // Separated-art animals use the actual front/head circles for that stage;
+    // procedural animals use the front three head sections. Keep their full size.
     const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage);
     const count=Math.min(hits.length,hasUploaded?2:3);
-    const src=hits.slice(hits.length-count);
-    const anchor=src[0];
-    return src.map((h,i)=>{
-      const t=src.length<=1?1:i/(src.length-1);
-      // Uniform 2% scale-down of the whole head copy; no extra snout/stage trim.
-      const localLength=1-(1-stageSq.length)*t;
-      return {
-        x:anchor.x+(h.x-anchor.x)*localLength,
-        y:anchor.y+(h.y-anchor.y)*localLength,
-        r:Math.max(2,h.r*stageSq.radius)
-      };
-    });
+    return hits.slice(hits.length-count).map(shift);
   }
 
   const face=animalHeadHitbox(a);
-  return face?[{...face,r:Math.max(3.2,face.r*stageSq.radius)}]:[];
+  return face?[shift({...face,r:Math.max(3.2,face.r)})]:[];
 }
 function animalSolidHeadHitbox(a) {
   // Compatibility helper for code that needs one representative head circle.
@@ -9662,9 +9636,12 @@ function unlockAchievement(id,context={}){
     return true;
   }
   if(guestAchievementSession[id])return false;
-  guestAchievementSession[id]={at:Date.now(),species:context.species||""};
+  const rewardSummary=grantAchievementReward(def,context);
+  guestAchievementSession[id]={at:Date.now(),species:context.species||"",rewardSummary};
+  saveMeta();
+  syncHud();
   updateAchievementUI();
-  queueAchievementToast(def,`Guest session · Log in to save and claim ${def.rewardText}`);
+  queueAchievementToast(def,rewardSummary||def.rewardText);
   return true;
 }
 function countUnlockedAchievementPrefix(prefix){
@@ -9692,7 +9669,7 @@ function updateAchievementUI(){
   const prog=el("achievementProgressText");
   if(prog) prog.textContent = account
     ? `${unlocked} / ${ACHIEVEMENT_DEFS.length} unlocked · Saved to ${account.username||"your account"}`
-    : `${unlocked} / ${ACHIEVEMENT_DEFS.length} unlocked this session · Log in to save and claim rewards`;
+    : `${unlocked} / ${ACHIEVEMENT_DEFS.length} unlocked this session · Rewards credited to this guest save`;
   const grid=el("achievementGrid"); if(!grid)return;
   grid.innerHTML="";
   for(const def of ACHIEVEMENT_DEFS){
@@ -11525,8 +11502,12 @@ async function connectMultiplayer(options={}) {
     });
 
     room.onMessage("achievementReward", (data={}) => {
-      if(data?.account) setAccountFromServer(data.account);
-      saveAccountSession();syncAchievementAccountBridge();syncAccountUi();
+      if(data?.account) {
+        setAccountFromServer(data.account);
+        try{window.__hostlSetGameGoldCubits?.(Number(data.account.goldCubits)||0);}catch(_){}
+      }
+      saveAccountSession();syncAchievementAccountBridge();syncAccountUi();syncHud();
+      if(data?.granted && Number(data.goldCubitsGranted)>0) banner(`Achievement reward: +${Math.floor(Number(data.goldCubitsGranted))} Gold Cubits`);
       if(data?.granted && Array.isArray(data.achievements)){
         for(const item of data.achievements){
           const def=ACHIEVEMENT_BY_ID.get(String(item?.id||""));
@@ -11598,6 +11579,19 @@ async function connectMultiplayer(options={}) {
     });
     room.onMessage("worldReward", applyWorldReward);
     room.onMessage("chestReward", applyChestNetworkReward);
+    room.onMessage("hiveEnterResult", (data={})=>{
+      if(!data?.success){banner("You must be beside a hive to enter.",true);return;}
+      const hive=resources.find(r=>String(r?.netId||r?.id||"")===String(data.hiveId||""))||nearestEnterableHive(160);
+      startHiveInterior(hive||{x:player.x,y:player.y,netId:data.hiveId},{hiveId:String(data.hiveId||"")});
+    });
+    room.onMessage("hiveTameResult", (data={})=>{
+      const h=game.hiveInterior;if(!h?.active)return;h.tamePending=false;
+      if(data?.reason==="max"){if(game.tameHeartFx)game.tameHeartFx.life=0;banner("Max 4 regular pets!",true);updateVehicleEnterButton();return;}
+      if(data?.success){h.larvaTamed=true;h.petType=String(data.type||"workerbee");h.aggro=true;tameHeartResolve(true,{x:h.larvaX,y:h.larvaY,r:18});if(sfx.tame)sfx.tame();achievementTamedSpecies(h.petType);banner(`Larva tamed — ${PET_TYPES[h.petType]?.name||"Bee"}! Every bee in the hive is angry. ESCAPE!`);}
+      else{tameHeartResolve(false,{x:h.larvaX,y:h.larvaY,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}
+      updateVehicleEnterButton();
+    });
+    room.onMessage("hiveForceExit",()=>{if(game.hiveInterior?.active)leaveHiveInterior();});
     room.onMessage("tameResult", applyTameNetworkResult);
     room.onMessage("skillState", applySkillNetworkState);
     room.onMessage("petBreedResult", applyPetBreedNetworkResult);
@@ -12130,7 +12124,7 @@ window.addEventListener("keydown", e => {
   if (["1","2","3","4","5","6","7","8","9","0"].includes(e.key)) handleHotkey(e.key);
   if (k === "c") toggleCraft();
   if (k === "e") toggleInv();
-  if (k === "t") tryTameNearby();
+  if (k === "t") { if(game.hiveInterior?.active) tryTameHiveLarva(); else tryTameNearby(); }
   if (k === "g") commandPets();
   if (k === "b") selectBerry();
   if (k === "p") toggleRunShop();
@@ -12209,11 +12203,93 @@ function nearestPlacedVehicle(maxDist=92){
   for(const w of walls){if(!isPlacedVehicleWall(w))continue;if(net.room&&w.ownerId!==net.sessionId)continue;if(!net.room&&w.ownerId!=="local")continue;const d=dist(player.x,player.y,w.x,w.y);if(d<=bestD){best=w;bestD=d;}}
   return best;
 }
+function nearestEnterableHive(maxDist=118){
+  if(player.vehicleType||game.hiveInterior?.active)return null;
+  let best=null,bestD=Math.max(1,Number(maxDist)||118);
+  for(const r of resources){if(!r||!r.alive||r.type!=="rainforestHive")continue;const c=offlineResourceCenter(r),d=dist(player.x,player.y,c.x,c.y);if(d<=bestD){best=r;bestD=d;}}
+  return best;
+}
+const HIVE_INTERIOR_W=1280,HIVE_INTERIOR_H=860;
+const HIVE_MAZE_WALLS=[
+  {x:0,y:0,w:1280,h:34},{x:0,y:826,w:1280,h:34},{x:0,y:0,w:34,h:860},{x:1246,y:0,w:34,h:860},
+  {x:185,y:110,w:38,h:540},{x:185,y:110,w:285,h:38},{x:432,y:110,w:38,h:250},
+  {x:335,y:322,w:310,h:38},{x:607,y:150,w:38,h:210},{x:607,y:150,w:360,h:38},
+  {x:929,y:150,w:38,h:330},{x:705,y:442,w:262,h:38},{x:705,y:442,w:38,h:245},
+  {x:335,y:520,w:408,h:38},{x:335,y:520,w:38,h:205},{x:335,y:687,w:260,h:38},
+  {x:557,y:610,w:38,h:115},{x:870,y:590,w:38,h:236},{x:870,y:590,w:250,h:38},
+  {x:1082,y:370,w:38,h:258}
+];
+function hiveCircleRectHit(x,y,r,rect){const qx=clamp(x,rect.x,rect.x+rect.w),qy=clamp(y,rect.y,rect.y+rect.h),dx=x-qx,dy=y-qy;return dx*dx+dy*dy<r*r;}
+function hiveResolveWalls(pos,r=13){
+  pos.x=clamp(pos.x,r,HIVE_INTERIOR_W-r);pos.y=clamp(pos.y,r,HIVE_INTERIOR_H-r);
+  for(let pass=0;pass<3;pass++)for(const w of HIVE_MAZE_WALLS){if(!hiveCircleRectHit(pos.x,pos.y,r,w))continue;const left=Math.abs(pos.x-(w.x-r)),right=Math.abs(pos.x-(w.x+w.w+r)),top=Math.abs(pos.y-(w.y-r)),bottom=Math.abs(pos.y-(w.y+w.h+r)),m=Math.min(left,right,top,bottom);if(m===left)pos.x=w.x-r;else if(m===right)pos.x=w.x+w.w+r;else if(m===top)pos.y=w.y-r;else pos.y=w.y+w.h+r;}
+}
+function makeHiveBee(i){const types=["workerbee","workerbee","workerbee","dronebee","workerbee","workerbee","dronebee","workerbee","queenbee"];return{type:types[i%types.length],x:250+(i*173)%870,y:95+(i*127)%650,angle:(i*.73)%TAU,wander:(i*.51)%TAU,wanderT:1+(i%4)*.4,atkCd:0};}
+function startHiveInterior(hive,data={}){
+  if(game.hiveInterior?.active)return;
+  const c=offlineResourceCenter(hive||{}),hiveId=String(data.hiveId||hive?.netId||hive?.id||"");
+  game.hiveInterior={active:true,hiveId,worldX:c.x||player.x,worldY:c.y||player.y,x:84,y:770,angle:-Math.PI/2,larvaX:1165,larvaY:92,larvaTamed:false,tamePending:false,aggro:false,bees:Array.from({length:18},(_,i)=>makeHiveBee(i)),hitCd:0,enteredAt:performance.now(),petType:""};
+  player._preHiveVehicle=player.vehicleType||"";player.vehicleType="";player.riding=null;
+  mouse.down=false;mouse.rdown=false;keys.clear();
+  banner("Inside the hive — movement is slower in the honey. Find the sleeping larva, tame it, then escape!");
+  updateVehicleEnterButton();
+}
+function leaveHiveInterior(){
+  const h=game.hiveInterior;if(!h?.active)return;
+  game.hiveInterior=null;player.x=h.worldX;player.y=h.worldY+Math.max(90,Number(resources.find(r=>String(r?.netId||r?.id||"")===h.hiveId)?.solidR)||70);player.angle=Math.PI/2;
+  if(net.room){try{net.room.send("hiveExit",{hiveId:h.hiveId});}catch(_){}}
+  updateVehicleEnterButton();banner(h.aggro?"You escaped the hive!":"You left the hive.");
+}
+function enterNearestHive(){
+  const hive=nearestEnterableHive();if(!hive){banner("Move closer to a hive first.",true);return;}
+  if(net.room){try{net.room.send("hiveEnter",{id:String(hive.netId||hive.id||"")});}catch(_){banner("Could not enter the hive.",true);}return;}
+  startHiveInterior(hive,{hiveId:String(hive.netId||hive.id||"")});
+}
+function hiveNearLarva(){const h=game.hiveInterior;return !!(h?.active&&!h.larvaTamed&&dist(h.x,h.y,h.larvaX,h.larvaY)<=68);}
+function hiveNearExit(){const h=game.hiveInterior;return !!(h?.active&&h.x<118&&h.y>700);}
+function addOfflineHiveLarvaPet(type){
+  const info=PET_TYPES[type];if(!info)return;const stage="baby",rr=animalRadius(type,stage),maxHp=upgradedPetMaxHp(type,stage),coat=(info.coats||[info.color])[0]||info.color;
+  const pet={type,stage,x:player.x,y:player.y,angle:0,r:rr,hp:maxHp,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:`${info.name} Larva`,gender:canonicalAnimalGender(type,Math.random()<.5?"Female":"Male"),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0};
+  player.pets.push(pet);achievementTamedSpecies(type);if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[type]=(meta.speciesCards[type]||0)+TAME_SPECIES_CARD_REWARD;saveMeta();syncPetCards();
+}
+function tryTameHiveLarva(){
+  const h=game.hiveInterior;if(!h?.active||h.larvaTamed||h.tamePending)return false;if(!hiveNearLarva()){banner("Get closer to the sleeping larva.",true);return true;}
+  if(player.pets.filter(p=>p&&!p.dead&&!p.bredChild).length>=4){banner("Max 4 regular pets!",true);return true;}
+  h.tamePending=true;tameHeartStart({x:h.larvaX,y:h.larvaY,r:18,type:"workerbee",stage:"baby"},"hiveLarva");if(sfx.tameTry)sfx.tameTry();banner("Stealing the larva… 50% tame chance");
+  if(net.room){try{net.room.send("hiveTameLarva",{hiveId:h.hiveId});}catch(_){h.tamePending=false;}return true;}
+  setTimeout(()=>{if(!game.hiveInterior?.active)return;const cur=game.hiveInterior;cur.tamePending=false;if(Math.random()<.5){const roll=Math.random(),type=roll<.12?"queenbee":roll<.72?"workerbee":"dronebee";cur.larvaTamed=true;cur.petType=type;cur.aggro=true;tameHeartResolve(true,{x:cur.larvaX,y:cur.larvaY,r:18});addOfflineHiveLarvaPet(type);banner(`Larva tamed — ${PET_TYPES[type]?.name||"Bee"}! Every bee in the hive is angry. ESCAPE!`);}else{tameHeartResolve(false,{x:cur.larvaX,y:cur.larvaY,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}updateVehicleEnterButton();},650);return true;
+}
+function updateHiveInterior(dt){
+  const h=game.hiveInterior;if(!h?.active)return;const mv=currentMoveVector(),ml=Math.hypot(mv.x,mv.y);if(ml>.05){h.angle=Math.atan2(mv.y,mv.x);h.x+=mv.x*72*dt;h.y+=mv.y*72*dt;hiveResolveWalls(h,13);}
+  h.hitCd=Math.max(0,(h.hitCd||0)-dt);
+  for(const b of h.bees){b.atkCd=Math.max(0,(b.atkCd||0)-dt);if(h.aggro){const a=Math.atan2(h.y-b.y,h.x-b.x);b.angle=a;b.x+=Math.cos(a)*68*dt;b.y+=Math.sin(a)*68*dt;hiveResolveWalls(b,11);if(dist(b.x,b.y,h.x,h.y)<27&&b.atkCd<=0){b.atkCd=.72;const dmg=b.type==="queenbee"?11:b.type==="dronebee"?8:6;if(net.room){try{net.room.send("hiveDamage",{amount:dmg});}catch(_){}}else hitPlayer(dmg,null);game.shake=Math.max(game.shake,3);}}else{b.wanderT-=dt;if(b.wanderT<=0){b.wander=rand(0,TAU);b.wanderT=rand(1,3);}b.angle=b.wander;b.x+=Math.cos(b.angle)*24*dt;b.y+=Math.sin(b.angle)*24*dt;hiveResolveWalls(b,11);}}
+  if(player.dead||game.over){game.hiveInterior=null;return;}updateAbilityFx(dt);updateFx(dt);updateVehicleEnterButton();
+}
+function drawHiveBeeTopDown(b){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle);ctx.fillStyle=b.type==="queenbee"?"#ffd34d":"#f2c94c";ctx.beginPath();ctx.ellipse(0,0,b.type==="queenbee"?19:14,b.type==="queenbee"?11:9,0,0,TAU);ctx.fill();ctx.fillStyle="#2d2413";for(let x=-6;x<=6;x+=6)ctx.fillRect(x,-8,2,16);ctx.fillStyle="rgba(235,250,255,.72)";ctx.beginPath();ctx.ellipse(-2,-12,8,5,-.4,0,TAU);ctx.ellipse(-2,12,8,5,.4,0,TAU);ctx.fill();ctx.fillStyle="#2a1d10";ctx.beginPath();ctx.arc(13,0,5,0,TAU);ctx.fill();ctx.restore();}
+function drawHiveInterior(){
+  const h=game.hiveInterior;if(!h?.active)return;ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);ctx.fillStyle="#f5cf2f";ctx.fillRect(0,0,W,H);const scale=Math.min(W/HIVE_INTERIOR_W,H/HIVE_INTERIOR_H),ox=(W-HIVE_INTERIOR_W*scale)/2,oy=(H-HIVE_INTERIOR_H*scale)/2;ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+  ctx.fillStyle="#ffd93f";ctx.fillRect(0,0,HIVE_INTERIOR_W,HIVE_INTERIOR_H);
+  // subtle honeycomb floor without random splats
+  ctx.strokeStyle="rgba(155,94,8,.16)";ctx.lineWidth=2;for(let y=55;y<HIVE_INTERIOR_H;y+=52)for(let x=48+(Math.floor(y/52)%2)*30;x<HIVE_INTERIOR_W;x+=60){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+22*Math.cos(a),py=y+22*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();}
+  for(const w of HIVE_MAZE_WALLS){ctx.fillStyle="#d89316";ctx.fillRect(w.x,w.y,w.w,w.h);ctx.fillStyle="#ffb817";ctx.fillRect(w.x+5,w.y+5,Math.max(0,w.w-10),Math.max(0,w.h-10));ctx.fillStyle="rgba(255,226,82,.85)";if(w.w>w.h){for(let x=w.x+18;x<w.x+w.w-10;x+=48){ctx.beginPath();ctx.moveTo(x,w.y+w.h);ctx.quadraticCurveTo(x+9,w.y+w.h+22,x+18,w.y+w.h);ctx.fill();}}}
+  ctx.fillStyle="#6f4510";ctx.font="900 24px sans-serif";ctx.fillText("EXIT",44,815);
+  if(!h.larvaTamed){ctx.save();ctx.translate(h.larvaX,h.larvaY);ctx.fillStyle="#f7dc75";ctx.beginPath();ctx.ellipse(0,0,24,15,-.1,0,TAU);ctx.fill();ctx.strokeStyle="#b88418";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#7d5b1b";ctx.font="bold 16px sans-serif";ctx.fillText("Z",22,-13);ctx.font="bold 12px sans-serif";ctx.fillText("z",34,-24);ctx.restore();}
+  for(const b of h.bees)drawHiveBeeTopDown(b);
+  if(h.larvaTamed&&h.petType){ctx.fillStyle="#fff1a8";ctx.beginPath();ctx.ellipse(h.x-17*Math.cos(h.angle),h.y-17*Math.sin(h.angle),13,8,h.angle,0,TAU);ctx.fill();}
+  ctx.save();ctx.translate(h.x,h.y);ctx.rotate(h.angle);ctx.fillStyle=player.color||"#6ec1ff";ctx.beginPath();ctx.arc(0,0,13,0,TAU);ctx.fill();ctx.fillStyle="#efe5d2";ctx.beginPath();ctx.arc(10,0,7,0,TAU);ctx.fill();ctx.restore();
+  safeCanvasDrawCall("tame heart",drawTameHeartOverlay);safeCanvasDrawCall("hive effects",drawFx);
+  ctx.restore();ctx.fillStyle="rgba(82,45,4,.88)";ctx.fillRect(14,14,Math.min(590,W-28),54);ctx.fillStyle="#fff1a8";ctx.font="800 15px sans-serif";ctx.fillText(h.aggro?"THE HIVE IS AGGRO — FIND THE EXIT!":"HIVE INTERIOR — honey slows you down · find the sleeping larva",28,46);
+}
 function updateVehicleEnterButton(){
-  if(!vehicleEnterBtn)return;const parked=game.started&&!player.dead&&!player.vehicleType?nearestPlacedVehicle(92):null;const show=!!(game.started&&!player.dead&&(player.vehicleType||parked));vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=player.vehicleType?"EXIT":"ENTER";vehicleEnterBtn.title=player.vehicleType?`Exit ${player.vehicleType}`:(parked?`Enter ${placedVehicleType(parked)}`:"Enter nearby vehicle");
+  if(!vehicleEnterBtn)return;
+  const h=game.hiveInterior;
+  if(h?.active){const tame=hiveNearLarva()&&!h.larvaTamed&&!h.tamePending,exit=hiveNearExit();const show=tame||exit;vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=tame?"TAME":exit?"EXIT HIVE":"";vehicleEnterBtn.title=tame?"Try to tame the sleeping larva (50%)":"Escape the hive";return;}
+  const hive=game.started&&!player.dead&&!player.vehicleType?nearestEnterableHive(118):null;
+  const parked=game.started&&!player.dead&&!player.vehicleType&&!hive?nearestPlacedVehicle(92):null;
+  const show=!!(game.started&&!player.dead&&(player.vehicleType||hive||parked));vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=player.vehicleType?"EXIT":hive?"ENTER":"ENTER";vehicleEnterBtn.title=player.vehicleType?`Exit ${player.vehicleType}`:(hive?"Enter hive":parked?`Enter ${placedVehicleType(parked)}`:"Enter nearby vehicle");
 }
 if(waterFillBtn)waterFillBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();fillBucketFromWater();},{passive:false});
-if(vehicleEnterBtn)vehicleEnterBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();if(player.vehicleType)leaveVehicle();else boardNearestPlacedVehicle();},{passive:false});
+if(vehicleEnterBtn)vehicleEnterBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();if(game.hiveInterior?.active){if(hiveNearLarva()&&!game.hiveInterior.larvaTamed)tryTameHiveLarva();else if(hiveNearExit())leaveHiveInterior();return;}if(player.vehicleType)leaveVehicle();else if(nearestEnterableHive(118))enterNearestHive();else boardNearestPlacedVehicle();},{passive:false});
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
   const special = player?.vehicleType || player?.heldSpecial || "";
@@ -16794,6 +16870,7 @@ let game = {
   tamePending: false,
   firstLightReady: false,
   midnightMarkSpawned: false,
+  hiveInterior: null,
 };
 
 
@@ -17152,7 +17229,7 @@ function animalPhysicalHitboxes(a){
   const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
-  // Mounting never changes head size. The same 98% head copy is used always.
+  // Mounting never changes the rule: full-size visible-head copy, shifted 4 px backward.
   for(const head of animalSolidHeadHitboxes(collisionAnimal)){
     hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   }
@@ -28542,6 +28619,7 @@ function draw(menuMode = false) {
   ctx.filter = "none";
   ctx.shadowBlur = 0;
   ctx.clearRect(0, 0, W, H);
+  if(!menuMode && game.hiveInterior?.active){drawHiveInterior();return;}
   let sx = 0, sy = 0;
   if (game.shake > 0) {
     sx = rand(-game.shake, game.shake);
@@ -28806,6 +28884,8 @@ function resetGame(options = {}) {
   // Run-only gold gear never carries into a new attempt.
   runShop = freshRunShopState();
   game.tamePending = false;
+  if(game.hiveInterior?.active&&net.room){try{net.room.send("hiveExit",{hiveId:game.hiveInterior.hiveId||""});}catch(_){}}
+  game.hiveInterior = null;
   // Chat history is per-run for this local player only.
   resetChatForNewRun();
   const restartingAfterDeath = !!(game.over || player.dead);
@@ -29009,6 +29089,12 @@ let renderFrameNowMs = performance.now();
 
 function runResetSimulationStep(step) {
   if (!game.started) return;
+  if(game.hiveInterior?.active){
+    const previousSurvivalTime=game.survivalTime;
+    updateHiveInterior(step);
+    if(!player.dead&&!game.over){game.survivalTime+=step;if(previousSurvivalTime<300&&game.survivalTime>=300)unlockAchievement("survive_5");if(previousSurvivalTime<600&&game.survivalTime>=600)unlockAchievement("survive_10");}
+    return;
+  }
   if (!player.dead && !game.over) {
     const previousSurvivalTime=game.survivalTime;
     game.survivalTime += step;
@@ -30237,6 +30323,8 @@ el("restartBtn").addEventListener("click", (e) => {
   resetGame({preserveLiveWorld:true});
 });
 el("homeBtn").addEventListener("click", () => {
+  if(game.hiveInterior?.active&&net.room){try{net.room.send("hiveExit",{hiveId:game.hiveInterior.hiveId||""});}catch(_){}}
+  game.hiveInterior=null;
   const returningHomeAfterDeath = !!(game.over || player.dead);
   if(net.room){try{net.room.send("playerPreview",{});}catch(_){}}
   else if(returningHomeAfterDeath){
