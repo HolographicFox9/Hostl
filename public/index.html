@@ -6454,7 +6454,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "726";
+const CUBE_SHARED_RULES_VERSION = "727";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -9264,50 +9264,87 @@ function animalHeadHitbox(a) {
   const scale=animalHeadHitboxScale(a?.type);
   return {x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
-function animalSolidHeadHitbox(a) {
-  // Every animal gets a dedicated solid/damage HEAD hitbox. This stays
-  // separate from animalHeadHitbox(), which is the smaller bite/attack face.
-  if (!a) return null;
-  const r=Math.max(4,Number(a.r)||18), ang=Number(a.angle)||0;
-  const ca=Math.cos(ang), sa=Math.sin(ang);
+function animalHeadCopyStageSqueeze(stage) {
+  // Invisible copy of the rendered head. Only a LITTLE smaller than the art so
+  // the very end of the snout can pass an obstacle while the actual skull/head
+  // remains solid. Each growth stage keeps its own proportional copy.
+  return ({
+    baby:      { length:0.940, radius:0.950 },
+    adult:     { length:0.950, radius:0.960 },
+    boss:      { length:0.955, radius:0.965 },
+    superboss: { length:0.960, radius:0.970 },
+    bigmomma:  { length:0.965, radius:0.975 }
+  })[stage] || { length:0.950, radius:0.960 };
+}
+function animalSolidHeadHitboxes(a) {
+  // Build the movement/damage head collision from a slightly squeezed COPY of
+  // the same front/head geometry used by this exact species + stage. This is
+  // intentionally much fuller than the old tiny skull bubble.
+  if (!a) return [];
+  const stageSq = animalHeadCopyStageSqueeze(a.stage);
+  const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
+  const r=Math.max(4,Number(a.r)||18);
   const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
+
+  // Bee Sep art has a much larger head than the old generic radius-chain nose.
+  // Keep the uploaded-art proportions, then squeeze the invisible copy only a
+  // few percent and add a smaller front lobe for the muzzle/front of the head.
   if (bee) {
-    // These ratios come from the actual uploaded Bee Sep head rectangles after
-    // they are scaled by drawUploadedBeeSkin(). The radius is trimmed slightly
-    // from the art edge so touching the outer pixels is still forgiving.
     const profiles={
       queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
       workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},
       dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}
     };
     const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60];
-    const forward=pr[0]*r, side=pr[1]*r;
-    return {
-      x:(Number(a.x)||0)+ca*forward-sa*side,
-      y:(Number(a.y)||0)+sa*forward+ca*side,
-      r:Math.max(4,r*pr[2])
+    const baseForward=pr[0]*r, side=pr[1]*r;
+    const skullR=Math.max(4,r*pr[2]*stageSq.radius);
+    const skullForward=baseForward*stageSq.length;
+    const skull={
+      x:(Number(a.x)||0)+ca*skullForward-sa*side,
+      y:(Number(a.y)||0)+sa*skullForward+ca*side,
+      r:skullR
     };
+    const frontForward=skullForward+skullR*.44*stageSq.length;
+    const front={
+      x:(Number(a.x)||0)+ca*frontForward-sa*side,
+      y:(Number(a.y)||0)+sa*frontForward+ca*side,
+      r:Math.max(3,skullR*.56)
+    };
+    return [skull,front];
   }
 
   const hits=animalBodyHitboxes(a);
   if (hits.length) {
-    const nose=hits[hits.length-1];
-    const skull=hits[Math.max(0,hits.length-2)]||nose;
-    // Put the solid part mostly on the skull so the snout can overlap slightly,
-    // but the player can never pass through the whole head.
-    let mix=.20;
-    let mul=.82;
-    if(a.type==="boar"){mix=.08;mul=a.stage==="baby"?.58:a.stage==="boss"?.46:a.stage==="superboss"?.42:a.stage==="bigmomma"?.40:.62;}
-    else if(a.type==="deer")mul=.72;
-    else if(a.stage==="baby")mul=.76;
-    return {
-      x:skull.x+(nose.x-skull.x)*mix,
-      y:skull.y+(nose.y-skull.y)*mix,
-      r:Math.max(animalHitboxMinRadius(a)*1.05,skull.r*mul)
-    };
+    // Uploaded separated animals use the last two circles as the actual head;
+    // procedural/radius animals use the last three front circles. Those circles
+    // already grow with every species and every stage, so the invisible copy does too.
+    const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage);
+    const count=Math.min(hits.length,hasUploaded?2:3);
+    const src=hits.slice(hits.length-count);
+    const anchor=src[0];
+    return src.map((h,i)=>{
+      const t=src.length<=1?1:i/(src.length-1);
+      // Squeeze the copy toward the back of the head instead of deleting the
+      // snout. The tip gets only a tiny additional trim so players can pass the
+      // outermost nose pixels, but not the whole head.
+      const localLength=1-(1-stageSq.length)*t;
+      const tipRadiusTrim=1-.035*t;
+      return {
+        x:anchor.x+(h.x-anchor.x)*localLength,
+        y:anchor.y+(h.y-anchor.y)*localLength,
+        r:Math.max(animalHitboxMinRadius(a)*.92,h.r*stageSq.radius*tipRadiusTrim)
+      };
+    });
   }
+
   const face=animalHeadHitbox(a);
-  return face?{...face,r:Math.max(3.2,face.r*1.15)}:null;
+  return face?[{...face,r:Math.max(3.2,face.r*stageSq.radius)}]:[];
+}
+function animalSolidHeadHitbox(a) {
+  // Compatibility helper for code that needs one representative head circle.
+  const hs=animalSolidHeadHitboxes(a);
+  if(!hs.length)return null;
+  return hs.reduce((best,h)=>!best||h.r>best.r?h:best,null);
 }
 function animalHeadTouches(a, tx, ty, tr) {
   const h = animalHeadHitbox(a);
@@ -9321,8 +9358,7 @@ function animalTargetDamageHitboxes(target) {
   // This prevents bites from only registering near the victim's center/torso.
   if (target.type && target.stage && PET_TYPES[target.type]) {
     const hits = animalBodyHitboxes(target).map(h => ({...h}));
-    const head = animalSolidHeadHitbox(target);
-    if (head) hits.push(head);
+    for (const head of animalSolidHeadHitboxes(target)) hits.push({...head});
     return hits;
   }
   const rr = target === player ? PLAYER_R * 0.82 : Math.max(2, (Number(target.r) || PLAYER_R) * 0.78);
@@ -17128,9 +17164,8 @@ function animalPhysicalHitboxes(a){
   const hits=animalPhysicalHitboxesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=(a?.enemyRider||a?.hostileRiderMount)?Object.assign({},a,{type:"wolf"}):a;
-  const head=animalSolidHeadHitbox(collisionAnimal);
-  if(head){
-    const mountedMul=(typeof player!=="undefined"&&player?.riding===a)?.94:1;
+  const mountedMul=(typeof player!=="undefined"&&player?.riding===a)?.94:1;
+  for(const head of animalSolidHeadHitboxes(collisionAnimal)){
     hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mountedMul)});
   }
   return hits;

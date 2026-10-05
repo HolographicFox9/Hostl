@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "726";
+const CUBE_SHARED_RULES_VERSION = "727";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1176,8 +1176,8 @@ function animalPhysicalCircles(a){
   const hits=animalPhysicalCirclesBase(a).map(h=>({...h}));
   if(!a||!hits.length)return hits;
   const collisionAnimal=a?.hostileRiderMount?Object.assign({},a,{type:"wolf"}):a;
-  const head=animalSolidHeadGeometry(collisionAnimal);
-  if(head){const mounted=a?._mountedCollision?.94:1;hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mounted)});}
+  const mounted=a?._mountedCollision?.94:1;
+  for(const head of animalSolidHeadGeometries(collisionAnimal))hits.push({x:head.x,y:head.y,r:Math.max(3.2,head.r*mounted)});
   return hits;
 }
 function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
@@ -1199,39 +1199,36 @@ function animalFaceGeometry(a){
   const r=Math.max(4,Number(a?.r)||18),angle=Number(a?.angle)||0,scale=animalHeadHitboxScale(a?.type);
   return{x:(a?.x||0)+Math.cos(angle)*r*1.02,y:(a?.y||0)+Math.sin(angle)*r*1.02,r:Math.max(2,r*.18*scale)};
 }
-function animalSolidHeadGeometry(a){
-  // Dedicated solid/damage head geometry for every animal. The smaller
-  // animalFaceGeometry() still controls attack contact so this does not
-  // accidentally increase bite/ram range.
-  if(!a)return null;
-  const r=Math.max(4,Number(a.r)||18),ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang);
+function animalHeadCopyStageSqueeze(stage){
+  return ({baby:{length:.940,radius:.950},adult:{length:.950,radius:.960},boss:{length:.955,radius:.965},superboss:{length:.960,radius:.970},bigmomma:{length:.965,radius:.975}})[stage]||{length:.950,radius:.960};
+}
+function animalSolidHeadGeometries(a){
+  // Server-authoritative copy of the client's slightly squeezed visible head.
+  // This replaces the old species/stage exceptions that made some heads tiny.
+  if(!a)return[];
+  const sq=animalHeadCopyStageSqueeze(a.stage),ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),r=Math.max(4,Number(a.r)||18);
   const bee=a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee";
   if(bee){
-    const profiles={
-      queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},
-      workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},
-      dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}
-    };
-    const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60],forward=pr[0]*r,side=pr[1]*r;
-    return{x:(Number(a.x)||0)+ca*forward-sa*side,y:(Number(a.y)||0)+sa*forward+ca*side,r:Math.max(4,r*pr[2])};
+    const profiles={queenbee:{baby:[1.06,-.06,.72],adult:[.90,-.06,.76],boss:[.85,-.01,.73],superboss:[.93,-.07,.75],bigmomma:[.92,-.07,.70]},workerbee:{baby:[.92,-.05,.62],adult:[.78,-.05,.65],boss:[.73,-.01,.63],superboss:[.81,-.06,.64],bigmomma:[.79,-.06,.61]},dronebee:{baby:[.81,-.05,.55],adult:[.69,-.05,.58],boss:[.64,-.01,.56],superboss:[.71,-.05,.57],bigmomma:[.70,-.05,.54]}};
+    const pr=profiles[a.type]?.[a.stage]||profiles[a.type]?.adult||[.78,0,.60],side=pr[1]*r,skullForward=pr[0]*r*sq.length,skullR=Math.max(4,r*pr[2]*sq.radius);
+    const skull={x:(Number(a.x)||0)+ca*skullForward-sa*side,y:(Number(a.y)||0)+sa*skullForward+ca*side,r:skullR};
+    const frontForward=skullForward+skullR*.44*sq.length;
+    const front={x:(Number(a.x)||0)+ca*frontForward-sa*side,y:(Number(a.y)||0)+sa*frontForward+ca*side,r:Math.max(3,skullR*.56)};
+    return[skull,front];
   }
   const hits=animalHitCircles(a);
   if(hits.length){
-    const nose=hits[hits.length-1],skull=hits[Math.max(0,hits.length-2)]||nose;
-    let mix=.20,mul=.82;
-    if(a.type==="boar"){mix=.08;mul=a.stage==="baby"?.58:a.stage==="boss"?.46:a.stage==="superboss"?.42:a.stage==="bigmomma"?.40:.62;}
-    else if(a.type==="deer")mul=.72;
-    else if(a.stage==="baby")mul=.76;
-    return{x:skull.x+(nose.x-skull.x)*mix,y:skull.y+(nose.y-skull.y)*mix,r:Math.max(animalHitboxMinRadius(a)*1.05,skull.r*mul)};
+    const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage),count=Math.min(hits.length,hasUploaded?2:3),src=hits.slice(hits.length-count),anchor=src[0];
+    return src.map((h,i)=>{const t=src.length<=1?1:i/(src.length-1),localLength=1-(1-sq.length)*t,tipRadiusTrim=1-.035*t;return{x:anchor.x+(h.x-anchor.x)*localLength,y:anchor.y+(h.y-anchor.y)*localLength,r:Math.max(animalHitboxMinRadius(a)*.92,h.r*sq.radius*tipRadiusTrim)};});
   }
-  const face=animalFaceGeometry(a);
-  return face?{...face,r:Math.max(3.2,face.r*1.15)}:null;
+  const face=animalFaceGeometry(a);return face?[{...face,r:Math.max(3.2,face.r*sq.radius)}]:[];
 }
+function animalSolidHeadGeometry(a){const hs=animalSolidHeadGeometries(a);if(!hs.length)return null;return hs.reduce((best,h)=>!best||h.r>best.r?h:best,null);}
 function animalTargetDamageCircles(ref,target){
   if(!target)return[];
   if(ref?.kind==="animal"||ref?.kind==="pet"){
     const hits=animalHitCircles(target).map(h=>({...h}));
-    const head=animalSolidHeadGeometry(target);if(head)hits.push(head);
+    for(const head of animalSolidHeadGeometries(target))hits.push({...head});
     return hits;
   }
   const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(2,(target.r||16)*.78);
