@@ -414,10 +414,10 @@ function accountCanUseTheme(a,id){return isKnownTheme(id) && (THEME_GUEST_FREE.h
 const ACCOUNT_PET_TYPES=new Set(["dog","cat","dragon","rabbit","fox","owl","deer","wolf","snake","boar","bear","saber","clouded","fennec","queenbee","workerbee","dronebee"]);
 const ACCOUNT_FREE_STARTER_PETS=new Set(["dog","cat","dragon"]);
 const ACCOUNT_PET_UNLOCK={
-  dog:{cards:0,cubits:0},cat:{cards:0,cubits:0},dragon:{cards:0,cubits:0},
-  rabbit:{cards:55,cubits:600},fox:{cards:55,cubits:650},owl:{cards:60,cubits:750},deer:{cards:70,cubits:900},
-  wolf:{cards:80,cubits:1100},snake:{cards:85,cubits:1200},boar:{cards:95,cubits:1400},bear:{cards:110,cubits:1800},saber:{cards:120,cubits:2200},
-  clouded:{cards:100,cubits:1650},fennec:{cards:75,cubits:950},queenbee:{cards:90,cubits:1200},workerbee:{cards:75,cubits:1000},dronebee:{cards:60,cubits:850}
+  dog:{cards:50,cubits:0},cat:{cards:50,cubits:0},dragon:{cards:50,cubits:0},
+  rabbit:{cards:50,cubits:600},fox:{cards:50,cubits:650},owl:{cards:50,cubits:750},deer:{cards:50,cubits:900},
+  wolf:{cards:50,cubits:1100},snake:{cards:50,cubits:1200},boar:{cards:50,cubits:1400},bear:{cards:50,cubits:1800},saber:{cards:50,cubits:2200},
+  clouded:{cards:50,cubits:1650},fennec:{cards:50,cubits:950},queenbee:{cards:50,cubits:1200},workerbee:{cards:50,cubits:1000},dronebee:{cards:50,cubits:850}
 };
 const ACCOUNT_PET_STAGE_ORDER=["baby","adult","boss","superboss"];
 const ACCOUNT_PET_STAGE_COST={adult:20,boss:50,superboss:100};

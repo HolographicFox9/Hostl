@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "732";
+const CUBE_SHARED_RULES_VERSION = "736";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1085,31 +1085,10 @@ function animalPhysicalCirclesBase(a){
   // their visible mount is a Boar/Bear/Dog/Saber. Damage geometry stays real.
   const riderWolfCollision=!!a?.hostileRiderMount;
   const collisionAnimal=riderWolfCollision?Object.assign({},a,{type:"wolf"}):a;
-  // Movement collision keeps the torso plus a smaller solid skull/head circle.
-  // Only the final muzzle/snout-tip circle is non-solid, so the nose can overlap
-  // an obstacle a little without allowing the whole head to pass through it.
-  const hits=animalHitCircles(collisionAnimal);
-  if(!hits.length)return hits;
-  if(collisionAnimal?.type==="boar") {
-    const ang=Number(collisionAnimal.angle)||0;
-    const r=Math.max(8,Number(collisionAnimal.r)||18);
-    const body=hits[Math.max(0,Math.min(hits.length-1,Math.floor((hits.length-1)*.45)))]||hits[0];
-    const skull=hits[Math.max(0,hits.length-2)]||hits[hits.length-1]||body;
-    const stageBody={baby:.43,adult:.52,boss:.55,superboss:.57,bigmomma:.59}[collisionAnimal.stage]||.52;
-    const stageHead={baby:.25,adult:.31,boss:.30,superboss:.29,bigmomma:.28}[collisionAnimal.stage]||.31;
-    const cutBack={baby:.16,adult:.18,boss:.20,superboss:.22,bigmomma:.24}[collisionAnimal.stage]||.18;
-    const mounted=a?._mountedCollision?0.92:1;
-    return [
-      {x:body.x,y:body.y,r:Math.max(3,r*stageBody*mounted)}
-    ];
-  }
-  // Torso collision only; animalPhysicalCircles() adds the exact visible-head
-  // copy afterward so there is never a second hidden skull hitbox.
-  const hasUploadedHead=!!uploadedAnimalVisibleDimensions(collisionAnimal?.type,collisionAnimal?.stage);
-  const headPartCount=Math.min(hits.length,hasUploadedHead?2:3);
-  const physical=hits.length>headPartCount?hits.slice(0,hits.length-headPartCount):hits.slice(0,1);
-  // Movement collision hugs the visible silhouette; the omitted last circle is
-  // the muzzle tip, and the remaining skull is pulled back slightly below.
+  // Movement collision is torso-only here. The ONLY head collision is the exact
+  // copied head pieces added later by animalPhysicalCircles().
+  const physical=animalTorsoCircles(collisionAnimal);
+  if(!physical.length)return physical;
   let radiusMul=.94;
   if(collisionAnimal?.stage==="baby")radiusMul*=.60;
   if(collisionAnimal?.type==="snake")radiusMul*=.72;
@@ -1131,55 +1110,16 @@ function animalPhysicalCirclesBase(a){
     else if(collisionAnimal?.stage==="boss")radiusMul*=.64;
     else radiusMul*=.68;
   }
-  // Riding uses the same real multi-circle body, just slightly forgiving so
-  // shoulders/head do not snag on tiny seams between nearby obstacles.
   if(a?._mountedCollision)radiusMul*=.92;
-  const last=physical.length-1;
-  return physical.map((h,i)=>{
-    let rMul=radiusMul;
-    const bossBoarFront=collisionAnimal?.type==="boar"&&(collisionAnimal?.stage==="boss"||collisionAnimal?.stage==="superboss")&&i>=last-1;
-    if(bossBoarFront){
-      const isSkull=i===last;
-      const frontMul=collisionAnimal?.stage==="superboss"?(isSkull?.12:.28):(isSkull?.16:.34);
-      rMul*=frontMul;
-    }else if(i===last&&physical.length>1){
-      let headMul=.64;
-      if(collisionAnimal?.type==="boar"&&collisionAnimal?.stage==="baby")headMul=.30;
-      else if(collisionAnimal?.type==="boar"&&collisionAnimal?.stage==="bigmomma")headMul=.20;
-      else if(collisionAnimal?.type==="boar")headMul=.62;
-      else if(collisionAnimal?.type==="deer"&&collisionAnimal?.stage==="adult")headMul=.54;
-      else if(collisionAnimal?.type==="deer"&&collisionAnimal?.stage==="boss")headMul=.46;
-      else if(collisionAnimal?.type==="deer")headMul=.58;
-      else if(collisionAnimal?.stage==="baby")headMul=.68;
-      rMul*=headMul;
-    }
-    const compactBoarHead=i===last&&collisionAnimal?.type==="boar"&&(collisionAnimal?.stage==="boss"||collisionAnimal?.stage==="superboss"||collisionAnimal?.stage==="bigmomma");
-    let minPhysicalR=collisionAnimal?.stage==="baby"?3.0:4;
-    if(i===last&&collisionAnimal?.type==="boar"&&collisionAnimal?.stage==="baby")minPhysicalR=2.3;
-    else if(i===last&&collisionAnimal?.stage==="baby")minPhysicalR=2.6;
-    else if(bossBoarFront)minPhysicalR=i===last?1.6:2.2;
-    else if(compactBoarHead)minPhysicalR=3;
-    const out={...h,r:Math.max(minPhysicalR,h.r*rMul)};
-    if(bossBoarFront){
-      const ang=Number(a?.angle)||0,r=Number(a?.r)||18;
-      const back=(i===last)?(collisionAnimal?.stage==="superboss"?.34:.30)*r:(collisionAnimal?.stage==="superboss"?.14:.11)*r;
-      out.x-=Math.cos(ang)*back;out.y-=Math.sin(ang)*back;
-    }else if(compactBoarHead){
-      const back=.20*(Number(a?.r)||18),ang=Number(a?.angle)||0;
-      out.x-=Math.cos(ang)*back;out.y-=Math.sin(ang)*back;
-    }else if(i===last&&physical.length>1){
-      const ang=Number(a?.angle)||0,back=(Number(a?.r)||18)*.08;
-      out.x-=Math.cos(ang)*back;out.y-=Math.sin(ang)*back;
-    }
-    return out;
-  });
+  const minPhysicalR=collisionAnimal?.stage==="baby"?3.0:4;
+  return physical.map(h=>({...h,r:Math.max(minPhysicalR,h.r*radiusMul)}));
 }
 
 function animalPhysicalCircles(a){
   const hits=animalPhysicalCirclesBase(a).map(h=>({...h}));
-  if(!a||!hits.length)return hits;
+  if(!a)return hits;
   const collisionAnimal=a?.hostileRiderMount?Object.assign({},a,{type:"wolf"}):a;
-  // Head collision is the exact visible-head copy at the exact visible-head position.
+  // The ONLY head collision is the exact visible-head copy at the exact visible-head position.
   for(const head of animalSolidHeadGeometries(collisionAnimal))hits.push({x:head.x,y:head.y,r:Math.max(2,head.r)});
   return hits;
 }
@@ -1193,9 +1133,23 @@ function animalProjectileTouch(a,x,y,radius=0){
   for(const h of animalTargetDamageCircles({kind:"animal"},a))if(dist(x,y,h.x,h.y)<radius+h.r)return true;
   return false;
 }
+function animalHeadCopyPartCount(a){
+  if(!a)return 0;
+  if(a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee")return 1;
+  const hits=animalHitCircles(a);
+  if(!hits.length)return 0;
+  const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage);
+  return Math.min(hits.length,hasUploaded?2:3);
+}
+function animalTorsoCircles(a){
+  const hits=animalHitCircles(a);
+  if(!hits.length)return[];
+  const headCount=animalHeadCopyPartCount(a);
+  return (hits.length>headCount?hits.slice(0,hits.length-headCount):hits.slice(0,1)).map(h=>({x:h.x,y:h.y,r:h.r}));
+}
 function animalVisibleHeadGeometries(a){
   // Exact-position visible-head copy: same size and same position as the head
-  // geometry used by the client. No shrink and no four-pixel offset.
+  // geometry used by the client. No shrink, no extra skull, and no offset.
   if(!a)return[];
   const ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),r=Math.max(4,Number(a.r)||18);
   if(a.type==="queenbee"||a.type==="workerbee"||a.type==="dronebee"){
@@ -1207,8 +1161,8 @@ function animalVisibleHeadGeometries(a){
   }
   const hits=animalHitCircles(a);
   if(hits.length){
-    const hasUploaded=!!uploadedAnimalVisibleDimensions(a.type,a.stage),count=Math.min(hits.length,hasUploaded?2:3);
-    return hits.slice(hits.length-count).map(h=>({x:h.x,y:h.y,r:h.r}));
+    const count=animalHeadCopyPartCount(a);
+    return hits.slice(Math.max(0,hits.length-count)).map(h=>({x:h.x,y:h.y,r:h.r}));
   }
   return[{x:(Number(a.x)||0)+ca*r*.92,y:(Number(a.y)||0)+sa*r*.92,r:Math.max(3,r*.34)}];
 }
@@ -1230,7 +1184,7 @@ function animalSolidHeadGeometry(a){const hs=animalSolidHeadGeometries(a);if(!hs
 function animalTargetDamageCircles(ref,target){
   if(!target)return[];
   if(ref?.kind==="animal"||ref?.kind==="pet"){
-    const hits=animalHitCircles(target).map(h=>({...h}));
+    const hits=animalTorsoCircles(target).map(h=>({...h}));
     for(const head of animalSolidHeadGeometries(target))hits.push({...head});
     return hits;
   }
