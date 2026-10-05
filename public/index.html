@@ -6454,7 +6454,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "725";
+const CUBE_SHARED_RULES_VERSION = "726";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -6466,12 +6466,12 @@ const TOOL_BASE = {
 };
 const TOOLS = JSON.parse(JSON.stringify(TOOL_BASE));
 const WALL_COST = { wood: 6 };
-const BUILDABLE_IDS = ["Wall","Tower","Saddle","Windmill","Boat","Sub","Chakrams","Flute","BattleBot","PetArmor","RepairBuilding"];
+const BUILDABLE_IDS = ["Wall","Tower","Saddle","Windmill","Boat","Sub","Chakrams","Flute","DivingSuit","BattleBot","PetArmor","RepairBuilding"];
 const STARTING_CRAFT_IDS = ["Wall","Tower","Saddle","Windmill"];
 // New Craft choices are locked only inside the set they came from. Picking one
 // Travel craft does not block the later Support-craft set, and vice versa.
 const NEW_CRAFT_GROUPS = [
-  {id:"travel",label:"Travel / Utility",ids:["Boat","Sub","Chakrams","Flute"]},
+  {id:"travel",label:"Travel / Utility",ids:["Boat","Sub","Chakrams","Flute","DivingSuit"]},
   {id:"support",label:"Support / Defense",ids:["BattleBot","PetArmor","RepairBuilding"]}
 ];
 const NEW_CRAFT_IDS = NEW_CRAFT_GROUPS.flatMap(g=>g.ids);
@@ -6526,6 +6526,11 @@ const BUILD_TIER_META={
     {name:"Carved Flute",cost:{wood:5,stone:5},desc:"Longer-range, longer-lasting flute effect."},
     {name:"Golden Flute",cost:{wood:4,gold:4},desc:"Very strong flute effect."},
     {name:"Gem Flute",cost:{wood:4,stone:6,gold:9},desc:"Final Flute. Ruby has the widest range, Emerald keeps animals asleep longest, Diamond lets calm snakes be weakened closest to death."}],
+  DivingSuit:[
+    {name:"Diving Suit",cost:{wood:6,stone:12,gold:4},desc:"Wearable diving gear. Once crafted, you can travel the deep ocean without a Boat or Sub and without deep-water damage."},
+    {name:"Reinforced Diving Suit",cost:{stone:16,gold:6},desc:"Safer diving gear with better underwater movement."},
+    {name:"Iron Diving Suit",cost:{stone:18,gold:9},desc:"Heavy deep-ocean suit with near-normal underwater movement."},
+    {name:"Gem Diving Suit",cost:{stone:20,gold:13},desc:"Final suit. Ruby is fastest underwater, Emerald conserves hydration, Diamond gives the strongest underwater protection."}],
   BattleBot:[
     {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A very durable combat robot that follows you and attacks enemies."},
     {name:"Reinforced Battle Bot",cost:{stone:24,gold:10},desc:"More health, stronger attacks, and better combat range."},
@@ -6542,7 +6547,7 @@ const BUILD_TIER_META={
     {name:"Cream White Repair Building",cost:{stone:20,gold:9},desc:"Powerful repair pulse with a wider range."},
     {name:"Grey Repair Building",cost:{stone:24,gold:14},desc:"Final repair building with the fastest repair pulse and widest range."}]
 };
-const BUILD_MAX_TIER={Wall:3,Tower:3,Saddle:3,Windmill:3,Boat:3,Sub:3,Chakrams:3,Flute:3,BattleBot:3,PetArmor:3,RepairBuilding:3};
+const BUILD_MAX_TIER={Wall:3,Tower:3,Saddle:3,Windmill:3,Boat:3,Sub:3,Chakrams:3,Flute:3,DivingSuit:3,BattleBot:3,PetArmor:3,RepairBuilding:3};
 const BUILD_FINAL_BRANCHES={
   Wall:[
     {variant:"ruby",icon:"♦",name:"Ruby Wall",desc:"Enemies that strike/contact it take return damage."},
@@ -6576,6 +6581,10 @@ const BUILD_FINAL_BRANCHES={
     {variant:"ruby",icon:"♦",name:"Ruby Flute",desc:"Widest taming-control range."},
     {variant:"emerald",icon:"◆",name:"Emerald Flute",desc:"Longest sleep/calm duration."},
     {variant:"diamond",icon:"◇",name:"Diamond Flute",desc:"Lets calm snakes be weakened almost to zero health."}],
+  DivingSuit:[
+    {variant:"ruby",icon:"♦",name:"Ruby Diving Suit",desc:"Fastest movement while travelling on the ocean floor."},
+    {variant:"emerald",icon:"◆",name:"Emerald Diving Suit",desc:"Full deep-water protection with reduced hydration drain while underwater."},
+    {variant:"diamond",icon:"◇",name:"Diamond Diving Suit",desc:"Full deep-water protection plus extra damage resistance while underwater."}],
   PetArmor:[
     {variant:"ruby",icon:"♦",name:"Ruby Pet Armor",desc:"The armored pet deals 25% more attack damage."},
     {variant:"emerald",icon:"◆",name:"Emerald Pet Armor",desc:"Each damaging pet attack heals that pet for part of the damage."},
@@ -6661,7 +6670,7 @@ function buildIsKnown(id){
   if(!NEW_CRAFT_IDS.includes(id))return false;
   const group=newCraftGroupForBuild(id);return !!group&&selectedNewCraftPath(group.id)===id;
 }
-function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":build==="Windmill"?"🌬️":build==="Boat"?"🛶":build==="Sub"?"🚤":build==="Chakrams"?"⭕":build==="Flute"?"🎵":build==="BattleBot"?"🤖":build==="PetArmor"?"🛡️":"💠";}
+function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":build==="Windmill"?"🌬️":build==="Boat"?"🛶":build==="Sub"?"🚤":build==="Chakrams"?"⭕":build==="Flute"?"🎵":build==="DivingSuit"?"🥽":build==="BattleBot"?"🤖":build==="PetArmor"?"🛡️":"💠";}
 function buildUpgradeChoiceInfo(build,variant=""){
   const t=buildUnlockTier(build),next=Math.min(buildMaxTier(build),t+1),base=buildTierMeta(build,next,variant);
   if(variant){const branch=(BUILD_FINAL_BRANCHES[build]||[]).find(x=>x.variant===variant);return {id:buildBranchChoiceId(build,variant),icon:branch?.icon||buildIcon(build),name:`Upgrade Craft: ${branch?.name||base.name}`,desc:branch?.desc||base.desc};}
@@ -11334,6 +11343,7 @@ function applyPlayerActionEvent(data={}) {
   const v=net.remoteVisuals.get(playerId);
   if(!v) return;
   const action=String(data.action||"attack");
+  if(action==="subClaw"){v._subClawTimer=.28;if(Number.isFinite(Number(data.angle))){v._netAngle=Number(data.angle);v.angle=Number(data.angle);}return;}
   const tool=String(data.tool||v.tool||"Fist");
   v.swingWeapon=tool;
   if(typeof data.weaponChoice==="string"&&data.weaponChoice)v.skillWeaponChoice=String(data.weaponChoice);
@@ -11357,7 +11367,9 @@ function applyPhaseNetworkEvent(data={}) {
   if(phase.name==="Midnight") banner("Midnight — Rangers and Chimest emerge.");
   if(phase.name==="Morning") { banner("Morning — sunlight! The Hostls are retreating."); if(game.started && !player.dead) unlockAchievement("survive_night"); }
 }
-function drawRemotePets(){ for(const p of net.remotePetVisuals.values()) if(inView(p.x,p.y,60)) drawAnimal(p); }
+function remoteMountedPetIds(){const ids=new Set();for(const v of net.remoteVisuals.values())if(v?.ridingPetId)ids.add(String(v.ridingPetId));return ids;}
+function drawRemoteMountedPets(){const ids=remoteMountedPetIds();for(const p of net.remotePetVisuals.values())if(ids.has(String(p.netId||""))&&inView(p.x,p.y,90))drawAnimal(p);}
+function drawRemotePets(){const ids=remoteMountedPetIds();for(const p of net.remotePetVisuals.values())if(!ids.has(String(p.netId||""))&&inView(p.x,p.y,60))drawAnimal(p);}
 
 function applyNetworkHarvestReward(data = {}) {
   const kind = data.kind;
@@ -11372,7 +11384,7 @@ function applyNetworkHarvestReward(data = {}) {
   }
   if (kind === "biomeMaterial") {
     const material=String(data.material||""),metaInfo=BIOME_MATERIAL_META[material];
-    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");if(material==="honeycomb")registerHotbarItem("Honey Comb");if(material==="honey")registerHotbarItem("Honey");if(material==="seaFruit")registerHotbarItem("Sea Fruit");if(material==="blueSeaweed")registerHotbarItem("Blue Seaweed");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
+    if(material&&amount>0){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[material]=(player.biomeMaterials[material]||0)+amount;if(material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(material==="frostBerry")registerHotbarItem("Frost Berry");if(material==="goodCactus")registerHotbarItem("Cactus A");if(material==="badCactus")registerHotbarItem("Cactus B");if(material==="stoneFruit")registerHotbarItem("Stone Fruit");if(material==="honeycomb")registerHotbarItem("Honey Comb");if(material==="honey")registerHotbarItem("Honey");if(material==="seaFruit")registerHotbarItem("Sea Fruit");if(material==="blueSeaweed")registerHotbarItem("Seaweed");floatText(tx,ty-24,`+${amount} ${metaInfo?.name||material}`,metaInfo?.color||"#d8e2c7");spark(tx,ty,metaInfo?.color||"#d8e2c7",5,65);syncHud();syncHotbar();}
     return;
   }
   if (kind === "wood" || kind === "stone" || kind === "berries" || kind === "gold") {
@@ -11551,7 +11563,7 @@ async function connectMultiplayer(options={}) {
       updateHydrationHud();syncHotbar();syncMobilePrimaryButton();
       if(data?.message)banner(String(data.message),data.ok===false);
     });
-    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||""),mounted=!!data?.mounted;if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(!mounted&&food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(!mounted&&food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(!mounted&&food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit"&&!data?.blocked){if(mounted&&data?.mountId){const sm=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(sm&&Number.isFinite(Number(data?.petStoneStacks)))sm.stoneFruitStacks=Math.max(0,Math.floor(Number(data.petStoneStacks)));}else{if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);if(Number.isFinite(Number(data?.stoneStacks))){const n=Math.max(0,Math.floor(Number(data.stoneStacks)));while(player._stoneFruitStacks.length>n)player._stoneFruitStacks.shift();while(player._stoneFruitStacks.length<n)player._stoneFruitStacks.push(game.time+20);}}}if(food==="honey"&&!data?.blocked){player._honeyRushUntil=game.time+12;if(!mounted)player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}if(food==="seaFruit")registerHotbarItem("Sea Fruit");if(food==="blueSeaweed"&&!data?.blocked){player._blueSeaweedUntil=game.time+Math.max(1,Number(data?.duration)||BLUE_SEAWEED_DURATION);registerHotbarItem("Blue Seaweed");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(mounted&&data?.mountId){const m=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(m&&Number.isFinite(Number(data?.mountHp)))m.hp=clamp(Number(data.mountHp),0,Math.max(1,Number(data?.mountMaxHp)||m.maxHp||1));}if(data?.message)banner(String(data.message),!!data?.blocked);if(data?.blocked){syncHud();syncHotbar();syncMobilePrimaryButton();return;}restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
+    room.onMessage("biomeFoodResult", data=>{const food=String(data?.food||""),mounted=!!data?.mounted;if(food){player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[food]=Math.max(0,Math.floor(Number(data?.count)||0));if(!mounted&&food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;}if(!mounted&&food==="goodCactus"){player._cactusGoodUntil=game.time+10;player._cactusHealRate=2.6;player._cactusHydrateRate=3.8;}if(!mounted&&food==="badCactus"){player._badCactusUntil=game.time+7;player._badCactusDamageRate=2.5;player._badCactusHydrateRate=4.5;}if(food==="stoneFruit"&&!data?.blocked){if(mounted&&data?.mountId){const sm=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(sm&&Number.isFinite(Number(data?.petStoneStacks)))sm.stoneFruitStacks=Math.max(0,Math.floor(Number(data.petStoneStacks)));}else{if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);if(Number.isFinite(Number(data?.stoneStacks))){const n=Math.max(0,Math.floor(Number(data.stoneStacks)));while(player._stoneFruitStacks.length>n)player._stoneFruitStacks.shift();while(player._stoneFruitStacks.length<n)player._stoneFruitStacks.push(game.time+20);}}}if(food==="honey"&&!data?.blocked){player._honeyRushUntil=game.time+12;if(!mounted)player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;registerHotbarItem("Honey");}if(food==="seaFruit")registerHotbarItem("Sea Fruit");if(food==="blueSeaweed"&&!data?.blocked){player._blueSeaweedUntil=game.time+Math.max(1,Number(data?.duration)||BLUE_SEAWEED_DURATION);registerHotbarItem("Seaweed");}}if(Number.isFinite(Number(data?.hydration)))player.hydration=clamp(Number(data.hydration),0,100);if(Number.isFinite(Number(data?.health)))player.health=clamp(Number(data.health),0,player.maxHealth);if(mounted&&data?.mountId){const m=net.petVisuals.get(String(data.mountId))||net.remotePetVisuals.get(String(data.mountId));if(m&&Number.isFinite(Number(data?.mountHp)))m.hp=clamp(Number(data.mountHp),0,Math.max(1,Number(data?.mountMaxHp)||m.maxHp||1));}if(data?.message)banner(String(data.message),!!data?.blocked);if(data?.blocked){syncHud();syncHotbar();syncMobilePrimaryButton();return;}restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();});
     room.onMessage("fluteResult", data=>{const n=Math.max(0,Math.floor(Number(data?.affected)||0));banner(n?`Flute affected ${n} nearby animal${n===1?"":"s"}`:"No animals close enough");});
     room.onMessage("revived", (data={}) => { finishRewardedRevive(data); });
     room.onMessage("reviveDenied", () => { game.revivePending=false; updateReviveDeathUi("The server could not authorize that revive."); });
@@ -11892,6 +11904,9 @@ function sendNetworkInput(dt) {
       vehicleExit: !player.vehicleType && performance.now()-(Number(player._vehicleExitRequestedAt)||0)<900,
       saddleTier: Math.max(0,Math.min(3,Math.floor(Number(player.saddleTier)||0))),
       saddleVariant: craftedBuildVariant("Saddle"),
+      divingSuitActive: divingSuitActive(),
+      divingSuitTier: divingSuitActive()?craftedBuildTier("DivingSuit"):-1,
+      divingSuitVariant: divingSuitActive()?craftedBuildVariant("DivingSuit"):"",
       // Keep authoritative mount collision geometry aligned with the locally
       // predicted mount during fast turns. The server validates/clamps this angle.
       ridingAngle: player.riding && Number.isFinite(player.riding.angle) ? player.riding.angle : null,
@@ -11968,7 +11983,7 @@ function updateRemotePlayers(dt) {
     v.moving = !!p.moving;
     v.ridingPetId = String(p.ridingPetId || "");
     v.vehicleType = String(p.vehicleType || "");
-    v.attackTimer = Math.max(0, (Number(v.attackTimer) || 0) - dt);
+    v.attackTimer = Math.max(0, (Number(v.attackTimer) || 0) - dt);v._subClawTimer=Math.max(0,(Number(v._subClawTimer)||0)-dt);
     if (v.moving) v.walkPhase = (v.walkPhase || 0) + dt * 12.0;
   });
   for (const id of Array.from(net.remoteVisuals.keys())) {
@@ -16286,13 +16301,20 @@ const ISLAND_SHORE_WIDTH = 230;
 // use existing biome terrain; fantasy/secret biomes and new island-only animals
 // are intentionally left for the later content pass instead of being invented here.
 const OUTER_ISLANDS = Object.freeze([
+  // A loose ring of reachable islands now surrounds the mainland instead of
+  // leaving most directions as uninterrupted empty ocean.
   {id:"reef_isle",cx:ISLAND_CX+29000,cy:ISLAND_CY-7000,r:1080,biome:"rainforest",seed:.73},
   {id:"sunbar_isle",cx:ISLAND_CX+26000,cy:ISLAND_CY+27000,r:920,biome:"desert",seed:1.91},
-  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:720,biome:"arctic",seed:3.17}
+  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:820,biome:"arctic",seed:3.17},
+  {id:"westwood_isle",cx:ISLAND_CX-29500,cy:ISLAND_CY+1500,r:980,biome:"forest",seed:4.23},
+  {id:"southwest_isle",cx:ISLAND_CX-25000,cy:ISLAND_CY+24500,r:900,biome:"desert",seed:5.31},
+  {id:"southcap_isle",cx:ISLAND_CX-2500,cy:ISLAND_CY+29200,r:850,biome:"desert",seed:6.47},
+  {id:"northeast_isle",cx:ISLAND_CX+24500,cy:ISLAND_CY-23500,r:960,biome:"rainforest",seed:7.53},
+  {id:"northwest_isle",cx:ISLAND_CX-24500,cy:ISLAND_CY-23000,r:930,biome:"mountains",seed:8.69}
 ]);
 const OCEAN_DIVE_START = 360;
 const OCEAN_SURFACE_NEAR_SHORE = 245;
-const BLUE_SEAWEED_DURATION = 15;
+const BLUE_SEAWEED_DURATION = 20;
 const OCEAN_DEEP_DAMAGE_START = 820;
 const OCEAN_DEEP_DAMAGE_FULL = 2200;
 const OCEAN_DEEP_DAMAGE_MIN = 4;
@@ -16331,12 +16353,12 @@ const BIOME_RESOURCE_INFO = Object.freeze({
   rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#f2bf35",category:"soft",hp:14},
   oceanUrchin:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#d58bd7",category:"soft",hp:4},
   oceanAnemone:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#ef8fae",category:"soft",hp:5},
-  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Blue Seaweed",color:"#59c7de",category:"soft",hp:4}
+  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Seaweed",color:"#59c7de",category:"soft",hp:4}
 });
 const BIOME_MATERIAL_META = Object.fromEntries(Object.values(BIOME_RESOURCE_INFO).map(v=>[v.material,{name:v.name,color:v.color,biome:v.biome}]));
 BIOME_MATERIAL_META.honey={name:"Honey",color:"#f4bd42",biome:"rainforest"};
 BIOME_MATERIAL_META.seaFruit={name:"Sea Fruit",color:"#e58eb0",biome:"ocean"};
-BIOME_MATERIAL_META.blueSeaweed={name:"Blue Seaweed",color:"#59c7de",biome:"ocean"};
+BIOME_MATERIAL_META.blueSeaweed={name:"Seaweed",color:"#59c7de",biome:"ocean"};
 const BIOME_ORDER = ["forest","rainforest","arctic","desert","mountains"];
 function biomeBaseId(id){ return String(id||CURRENT_BIOME_ID).replace(/_edge$/,'') || CURRENT_BIOME_ID; }
 function biomeProfileAt(x,y){ return BIOME_PROFILES[biomeBaseId(worldBiomeAt(x,y))] || BIOME_PROFILES.forest; }
@@ -16414,6 +16436,8 @@ function randomOceanFloorPoint(minDepth=390,maxDepth=1900){
 }
 function underwaterFloorActive(){return (Number(player?._underwaterBlend)||0)>.45;}
 function blueSeaweedProtectionActive(){return (Number(player?._blueSeaweedUntil)||0)>game.time;}
+function divingSuitActive(){return buildIsKnown("DivingSuit")&&craftedItemCount("DivingSuit")>0;}
+function divingSuitUnderwaterMoveMul(){if(!divingSuitActive())return 1;const t=craftedBuildTier("DivingSuit"),v=craftedBuildVariant("DivingSuit");let m=[.86,.93,1.0,1.05][clamp(t,0,3)]||1;if(t>=3&&v==="ruby")m=1.14;return m;}
 function oceanDepthDamageRateAt(x,y){const d=oceanDepthAt(x,y);if(d<=OCEAN_DEEP_DAMAGE_START)return 0;const q=clamp((d-OCEAN_DEEP_DAMAGE_START)/Math.max(1,OCEAN_DEEP_DAMAGE_FULL-OCEAN_DEEP_DAMAGE_START),0,1);return OCEAN_DEEP_DAMAGE_MIN+(OCEAN_DEEP_DAMAGE_MAX-OCEAN_DEEP_DAMAGE_MIN)*q;}
 function islandConstrainedPoint(x,y,pad=0){
   const px=Number(x)||ISLAND_CX,py=Number(y)||ISLAND_CY,dx=px-ISLAND_CX,dy=py-ISLAND_CY,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),r=islandRadiusAtAngle(a,Math.max(0,Number(pad)||0));
@@ -18031,7 +18055,7 @@ function initWorld() {
 
   // Outer islands now have their own real wildlife instead of being empty land.
   // Keep island populations mostly baby/adult so the smaller islands stay navigable.
-  const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:18};
+  const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:20,westwood_isle:24,southwest_isle:22,southcap_isle:21,northeast_isle:24,northwest_isle:23};
   for(const spec of OUTER_ISLANDS){
     const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!isWildBeeType(type));
     const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;
@@ -18374,6 +18398,26 @@ function boardPlacedVehicle(v){
   banner(`Entered ${type}`);syncHotbar();syncMobilePrimaryButton();updateVehicleEnterButton();return true;
 }
 function boardNearestPlacedVehicle(){const v=nearestPlacedVehicle(96);if(!v){banner("Move next to your placed Boat or Sub first",true);return false;}return boardPlacedVehicle(v);}
+
+function subClawAttack(){
+  if(player.vehicleType!=="Sub"||player.dead||player.attackCd>0)return false;
+  player.attackCd=.34;player._subClawTimer=.28;
+  let best=null,bestD=Infinity;
+  for(const r of queryStaticNearby("resources",player.x,player.y,125)){
+    if(!r||!r.alive||r.type==="pond"||r.type==="river")continue;
+    const oceanThing=r.type==="oceanRock"||BIOME_RESOURCE_INFO[r.type]?.biome==="ocean";if(!oceanThing)continue;
+    const c=resourceSolidCenter(r),d=dist(player.x,player.y,c.x,c.y);if(d>105+(Number(r.solidR)||6)||!isFacing(c.x,c.y,1.38))continue;
+    if(d<bestD){best=r;bestD=d;}
+  }
+  if(net.room){if(best?.netId)try{net.room.send("subClaw",{id:best.netId,angle:player.angle,tier:player.vehicleTier||0});}catch(_){};if(!best)sfx.stoneHit();return !!best;}
+  if(!best){sfx.stoneHit();return false;}
+  const tier=clamp(Math.floor(Number(player.vehicleTier)||0),0,3),info=BIOME_RESOURCE_INFO[best.type];
+  best.pulse=1;
+  if(best.type==="oceanRock"){const dmg=1.65+tier*.42;best.hp=Math.max(0,best.hp-dmg);const amount=1+(tier>=2?1:0);player.stone+=amount;floatText(best.x,best.y-18,`+${amount} stone`,"#a9b3bd");spark(best.x,best.y,"#a9b3bd",6,72);sfx.stoneHit();}
+  else if(info){const dmg=1.45+tier*.34;best.hp=Math.max(0,best.hp-dmg);const amount=1+(tier>=3?1:0);player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[info.material]=(player.biomeMaterials[info.material]||0)+amount;if(info.material==="seaFruit")registerHotbarItem("Sea Fruit");if(info.material==="blueSeaweed")registerHotbarItem("Seaweed");floatText(best.x,best.y-18,`+${amount} ${info.name}`,info.color);spark(best.x,best.y,info.color,6,72);sfx.logHit();}
+  if(best.hp<=0){best.alive=false;best.respawnAt=game.time+rand(16,28);}
+  syncHud();syncHotbar();return true;
+}
 
 function petUnderWorldPoint(wx, wy) {
   let best=null,bestD=Infinity;
@@ -18796,7 +18840,7 @@ function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
 
 function meleeAttack(preciseResolve=null) {
   const resolvingPrecise=!!preciseResolve;
-  if(!resolvingPrecise&&player.vehicleType){return;}
+  if(!resolvingPrecise&&player.vehicleType){if(player.vehicleType==="Sub")subClawAttack();return;}
   if(!resolvingPrecise){
     if (player.heldSpecial === "HoneyComb") { return; }
     if (player.heldSpecial === "Bucket") { useBucket(); return; }
@@ -19088,7 +19132,7 @@ function gatherResource(r, t, toolOverride=null) {
     }
     const correct=(biomeInfo.category==="wood"&&toolName==="Axe")||(biomeInfo.category==="stone"&&toolName==="Pickaxe")||(biomeInfo.category==="soft"&&(toolName==="Fist"||toolName==="Axe"));
     let dmg=(t.resourcePower==null?1:t.resourcePower)*(correct?1.25:.68); if(toolName==="Sword")dmg*=.35;
-    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");if(biomeInfo.material==="goodCactus")registerHotbarItem("Cactus A");if(biomeInfo.material==="badCactus")registerHotbarItem("Cactus B");if(biomeInfo.material==="stoneFruit")registerHotbarItem("Stone Fruit");if(biomeInfo.material==="honeycomb")registerHotbarItem("Honey Comb");if(biomeInfo.material==="honey")registerHotbarItem("Honey");if(biomeInfo.material==="seaFruit")registerHotbarItem("Sea Fruit");if(biomeInfo.material==="blueSeaweed")registerHotbarItem("Blue Seaweed");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);
+    r.hp-=dmg;r.pulse=1;const yieldAmt=correct?2:1;player.biomeMaterials=player.biomeMaterials||{};player.biomeMaterials[biomeInfo.material]=(player.biomeMaterials[biomeInfo.material]||0)+yieldAmt;if(biomeInfo.material==="jungleBerry")registerHotbarItem("Jungle Fruit");if(biomeInfo.material==="frostBerry")registerHotbarItem("Frost Berry");if(biomeInfo.material==="goodCactus")registerHotbarItem("Cactus A");if(biomeInfo.material==="badCactus")registerHotbarItem("Cactus B");if(biomeInfo.material==="stoneFruit")registerHotbarItem("Stone Fruit");if(biomeInfo.material==="honeycomb")registerHotbarItem("Honey Comb");if(biomeInfo.material==="honey")registerHotbarItem("Honey");if(biomeInfo.material==="seaFruit")registerHotbarItem("Sea Fruit");if(biomeInfo.material==="blueSeaweed")registerHotbarItem("Seaweed");gainSkillXp(.7*yieldAmt,"gather");consumeHydration(.9);
     floatText(r.x,r.y-20,`+${yieldAmt} ${biomeInfo.name}`,biomeInfo.color);spark(r.x,r.y,biomeInfo.color,correct?7:4,correct?90:55);syncHud();syncHotbar();
     if(biomeInfo.category==="stone")sfx.stoneHit();else sfx.logHit();
     if(r.hp<=0){r.hp=0;r.alive=false;r.respawnAt=game.time+rand(18,30);spark(r.x,r.y,biomeInfo.color,10,100);}
@@ -19259,11 +19303,11 @@ function eatBerry() {
 
 function selectBiomeFood(food){
   const material=food,count=Math.max(0,Math.floor(Number(player.biomeMaterials?.[material])||0));
-  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus",stoneFruit:"Stone Fruit",honey:"Honey",seaFruit:"Sea Fruit",blueSeaweed:"Blue Seaweed"};
+  const names={jungleBerry:"Jungle Fruit",frostBerry:"Frost Berry",goodCactus:"Cactus",badCactus:"Cactus",stoneFruit:"Stone Fruit",honey:"Honey",seaFruit:"Sea Fruit",blueSeaweed:"Seaweed"};
   if(count<1){banner(`No ${names[material]||"food"}!`,true);return;}
   if(TOOLS[player.tool]&&player.owned[player.tool])player.lastWeaponTool=player.tool;
   player.heldSpecial=material==="jungleBerry"?"JungleBerry":material==="frostBerry"?"FrostBerry":material==="goodCactus"?"GoodCactus":material==="badCactus"?"BadCactus":material==="honey"?"Honey":material==="seaFruit"?"SeaFruit":material==="blueSeaweed"?"BlueSeaweed":"StoneFruit";
-  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — -20 rider hydration; +20% strength/-10% speed goes to you on foot or your mount while riding":material==="honey"?"Honey equipped — heals and boosts speed":material==="seaFruit"?"Sea Fruit equipped — restores health and hydration":material==="blueSeaweed"?"Blue Seaweed equipped — 15 seconds of underwater protection":"Cactus equipped — eat to find out");
+  banner(material==="jungleBerry"?"Jungle Fruit equipped — heals over time":material==="frostBerry"?"Frost Berry equipped — restores health and hydration":material==="stoneFruit"?"Stone Fruit equipped — -20 rider hydration; +20% strength/-10% speed goes to you on foot or your mount while riding":material==="honey"?"Honey equipped — heals and boosts speed":material==="seaFruit"?"Sea Fruit equipped — restores health and hydration":material==="blueSeaweed"?"Seaweed equipped — 20 seconds of deep-ocean protection":"Cactus equipped — eat to find out");
   syncHotbar();syncMobilePrimaryButton();
 }
 function eatBiomeFood(food){
@@ -19324,7 +19368,7 @@ function eatBiomeFood(food){
       banner("Sea Fruit — pet +12 HP, rider +10 hydration");updateHydrationHud();
     }
     else if(food==="blueSeaweed"){
-      player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Blue Seaweed — protected underwater for ${BLUE_SEAWEED_DURATION} seconds`);
+      player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Seaweed — deep-ocean protection for ${BLUE_SEAWEED_DURATION} seconds`);
     }
   }else{
     if(food==="jungleBerry"){player._jungleHotUntil=game.time+8;player._jungleHotRate=4;banner("Jungle Fruit — healing over time");}
@@ -19334,7 +19378,7 @@ function eatBiomeFood(food){
     else if(food==="stoneFruit"){player.hydration=clamp((Number(player.hydration)||0)-20,0,100);if(!Array.isArray(player._stoneFruitStacks))player._stoneFruitStacks=[];player._stoneFruitStacks.push(game.time+20);const n=activeStoneFruitStacks();banner(`Stone Fruit ×${n} — -20 hydration, +${n*20}% strength, -${n*10}% speed; this stack lasts 20s`);updateHydrationHud();}
     else if(food==="honey"){player.health=clamp(player.health+20,0,player.maxHealth);player._honeyRushUntil=game.time+12;player._honeyHealUntil=game.time+12;player._honeyHealRate=4.6;player._honeyHasteMul=1.2;banner("Honey — +20 HP, healing over time, and faster movement");}
     else if(food==="seaFruit"){player.health=clamp(player.health+12,0,player.maxHealth);player.hydration=clamp((Number(player.hydration)||0)+10,0,100);banner("Sea Fruit — +12 HP, +10 hydration");updateHydrationHud();}
-    else if(food==="blueSeaweed"){player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Blue Seaweed — protected underwater for ${BLUE_SEAWEED_DURATION} seconds`);}
+    else if(food==="blueSeaweed"){player._blueSeaweedUntil=game.time+BLUE_SEAWEED_DURATION;banner(`Seaweed — protected underwater for ${BLUE_SEAWEED_DURATION} seconds`);}
   }
   sfx.eat();restoreLastWeaponAfterSpecial();syncHud();syncHotbar();syncMobilePrimaryButton();
 }
@@ -23108,7 +23152,7 @@ function updateOceanTravelState(dt){
   const floorTarget=(walkingFloor||subFloor)?clamp((depth-OCEAN_SURFACE_NEAR_SHORE)/(OCEAN_DIVE_START-OCEAN_SURFACE_NEAR_SHORE),0,1):0;
   player._underwaterBlend+=(floorTarget-(Number(player._underwaterBlend)||0))*Math.min(1,dt*3.2);
   if(nearShore&&player._underwaterBlend<.025)player._underwaterBlend=0;
-  if(!net.room&&!player.dead&&!player.vehicleType&&biome==="ocean"&&!blueSeaweedProtectionActive()){
+  if(!net.room&&!player.dead&&!player.vehicleType&&biome==="ocean"&&!blueSeaweedProtectionActive()&&!divingSuitActive()){
     const rate=oceanDepthDamageRateAt(player.x,player.y);
     if(rate>0){
       player.health=Math.max(0,player.health-rate*dt*runDefenseMul());
@@ -23116,7 +23160,7 @@ function updateOceanTravelState(dt){
       if(player._oceanDamageFxCd<=0){
         player._oceanDamageFxCd=.72;player.hurtFlash=.18;game.shake=Math.max(game.shake||0,3.2);
         floatText(player.x,player.y-34,`-${Math.max(1,Math.round(rate*.72))} DEEP WATER`,"#8edbff");
-        const now=performance.now();if(now-(Number(player._oceanDamageWarnAt)||0)>3200){player._oceanDamageWarnAt=now;banner("Deep water hurts — eat Blue Seaweed or use a Boat/Sub!",true);}
+        const now=performance.now();if(now-(Number(player._oceanDamageWarnAt)||0)>3200){player._oceanDamageWarnAt=now;banner("Deep water hurts — eat Seaweed, wear a Diving Suit, or use a Sub!",true);}
       }
       if(player.health<=0)killPlayerFromDeepOcean();
     }
@@ -23141,6 +23185,7 @@ function updatePlayer(dt) {
   if (player.attackCd > 0) player.attackCd -= dt;
   if (player.shootCd > 0) player.shootCd -= dt;
   if (player.punchTimer > 0) player.punchTimer -= dt;
+  if ((player._subClawTimer||0) > 0) player._subClawTimer = Math.max(0,player._subClawTimer-dt);
   if (player.hurtFlash > 0) player.hurtFlash -= dt;
   const runRegen = runRegenPerSec();
   if (runRegen > 0 && !player.dead && player.health < player.maxHealth) player.health = Math.min(player.maxHealth, player.health + runRegen * dt);
@@ -23203,7 +23248,7 @@ function updatePlayer(dt) {
       dx = Math.cos(mount.angle); dy = Math.sin(mount.angle);
     }
     if (!player.riding && !player.vehicleType && swimmingBeforeMove) speed *= 0.68;
-    if (!player.riding && onOceanFloor) speed *= blueSeaweedProtectionActive()?1:0.72;
+    if (!player.riding && onOceanFloor) speed *= (blueSeaweedProtectionActive()?1:(divingSuitActive()?divingSuitUnderwaterMoveMul():0.72));
     if (player.heldSpecial === "Wall") speed *= 0.64;
     movePlayerSwept((dx / Math.max(0.001, Math.hypot(dx,dy))) * speed * dt, (dy / Math.max(0.001, Math.hypot(dx,dy))) * speed * dt);
     if(player.vehicleType&&!vehicleTravelAllowed(player.x,player.y)){player.x=moveStartX;player.y=moveStartY;}
@@ -23403,7 +23448,7 @@ function ensureHotbarAcquisitionOrder() {
   if((player.biomeMaterials?.honeycomb||0)>0)registerHotbarItem("Honey Comb");
   if((player.biomeMaterials?.honey||0)>0)registerHotbarItem("Honey");
   if((player.biomeMaterials?.seaFruit||0)>0)registerHotbarItem("Sea Fruit");
-  if((player.biomeMaterials?.blueSeaweed||0)>0)registerHotbarItem("Blue Seaweed");
+  if((player.biomeMaterials?.blueSeaweed||0)>0)registerHotbarItem("Seaweed");
 
 }
 function hotbarLabelAvailable(label){
@@ -23411,11 +23456,11 @@ function hotbarLabelAvailable(label){
   if(STARTER_WEAPON_IDS.includes(label))return !!player.owned[label]&&label===primaryWeaponLabel();
   if(HOTBAR_CRAFT_IDS.includes(label))return craftedItemCount(label)>0;
   if(label==="Berry")return (player.berries||0)>0;
-  const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey","Sea Fruit":"seaFruit","Blue Seaweed":"blueSeaweed"}[label];
+  const mat={"Jungle Fruit":"jungleBerry","Frost Berry":"frostBerry","Cactus A":"goodCactus","Cactus B":"badCactus","Stone Fruit":"stoneFruit","Honey Comb":"honeycomb","Honey":"honey","Sea Fruit":"seaFruit","Seaweed":"blueSeaweed"}[label];
   if(mat)return (player.biomeMaterials?.[mat]||0)>0;
   return false;
 }
-function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",SeaFruit:"Sea Fruit",BlueSeaweed:"Blue Seaweed",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill",Boat:"Boat",Sub:"Sub",Chakrams:"Chakrams",Flute:"Flute",BattleBot:"BattleBot",PetArmor:"PetArmor",RepairBuilding:"RepairBuilding"})[special]||"";}
+function specialHotbarLabel(special){return ({Bucket:"Bucket",Berry:"Berry",JungleBerry:"Jungle Fruit",FrostBerry:"Frost Berry",GoodCactus:"Cactus A",BadCactus:"Cactus B",StoneFruit:"Stone Fruit",HoneyComb:"Honey Comb",Honey:"Honey",SeaFruit:"Sea Fruit",BlueSeaweed:"Seaweed",Wall:"Wall",Saddle:"Saddle",Tower:"Tower",Windmill:"Windmill",Boat:"Boat",Sub:"Sub",Chakrams:"Chakrams",Flute:"Flute",BattleBot:"BattleBot",PetArmor:"PetArmor",RepairBuilding:"RepairBuilding"})[special]||"";}
 function swapInventoryIntoHotbar(inLabel,outLabel){
   ensureHotbarInventoryState();
   const idx=player.hotbarOrder.indexOf(outLabel);if(idx<0||outLabel===primaryWeaponLabel()||!player.inventoryOrder.includes(inLabel))return false;
@@ -23445,7 +23490,7 @@ function getHotbarItems() {
     else if (label === "Honey Comb") entry={tool:null,label:"Honey Comb",special:"HoneyComb",qty:player.biomeMaterials?.honeycomb||0};
     else if (label === "Honey") entry={tool:null,label:"Honey",special:"Honey",qty:player.biomeMaterials?.honey||0};
     else if (label === "Sea Fruit") entry={tool:null,label:"Sea Fruit",special:"SeaFruit",qty:player.biomeMaterials?.seaFruit||0};
-    else if (label === "Blue Seaweed") entry={tool:null,label:"Blue Seaweed",special:"BlueSeaweed",qty:player.biomeMaterials?.blueSeaweed||0};
+    else if (label === "Seaweed") entry={tool:null,label:"Seaweed",special:"BlueSeaweed",qty:player.biomeMaterials?.blueSeaweed||0};
     else if (label === "Wall" && craftedItemCount("Wall")>0) entry={tool:null,label:"Wall",special:"Wall",qty:craftedItemCount("Wall")};
     else if (label === "Tower" && craftedItemCount("Tower")>0) entry={tool:null,label:"Tower",special:"Tower",qty:craftedItemCount("Tower")};
     else if (label === "Windmill" && craftedItemCount("Windmill")>0) entry={tool:null,label:"Windmill",special:"Windmill",qty:craftedItemCount("Windmill")};
@@ -23505,7 +23550,7 @@ function iconSvg(name) {
     Berry: '<circle cx="9" cy="15" r="5" fill="#d83d68"/><circle cx="17" cy="15" r="5" fill="#e65a80"/><circle cx="13" cy="10" r="4" fill="#c92e5c"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#6ab04c"/>',
     "Jungle Fruit": '<g><ellipse cx="13" cy="14" rx="8" ry="6.5" fill="#f07a42" stroke="#7c3c20" stroke-width="1.3"/><ellipse cx="10.5" cy="11.5" rx="2.2" ry="1.4" fill="#ffc16c" opacity=".8"/><path d="M13 7 Q16 2 22 5 Q18 9 13 9Z" fill="#3d8a45" stroke="#24572c" stroke-width="1"/></g>',
     "Sea Fruit": '<g><circle cx="13" cy="14" r="7.5" fill="#d58bd7" stroke="#6e3d73" stroke-width="1.4"/><circle cx="10.5" cy="11" r="2.2" fill="#f2c3ee"/><path d="M13 7 Q16 3 20 6" fill="none" stroke="#4f9c72" stroke-width="2" stroke-linecap="round"/></g>',
-    "Blue Seaweed": '<g fill="none" stroke-linecap="round"><path d="M8 23 Q5 16 10 10 Q14 6 10 2" stroke="#48a9c8" stroke-width="3"/><path d="M14 24 Q18 17 14 12 Q10 8 16 4" stroke="#70d7e8" stroke-width="3.2"/><path d="M20 23 Q16 16 21 9" stroke="#3194b8" stroke-width="3"/></g>',
+    "Seaweed": '<g fill="none" stroke-linecap="round"><path d="M8 23 Q5 16 10 10 Q14 6 10 2" stroke="#48a9c8" stroke-width="3"/><path d="M14 24 Q18 17 14 12 Q10 8 16 4" stroke="#70d7e8" stroke-width="3.2"/><path d="M20 23 Q16 16 21 9" stroke="#3194b8" stroke-width="3"/></g>',
     "Frost Berry": '<g><circle cx="9" cy="15" r="5" fill="#89b8f2"/><circle cx="17" cy="15" r="5" fill="#b9dcff"/><circle cx="13" cy="10" r="4.2" fill="#76a5e3"/><path d="M13 7 Q16 3 20 5 Q17 9 13 9Z" fill="#d9fbff"/><path d="M4 13 L8 11 M18 9 L22 6 M15 20 L19 23" stroke="#effcff" stroke-width="1.4" stroke-linecap="round"/></g>',
     "Cactus A": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
     "Cactus B": '<g><circle cx="13" cy="13" r="5.2" fill="#67a555" stroke="#30511f" stroke-width="1.2"/><ellipse cx="13" cy="7.2" rx="3.3" ry="2.1" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="18.3" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/><ellipse cx="7.7" cy="13" rx="3" ry="2" fill="#72b45e" stroke="#30511f" stroke-width="1"/></g>',
@@ -24256,7 +24301,7 @@ function doCraft(c) {
   pay(c.cost);player.craftedCounts=player.craftedCounts||{};player.craftedTiers=player.craftedTiers||{};player.craftedVariants=player.craftedVariants||{};
   player.craftedCounts[c.id]=craftedItemCount(c.id)+1;player.craftedTiers[c.id]=Math.max(craftedBuildTier(c.id),clamp(Number(c.tier)||0,0,buildMaxTier(c.id)));if(c.variant)player.craftedVariants[c.id]=String(c.variant);
   if(c.id==="Wall")player.wallTier=player.craftedTiers.Wall;if(c.id==="Tower")player.towerTier=player.craftedTiers.Tower;if(c.id==="Saddle"){player.saddleTier=player.craftedTiers.Saddle;player.hasSaddle=true;}if(c.id==="Windmill")player.windmillTier=player.craftedTiers.Windmill;
-  if(HOTBAR_CRAFT_IDS.includes(c.id))registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"||c.id==="BattleBot"?6:4,"craft");sfx.craft();banner(`Crafted 1 ${buildTierMeta(c.id,c.tier,c.variant).name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
+  if(HOTBAR_CRAFT_IDS.includes(c.id))registerHotbarItem(c.id);gainSkillXp(c.id==="Tower"||c.id==="BattleBot"?6:4,"craft");sfx.craft();banner(c.id==="DivingSuit"?`Crafted ${buildTierMeta(c.id,c.tier,c.variant).name} — it is equipped automatically for deep-ocean swimming.`:`Crafted 1 ${buildTierMeta(c.id,c.tier,c.variant).name}. You now have ${craftedItemCount(c.id)}.`);buildCraftList();buildHotbar();syncHud();syncHotbar();
 }
 el("closeCraft").addEventListener("click", () => el("craftOverlay").classList.remove("show"));
 el("craftList").addEventListener("wheel",e=>{e.stopPropagation();},{passive:true});
@@ -24593,7 +24638,7 @@ function drawBackground() {
   // Ocean biome texture exists even from the surface, so travelling by Boat feels
   // like crossing a real region rather than a flat blue gap between landmasses.
   const oceanCell=220,ocx=Math.floor(game.camX/oceanCell)*oceanCell-oceanCell,ocy=Math.floor(game.camY/oceanCell)*oceanCell-oceanCell;
-  ctx.globalAlpha=.12+.10*uw;
+  ctx.globalAlpha=.12*(1-uw);
   for(let y=ocy;y<game.camY+H+oceanCell;y+=oceanCell)for(let x=ocx;x<game.camX+W+oceanCell;x+=oceanCell){
     const px=x+34+groundNoise(x,y,260)*150,py=y+30+groundNoise(x,y,263)*150;
     if(isInsideAnyLand(px,py,18))continue;
@@ -24604,31 +24649,13 @@ function drawBackground() {
   ctx.globalAlpha=1;
 
   if(uw>.04){
-    // Sandy/blue seafloor patches, rubble, coral gardens and large waving seaweed beds.
-    // These are render-only biome detail; harvestable Sea Fruit/Blue Seaweed/rocks remain real resources.
-    const sandStep=72,sx0=Math.floor(game.camX/sandStep)*sandStep-sandStep,sy0=Math.floor(game.camY/sandStep)*sandStep-sandStep;
-    ctx.globalAlpha=.24*uw;
-    for(let y=sy0;y<game.camY+H+sandStep;y+=sandStep)for(let x=sx0;x<game.camX+W+sandStep;x+=sandStep){
-      const px=x+18+groundNoise(x,y,301)*42,py=y+16+groundNoise(x,y,307)*44;if(isInsideAnyLand(px,py,6))continue;
-      ctx.fillStyle=groundNoise(x,y,311)>.42?"#e0c990":"#baa86f";ctx.beginPath();ctx.ellipse(px,py,4+groundNoise(x,y,313)*7,2+groundNoise(x,y,317)*3,.2,0,TAU);ctx.fill();
-    }
-    const floorDecorStep=105,fdx=Math.floor(game.camX/floorDecorStep)*floorDecorStep-floorDecorStep,fdy=Math.floor(game.camY/floorDecorStep)*floorDecorStep-floorDecorStep;
-    ctx.globalAlpha=.30*uw;
-    for(let y=fdy;y<game.camY+H+floorDecorStep;y+=floorDecorStep)for(let x=fdx;x<game.camX+W+floorDecorStep;x+=floorDecorStep){
-      const px=x+14+groundNoise(x,y,401)*78,py=y+12+groundNoise(x,y,409)*80;if(isInsideAnyLand(px,py,8))continue;const n=groundNoise(x,y,419);
-      if(n<.18){
-        ctx.fillStyle="#3d91aa";ctx.beginPath();ctx.ellipse(px,py,38+groundNoise(x,y,421)*54,22+groundNoise(x,y,423)*34,.2,0,TAU);ctx.fill();
-      }else if(n<.39){
-        ctx.strokeStyle="#3f9a70";ctx.lineCap="round";for(let k=0;k<6;k++){const ox=(k-2.5)*5.2,hh=19+(k%3)*8+groundNoise(x+k,y,431)*8;ctx.lineWidth=2.4+(k%2)*.8;ctx.beginPath();ctx.moveTo(px+ox,py+11);ctx.quadraticCurveTo(px+ox+Math.sin(game.time*2.0+k+x*.01)*8,py+2,px+ox+Math.sin(game.time*1.7+k)*4,py-hh);ctx.stroke();}
-      }else if(n<.57){
-        const cols=["#cf7180","#e09a68","#b56fa8","#d5b55d"];ctx.strokeStyle=cols[Math.floor(groundNoise(x,y,437)*cols.length)];ctx.lineWidth=3.2;ctx.beginPath();ctx.moveTo(px,py+10);ctx.lineTo(px,py-13);ctx.moveTo(px,py-3);ctx.lineTo(px-11,py-13);ctx.moveTo(px,py-7);ctx.lineTo(px+12,py-18);ctx.moveTo(px-5,py-8);ctx.lineTo(px-6,py-21);ctx.stroke();ctx.fillStyle="#e4b36e";ctx.beginPath();ctx.arc(px+14,py+4,3.2,0,TAU);ctx.fill();
-      }else if(n<.76){
-        const count=2+Math.floor(groundNoise(x,y,443)*4);for(let k=0;k<count;k++){const ox=(groundNoise(x+k*19,y,449)-.5)*42,oy=(groundNoise(y+k*23,x,451)-.5)*28,rr=5+groundNoise(x,y,k+457)*8;ctx.fillStyle=k%2?"#657985":"#778b8d";ctx.strokeStyle="#344750";ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(px+ox,py+oy,rr,rr*.68,(k-.5)*.35,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="rgba(210,231,226,.18)";ctx.beginPath();ctx.ellipse(px+ox-rr*.22,py+oy-rr*.22,rr*.42,rr*.15,-.2,0,TAU);ctx.fill();}
-      }else if(n<.89){
-        ctx.fillStyle="#d98675";for(let k=0;k<3;k++){const a=k/3*TAU;ctx.beginPath();ctx.ellipse(px+Math.cos(a)*7,py+Math.sin(a)*5,5,2.2,a,0,TAU);ctx.fill();}ctx.strokeStyle="#ead9aa";ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+16,py+7,5,.2,2.8);ctx.stroke();
-      }
-    }
-    ctx.globalAlpha=1;
+    // The ocean floor is one continuous sandy biome. Seaweed, rocks, Anemones and
+    // Urchins are real harvestable world resources, so no fake decorative seaweed
+    // or random colored splats are painted onto the sand.
+    ctx.save();
+    // Fully submerged ocean floor is plain sand: no random patches, splats or fake seaweed.
+    ctx.globalAlpha=.92*uw;ctx.fillStyle="#d8c18a";ctx.fillRect(game.camX-80,game.camY-80,W+160,H+160);
+    ctx.restore();
   }
 
   // Main island surf bands.
@@ -24677,9 +24704,9 @@ function drawBackground() {
 function drawUnderwaterScreenFx(amount){
   amount=clamp(Number(amount)||0,0,1);if(amount<=.01)return;
   ctx.save();
-  // No blue screen tint: underwater is shown by the seafloor itself plus a
-  // subtle moving refraction pattern, so the player's colors stay unchanged.
-  ctx.globalAlpha=.12*amount;ctx.strokeStyle="#d8f7ff";ctx.lineWidth=2;ctx.lineCap="round";
+  // Deeper water has a stronger blue cast, then refraction moves over it.
+  ctx.globalAlpha=.38*amount;ctx.fillStyle="#0d5f91";ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=.15*amount;ctx.strokeStyle="#d8f7ff";ctx.lineWidth=2;ctx.lineCap="round";
   const phase=game.time*1.65;
   for(let y=-30;y<H+50;y+=58){ctx.beginPath();for(let x=-45;x<=W+45;x+=30){const yy=y+Math.sin(x*.018+phase+y*.011)*6+Math.sin(x*.006-phase*.7)*3;if(x===-45)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}ctx.stroke();}
   ctx.globalAlpha=.065*amount;ctx.fillStyle="#ffffff";for(let i=0;i<8;i++){const x=((i*191+game.time*20)%(W+200))-100,y=((i*109+game.time*7)%(H+130))-65;ctx.beginPath();ctx.ellipse(x,y,50,5,.12,0,TAU);ctx.fill();}
@@ -27297,6 +27324,9 @@ function drawVehicleLocal(type,actor,submerged=false,occupied=true){
     if(occupied){ctx.fillStyle=HOSTL_LOCKED_PLAYER_COLOR;ctx.strokeStyle="#191817";ctx.lineWidth=2.5;roundRect(-10,-5,20,20,4);ctx.fill();ctx.stroke();}
   }else if(t==="Sub"){
     const bob=submerged?Math.sin(game.time*2.2)*.8:0;ctx.translate(0,bob);
+    // Local +Y is the vehicle's forward direction under the shared world-angle transform.
+    // The old Sub art pointed toward -Y, so it appeared backwards/upside down.
+    ctx.rotate(Math.PI);
     // True top-down submarine: nose, dorsal hatch, rear fins and propeller are all seen from above.
     ctx.fillStyle=submerged?"rgba(21,83,113,.20)":"rgba(8,69,96,.22)";ctx.beginPath();ctx.ellipse(0,5,35,43,0,0,TAU);ctx.fill();
     ctx.fillStyle="#718a95";ctx.strokeStyle="#263740";ctx.lineWidth=3;
@@ -27309,6 +27339,10 @@ function drawVehicleLocal(type,actor,submerged=false,occupied=true){
     ctx.fillStyle="#405761";ctx.strokeStyle="#20323a";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-7,13,17,0,0,TAU);ctx.fill();ctx.stroke();
     ctx.fillStyle="#79cce5";ctx.beginPath();ctx.arc(0,-9,7.5,0,TAU);ctx.fill();ctx.stroke();
     ctx.strokeStyle="#a9c1c9";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-15,-25);ctx.quadraticCurveTo(0,-34,15,-25);ctx.stroke();
+    // Harvest claws are visible from above and extend when the Sub attack button is used.
+    const clawT=clamp((Number(actor?._subClawTimer)||0)/.28,0,1),extend=Math.sin((1-clawT)*Math.PI)*12;
+    ctx.strokeStyle="#263740";ctx.fillStyle="#879ca5";ctx.lineWidth=3;
+    for(const side of [-1,1]){const sx=side*15,sy=-31,ex=side*(20+extend*.18),ey=-45-extend;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+side*8,ey-5);ctx.lineTo(ex+side*3,ey+4);ctx.closePath();ctx.fill();ctx.stroke();}
   }
   ctx.restore();
 }
@@ -28548,13 +28582,12 @@ function draw(menuMode = false) {
   }
   for (const g of viewGold) safeCanvasEntityDraw("gold", g, drawGoldChunk);
 
-  // Players are always BELOW animals, whether on foot or mounted. Draw every
-  // player before any pet/wildlife/mount so an animal can never appear under a
-  // person just because that person started or stopped riding.
-  if (!menuMode) {
-    safeCanvasDrawCall("ability fx", drawAbilityFx);
-    safeCanvasDrawCall("player", drawPlayer);
-  }
+  // A rider sits ABOVE the pet they are currently riding. Other animals still
+  // draw later, so the player remains underneath unrelated wildlife/pets.
+  if (!menuMode) safeCanvasDrawCall("ability fx", drawAbilityFx);
+  if(!menuMode&&player.riding&&!player.riding.dead) safeCanvasEntityDraw("ridden pet",player.riding,drawAnimal);
+  if (!menuMode || net.room) safeCanvasDrawCall("remote mounted pets", drawRemoteMountedPets);
+  if (!menuMode) safeCanvasDrawCall("player", drawPlayer);
   if (!menuMode || net.room) safeCanvasDrawCall("remote players", drawRemotePlayers);
 
   // Animal trails are a ground effect: draw them BEFORE wildlife and pets.
@@ -28565,7 +28598,6 @@ function draw(menuMode = false) {
     circ(p.x, p.y, p.size);
   }
   ctx.globalAlpha = 1;
-  if(!menuMode&&player.riding&&!player.riding.dead) safeCanvasEntityDraw("ridden pet",player.riding,drawAnimal);
   for (const a of animals) if (!a.owned && renderInView(a.x, a.y, Math.max(135, (Number(a.r) || 18) * 3.5))) safeCanvasEntityDraw("wild animal", a, drawAnimal);
   for (const p of player.pets) if (p!==player.riding&&renderInView(p.x, p.y, Math.max(135, (Number(p.r) || 18) * 3.5))) safeCanvasEntityDraw("pet", p, drawAnimal);
   if (!menuMode || net.room) safeCanvasDrawCall("remote pets", drawRemotePets);

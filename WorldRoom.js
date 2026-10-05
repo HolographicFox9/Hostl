@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "725";
+const CUBE_SHARED_RULES_VERSION = "726";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -573,15 +573,15 @@ function skillChoiceCount(s,id){let n=0;for(const v of Object.values(s?.mileston
 function weaponTierFromSkill(s){return clamp(skillChoiceCount(s,"weaponTier"),0,2);}
 const STARTING_CRAFT_IDS=["Wall","Tower","Saddle","Windmill"];
 const NEW_CRAFT_GROUPS=[
-  {id:"travel",ids:["Boat","Sub","Chakrams","Flute"]},
+  {id:"travel",ids:["Boat","Sub","Chakrams","Flute","DivingSuit"]},
   {id:"support",ids:["BattleBot","PetArmor","RepairBuilding"]}
 ];
 const NEW_CRAFT_IDS=NEW_CRAFT_GROUPS.flatMap(g=>g.ids);
 const ALL_CRAFT_IDS=[...STARTING_CRAFT_IDS,...NEW_CRAFT_IDS];
-const BUILD_MAX_TIER={Wall:3,Tower:3,Saddle:3,Windmill:3,Boat:3,Sub:3,Chakrams:3,Flute:3,BattleBot:3,PetArmor:3,RepairBuilding:3};
+const BUILD_MAX_TIER={Wall:3,Tower:3,Saddle:3,Windmill:3,Boat:3,Sub:3,Chakrams:3,Flute:3,DivingSuit:3,BattleBot:3,PetArmor:3,RepairBuilding:3};
 const BUILD_FINAL_VARIANTS={
   Wall:["ruby","emerald","diamond"],Tower:["ruby","emerald","diamond"],Saddle:["ruby","emerald","diamond"],Windmill:["ruby","emerald","diamond"],
-  Boat:["ruby","emerald","diamond"],Sub:["ruby","emerald","diamond"],Chakrams:["ruby","emerald","diamond"],Flute:["ruby","emerald","diamond"],
+  Boat:["ruby","emerald","diamond"],Sub:["ruby","emerald","diamond"],Chakrams:["ruby","emerald","diamond"],Flute:["ruby","emerald","diamond"],DivingSuit:["ruby","emerald","diamond"],
   PetArmor:["ruby","emerald","diamond"],BattleBot:["water","fire","lightning","plant","void","light"]
 };
 function parseBuildUpgradeChoice(raw){const m=String(raw||"").match(/^build([A-Za-z]+)(?:@([A-Za-z]+))?$/);return m?{build:m[1],variant:(m[2]||"").toLowerCase()}:null;}
@@ -646,14 +646,14 @@ class PlayerState extends Schema {
     this.moveX = 0; this.moveY = 0; this.moving = false; this.animalCarryT = 0;
     this.kills = 0; this.gold = 0; this.title = ""; this.testerRank = 0; this.ownerRank = 0;
     this.skillLevel = 0; this.skillXp = 0; this.skillSpeed = 0; this.skillStrength = 0; this.skillDefense = 0; this.skillPendingMilestone = 0;
-    this.hydration = 100; this.bucketWater = true; this.bucketSips = BUCKET_MAX_SIPS; this.saddleTier = 0; this.saddleVariant="";
+    this.hydration = 100; this.bucketWater = true; this.bucketSips = BUCKET_MAX_SIPS; this.saddleTier = 0; this.saddleVariant=""; this.divingSuitTier=-1; this.divingSuitVariant="";
   }
 }
 defineTypes(PlayerState, {
   id:"string", username:"string", x:"number", y:"number", angle:"number",
   health:"number", maxHealth:"number", dead:"boolean", color:"string", tool:"string", heldSpecial:"string", ridingPetId:"string", vehicleType:"string", vehicleTier:"number", vehicleVariant:"string",
   moveX:"number", moveY:"number", moving:"boolean", animalCarryT:"number", kills:"number", gold:"number", title:"string", testerRank:"number", ownerRank:"number",
-  skillLevel:"number", skillXp:"number", skillSpeed:"number", skillStrength:"number", skillDefense:"number", skillPendingMilestone:"number", hydration:"number", bucketWater:"boolean", bucketSips:"number", saddleTier:"number", saddleVariant:"string"
+  skillLevel:"number", skillXp:"number", skillSpeed:"number", skillStrength:"number", skillDefense:"number", skillPendingMilestone:"number", hydration:"number", bucketWater:"boolean", bucketSips:"number", saddleTier:"number", saddleVariant:"string", divingSuitTier:"number", divingSuitVariant:"string"
 });
 
 class ResourceState extends Schema {
@@ -1351,9 +1351,14 @@ const ISLAND_RADIUS=Math.min(MAIN_WORLD_W,MAIN_WORLD_H)*.415,ISLAND_SHORE_WIDTH=
 const OUTER_ISLANDS=Object.freeze([
   {id:"reef_isle",cx:ISLAND_CX+29000,cy:ISLAND_CY-7000,r:1080,biome:"rainforest",seed:.73},
   {id:"sunbar_isle",cx:ISLAND_CX+26000,cy:ISLAND_CY+27000,r:920,biome:"desert",seed:1.91},
-  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:720,biome:"arctic",seed:3.17}
+  {id:"frost_isle",cx:ISLAND_CX+7000,cy:ISLAND_CY-28500,r:820,biome:"arctic",seed:3.17},
+  {id:"westwood_isle",cx:ISLAND_CX-29500,cy:ISLAND_CY+1500,r:980,biome:"forest",seed:4.23},
+  {id:"southwest_isle",cx:ISLAND_CX-25000,cy:ISLAND_CY+24500,r:900,biome:"desert",seed:5.31},
+  {id:"southcap_isle",cx:ISLAND_CX-2500,cy:ISLAND_CY+29200,r:850,biome:"desert",seed:6.47},
+  {id:"northeast_isle",cx:ISLAND_CX+24500,cy:ISLAND_CY-23500,r:960,biome:"rainforest",seed:7.53},
+  {id:"northwest_isle",cx:ISLAND_CX-24500,cy:ISLAND_CY-23000,r:930,biome:"mountains",seed:8.69}
 ]);
-const OCEAN_DIVE_START=360,OCEAN_SURFACE_NEAR_SHORE=245,BLUE_SEAWEED_DURATION=15;
+const OCEAN_DIVE_START=360,OCEAN_SURFACE_NEAR_SHORE=245,BLUE_SEAWEED_DURATION=20;
 const OCEAN_DEEP_DAMAGE_START=820,OCEAN_DEEP_DAMAGE_FULL=2200,OCEAN_DEEP_DAMAGE_MIN=4,OCEAN_DEEP_DAMAGE_MAX=16;
 const BIOME_ZONES={
   forest:{id:"forest",cx:MAIN_WORLD_LEFT+MAIN_WORLD_W*.41,cy:MAIN_WORLD_TOP+MAIN_WORLD_H*.51},
@@ -1390,7 +1395,7 @@ const BIOME_RESOURCE_INFO=Object.freeze({
   rainforestHive:{biome:"rainforest",material:"honeycomb",name:"Giant Hive",color:"#f2bf35",category:"soft",hp:14},
   oceanUrchin:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#d58bd7",category:"soft",hp:4},
   oceanAnemone:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#ef8fae",category:"soft",hp:5},
-  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Blue Seaweed",color:"#59c7de",category:"soft",hp:4}
+  oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Seaweed",color:"#59c7de",category:"soft",hp:4}
 });
 function islandDistance(x,y){return Math.hypot(x-ISLAND_CX,y-ISLAND_CY);}
 function islandAngleDelta(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;else if(d<-Math.PI)d+=TAU;return d;}
@@ -1421,6 +1426,7 @@ function placedVehicleType(w){const k=String(w?.kind||"");return k.startsWith("v
 function placedVehicleTier(w){const m=String(w?.kind||"").match(/^vehicle(?:Boat|Sub)(\d+)/);return clamp(Math.floor(Number(m?.[1])||0),0,3);}
 function placedVehicleVariant(w){const m=String(w?.kind||"").match(/@([a-z]+)$/i);return String(m?.[1]||"").toLowerCase();}
 function vehicleSpeedMul(type,tier=0,variant=""){tier=clamp(Math.floor(Number(tier)||0),0,3);let m=type==="Sub"?[1.38,1.72,2.08,2.34][tier]:[1.55,1.92,2.32,2.56][tier];if(tier>=3&&variant==="ruby")m*=1.16;else if(tier>=3&&variant==="emerald")m*=1.08;else if(tier>=3&&variant==="diamond")m*=1.04;return m;}
+function divingSuitMoveMulServer(p){const tier=clamp(Math.floor(Number(p?.divingSuitTier)||0),0,3);let m=[.86,.93,1,1.05][tier];if(tier>=3&&String(p?.divingSuitVariant||"")==="ruby")m=1.14;return m;}
 function isPlacedVehicleWall(w){return !!placedVehicleType(w);}
 function vehicleTravelAllowed(x,y){return worldBiomeAt(x,y)==="ocean"||landDepthToCoastAt(x,y)<=VEHICLE_BEACH_INLAND;}
 function vehiclePlacementAllowed(x,y){return nearOceanShore(x,y,VEHICLE_PLACE_COAST_RANGE)&&vehicleTravelAllowed(x,y);}
@@ -1596,6 +1602,7 @@ export class WorldRoom extends Room {
 
     this.onMessage("input",(client,input={})=>this.handleInput(client,input));
     this.onMessage("resourceHit",(client,data={})=>this.handleResourceHit(client,data));
+    this.onMessage("subClaw",(client,data={})=>this.handleSubClaw(client,data));
     this.onMessage("goldHit",(client,data={})=>this.handleGoldHit(client,data));
     this.onMessage("attack",(client,data={})=>this.handleAttack(client,data));
     this.onMessage("throwAxe",(client,data={})=>this.handleThrowAxe(client,data));
@@ -2300,7 +2307,7 @@ export class WorldRoom extends Room {
 
     // The outer islands are no longer empty. Give each island a dense local
     // population using species that already belong to that island's biome.
-    const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:18};
+    const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:20,westwood_isle:24,southwest_isle:22,southcap_isle:21,northeast_isle:24,northwest_isle:23};
     for(const spec of OUTER_ISLANDS){
       const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!this.isWildBeeType(type));
       const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;let made=0;
@@ -2435,6 +2442,11 @@ export class WorldRoom extends Room {
     if(typeof input.heldSpecial==="string")p.heldSpecial=["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","Honey","HoneyComb","Bucket","Wall","Saddle","Tower","Windmill","Boat","Sub","Chakrams","Flute","BattleBot","PetArmor","RepairBuilding"].includes(input.heldSpecial)?input.heldSpecial:"";
     if(Number.isFinite(+input.saddleTier))p.saddleTier=clamp(Math.floor(+input.saddleTier),0,this.buildTierForOwner(client.sessionId,"Saddle"));
     if(typeof input.saddleVariant==="string"){const v=this.buildVariantForOwner(client.sessionId,"Saddle");p.saddleVariant=p.saddleTier>=3&&input.saddleVariant===v?v:"";}
+    {
+      const s=this.skillState(client.sessionId),known=buildKnownFromSkill(s,"DivingSuit"),active=input.divingSuitActive===true&&known;
+      if(active){const maxTier=this.buildTierForOwner(client.sessionId,"DivingSuit");p.divingSuitTier=clamp(Math.floor(Number(input.divingSuitTier)||0),0,maxTier);const v=this.buildVariantForOwner(client.sessionId,"DivingSuit");p.divingSuitVariant=p.divingSuitTier>=3&&String(input.divingSuitVariant||"")===v?v:"";}
+      else{p.divingSuitTier=-1;p.divingSuitVariant="";}
+    }
     if(typeof input.ridingPetId==="string"){
       const requested=input.ridingPetId.slice(0,32);
       if(!requested)p.ridingPetId="";
@@ -2496,7 +2508,7 @@ export class WorldRoom extends Room {
       if(p.vehicleType)expectedSpeed*=vehicleSpeedMul(p.vehicleType,p.vehicleTier||0,p.vehicleVariant||"");
       if(rideMount&&!rideMount.dead)expectedSpeed=Math.max(24,Number(rideMount.speed)||148)*petStoneFruitMoveMul(rideMount)*2.30*inputMag;
       const onOceanFloor=!p.vehicleType&&!rideMount&&worldBiomeAt(p.x,p.y)==="ocean"&&oceanDepthAt(p.x,p.y)>=OCEAN_DIVE_START;
-      if(onOceanFloor&& !((Number(p._blueSeaweedUntil)||0)>this.state.worldTime))expectedSpeed*=.72;
+      if(onOceanFloor&& !((Number(p._blueSeaweedUntil)||0)>this.state.worldTime)){if(Number(p.divingSuitTier)>=0)expectedSpeed*=divingSuitMoveMulServer(p);else expectedSpeed*=.72;}
       if(p.heldSpecial==="Wall")expectedSpeed*=.64;
       expectedSpeed*=slowMul;
       const minStep=rideMount?52:(p.vehicleType?44:34);
@@ -2562,7 +2574,7 @@ export class WorldRoom extends Room {
     }
     if(amount>0)p.health=clamp(p.health+amount,0,p.maxHealth);
   }
-  handleRespawn(client,data={}){const p=this.state.players.get(client.sessionId);if(!p)return;this.playerCombatReadyAt.set(client.sessionId,this.state.worldTime+1.15);this.playerSurvivalSeconds.set(client.sessionId,0);this.playerSurvivalAwards.set(client.sessionId,new Set());this.playerNightSeen.delete(client.sessionId);this.playerRunShop.set(client.sessionId,{purchased:new Set(),hat:"",cape:"",armor:""});this.playerSkillProgress.set(client.sessionId,{level:0,xp:0,speed:0,strength:0,defense:0,stoneChoice:"",weaponChoice:"",milestones:{}});this.playerBiomeMaterials.set(client.sessionId,{});this.playerStoneFruitStacks.set(client.sessionId,[]);this.sendSkillState(client.sessionId);this.tamePendingPlayers.delete(client.sessionId);const oldX=p.x,oldY=p.y;const requested=Math.max(0,Math.min(3200,Number(data?.minDistance)||2400));const s=this.safeSpawn(oldX,oldY,requested);p.x=s.x;p.y=s.y;p.angle=rand(-Math.PI,Math.PI);p.health=p.maxHealth;p.hydration=100;p.bucketWater=true;p.bucketSips=BUCKET_MAX_SIPS;p.dead=false;p.tool="Fist";p.heldSpecial="";p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";p.saddleTier=0;p.saddleVariant="";p.animalCarryT=0;p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;p._blueSeaweedUntil=0;this.playerStoneFruitStacks.set(client.sessionId,[]);p._honeyRushUntil=0;p._honeyHealUntil=0;p._honeyHealRate=0;p._honeyHasteMul=1;p._mountedCactusHydrateUntil=0;p._mountedCactusHydrateRate=0;p._mountedBadCactusUntil=0;p._mountedBadCactusHydrateRate=0;this.playerCarryUntil.delete(client.sessionId);this.playerCarryAnimal.delete(client.sessionId);this.pendingAnimalPushes.delete(client.sessionId);let i=0;for(const[id,pet]of this.state.pets){if(!pet||pet.ownerId!==client.sessionId)continue;const pos=this.safePetSpawnNear(p.x,p.y,pet.r||18);pet.x=pos.x;pet.y=pos.y;pet.angle=p.angle;pet.targetX=0;pet.targetY=0;pet.follow=true;pet.orderMode="follow";this.petFollowState.delete(id);this.petChaseState.delete(id);if(pet.dead){pet.dead=false;pet.hp=pet.maxHp;this.petDeathTimers.delete(id);}i++;}client.send("respawned",{x:p.x,y:p.y,movedFrom:{x:oldX,y:oldY}});}
+  handleRespawn(client,data={}){const p=this.state.players.get(client.sessionId);if(!p)return;this.playerCombatReadyAt.set(client.sessionId,this.state.worldTime+1.15);this.playerSurvivalSeconds.set(client.sessionId,0);this.playerSurvivalAwards.set(client.sessionId,new Set());this.playerNightSeen.delete(client.sessionId);this.playerRunShop.set(client.sessionId,{purchased:new Set(),hat:"",cape:"",armor:""});this.playerSkillProgress.set(client.sessionId,{level:0,xp:0,speed:0,strength:0,defense:0,stoneChoice:"",weaponChoice:"",milestones:{}});this.playerBiomeMaterials.set(client.sessionId,{});this.playerStoneFruitStacks.set(client.sessionId,[]);this.sendSkillState(client.sessionId);this.tamePendingPlayers.delete(client.sessionId);const oldX=p.x,oldY=p.y;const requested=Math.max(0,Math.min(3200,Number(data?.minDistance)||2400));const s=this.safeSpawn(oldX,oldY,requested);p.x=s.x;p.y=s.y;p.angle=rand(-Math.PI,Math.PI);p.health=p.maxHealth;p.hydration=100;p.bucketWater=true;p.bucketSips=BUCKET_MAX_SIPS;p.dead=false;p.tool="Fist";p.heldSpecial="";p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";p.saddleTier=0;p.saddleVariant="";p.divingSuitTier=-1;p.divingSuitVariant="";p.animalCarryT=0;p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;p._blueSeaweedUntil=0;this.playerStoneFruitStacks.set(client.sessionId,[]);p._honeyRushUntil=0;p._honeyHealUntil=0;p._honeyHealRate=0;p._honeyHasteMul=1;p._mountedCactusHydrateUntil=0;p._mountedCactusHydrateRate=0;p._mountedBadCactusUntil=0;p._mountedBadCactusHydrateRate=0;this.playerCarryUntil.delete(client.sessionId);this.playerCarryAnimal.delete(client.sessionId);this.pendingAnimalPushes.delete(client.sessionId);let i=0;for(const[id,pet]of this.state.pets){if(!pet||pet.ownerId!==client.sessionId)continue;const pos=this.safePetSpawnNear(p.x,p.y,pet.r||18);pet.x=pos.x;pet.y=pos.y;pet.angle=p.angle;pet.targetX=0;pet.targetY=0;pet.follow=true;pet.orderMode="follow";this.petFollowState.delete(id);this.petChaseState.delete(id);if(pet.dead){pet.dead=false;pet.hp=pet.maxHp;this.petDeathTimers.delete(id);}i++;}client.send("respawned",{x:p.x,y:p.y,movedFrom:{x:oldX,y:oldY}});}
   handleRevive(client,data={}){
     const p=this.state.players.get(client.sessionId); if(!p||!p.dead)return;
     const accountId=this.playerAccountIds.get(client.sessionId);
@@ -2570,7 +2582,7 @@ export class WorldRoom extends Room {
     if(!auth?.ok){client.send("reviveDenied",{error:"revive_not_authorized"});return;}
     const oldX=p.x,oldY=p.y,s=this.safeSpawn(oldX,oldY,760);
     this.playerCombatReadyAt.set(client.sessionId,this.state.worldTime+1.35);
-    p.x=s.x;p.y=s.y;p.angle=rand(-Math.PI,Math.PI);p.health=Math.max(1,p.maxHealth*.60);p.hydration=65;p.bucketWater=true;p.bucketSips=Math.min(BUCKET_MAX_SIPS,2);p.dead=false;p.heldSpecial="";p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";p.animalCarryT=0;
+    p.x=s.x;p.y=s.y;p.angle=rand(-Math.PI,Math.PI);p.health=Math.max(1,p.maxHealth*.60);p.hydration=65;p.bucketWater=true;p.bucketSips=Math.min(BUCKET_MAX_SIPS,2);p.dead=false;p.heldSpecial="";p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";p.divingSuitTier=-1;p.divingSuitVariant="";p.animalCarryT=0;
     p.gold=Math.max(0,Math.floor((Number(p.gold)||0)*.35));
     const inv=this.playerBiomeMaterials.get(client.sessionId)||{};for(const k of Object.keys(inv))inv[k]=Math.max(0,Math.floor((Number(inv[k])||0)*.35));this.playerBiomeMaterials.set(client.sessionId,inv);
     p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;p._blueSeaweedUntil=0;this.playerStoneFruitStacks.set(client.sessionId,[]);p._honeyRushUntil=0;p._honeyHealUntil=0;p._honeyHealRate=0;p._honeyHasteMul=1;p._mountedCactusHydrateUntil=0;p._mountedCactusHydrateRate=0;p._mountedBadCactusUntil=0;p._mountedBadCactusHydrateRate=0;
@@ -2682,6 +2694,20 @@ export class WorldRoom extends Room {
   }
 
   handleResourceHit(client,data,options={}){const id=String(data.id||""),r=this.state.resources.get(id);if(!r||!r.alive||r.type==="pond"||r.type==="river")return;if(!options.projectile){if(data.preciseWeapon){const pp=this.state.players.get(client.sessionId),preTool=this.allowedTool(client.sessionId,String(data.tool||"Fist")),preTier=this.weaponTierForOwner(client.sessionId),prePose=preciseWeaponPoseKey(preTool,preTier,String(this.skillState(client.sessionId).weaponChoice||"")),preAng=Number.isFinite(+data.angle)?+data.angle:(pp?.angle||0),preShape=pp&&prePose?preciseWeaponShape(pp,prePose,preAng,clamp(Number(data.attackT)||.54,0,1)):null;if(!preShape||!preciseShapeTouchesResource(preShape,r))return;}else if(!this.playerCanReach(client,r.x,r.y,Math.min(80,r.solidR)))return;}if(this.isBeeFlowerResource(r)){this.broadcastFx({kind:"hit",x:r.x,y:r.y,text:"",color:BIOME_RESOURCE_INFO[r.type]?.color||"#ef8ac4"});return;}this.addSkillXp(client.sessionId,1);const toolName=this.allowedTool(client.sessionId,String(data.tool||"Fist")),t=this.specializedToolStats(client.sessionId,toolName,this.weaponTierForOwner(client.sessionId));const p=this.state.players.get(client.sessionId),biomeInfo=BIOME_RESOURCE_INFO[r.type];if(!options.skipHydration)this.consumeHydration(client.sessionId,biomeInfo?.category==="soft"?.9:(r.type==="bush"?.65:1.2));this.broadcast("playerAction",{playerId:client.sessionId,action:"resourceHit",tool:toolName,angle:p?.angle||0,heldSpecial:p?.heldSpecial||"",targetKind:"resource",targetId:id});this.broadcastFx({kind:"hit",x:r.x,y:r.y,text:"",color:biomeInfo?.color||(r.type==="bush"?"#d1315c":((r.type==="rock"||r.type==="oceanRock")?"#a9b3bd":"#c99a5b"))});if(biomeInfo){if(r.type==="forestGiantFlower"||r.type==="rainforestGiantFlower"){this.broadcastFx({kind:"hit",x:r.x,y:r.y,text:"",color:biomeInfo.color});return;}if(r.type==="rainforestHive"){const gotComb=Math.random()<.26,honeyAmt=1,inv=this.playerBiomeMaterials.get(client.sessionId)||{};if(gotComb)inv.honeycomb=(inv.honeycomb||0)+1;inv.honey=(inv.honey||0)+honeyAmt;this.playerBiomeMaterials.set(client.sessionId,inv);if(gotComb)client.send("resourceReward",{id,kind:"biomeMaterial",material:"honeycomb",amount:1,label:"Honey Comb",color:biomeInfo.color});else client.send("resourceReward",{id,kind:"hiveMiss",material:"honeycomb",amount:0,label:"No Honey Comb",color:"#e7c66d"});client.send("resourceReward",{id,kind:"biomeMaterial",material:"honey",amount:honeyAmt,label:"Honey",color:"#f4bd42"});this.broadcastFx({kind:"hit",x:r.x,y:r.y,text:gotComb?"+ Honey Comb":"No comb",color:gotComb?biomeInfo.color:"#e7c66d"});return;}const correct=(biomeInfo.category==="wood"&&toolName==="Axe")||(biomeInfo.category==="stone"&&toolName==="Pickaxe")||(biomeInfo.category==="soft"&&(toolName==="Fist"||toolName==="Axe"));let damage=(t.resourcePower==null?1:t.resourcePower)*(correct?1.25:.68);if(toolName==="Sword")damage*=.35;r.hp=Math.max(0,r.hp-damage);const amount=correct?2:1,inv=this.playerBiomeMaterials.get(client.sessionId)||{};inv[biomeInfo.material]=(inv[biomeInfo.material]||0)+amount;this.playerBiomeMaterials.set(client.sessionId,inv);client.send("resourceReward",{id,kind:"biomeMaterial",material:biomeInfo.material,amount,label:biomeInfo.name,color:biomeInfo.color});this.broadcastEntityHealth("resource",id,r);if(r.hp<=0){r.alive=false;this.resourceRespawns.set(id,rand(18,30));this.broadcastEntityHealth("resource",id,r);const accountId=this.playerAccountIds.get(client.sessionId),homeMap={treeResin:"resin",wildHerb:"wildHerb",jungleVine:"swiftFiber",iceCrystal:"iceCrystal"},homeId=homeMap[biomeInfo.material];if(accountId&&homeId){Promise.resolve(HOSTL_ACCOUNT_HOOKS.rewardGameplayMaterial(String(accountId),homeId,1,`biome:${r.type}`)).then(result=>{if(result?.granted)client.send("accountMaterialReward",result);}).catch(()=>{});}}return;}if(r.type==="bush"){r.hp=Math.max(0,r.hp-Math.max(.5,t.gather*.9));client.send("resourceReward",{id,kind:"berries",amount:Math.max(1,Math.round(randi(1,2)*this.runPerks(client.sessionId).gatherMul))});}else{const isWood=r.type==="tree"||r.type==="log",correctAxe=toolName==="Axe"&&isWood,correctPick=toolName==="Pickaxe"&&(r.type==="rock"||r.type==="oceanRock");let damage=t.resourcePower;if(r.type==="log")damage*=1.35;if(toolName==="Fist")damage*=r.type==="log"?1.25:.82;if(toolName==="Axe"&&!correctAxe)damage*=.32;if(toolName==="Pickaxe"&&!correctPick)damage*=.32;r.hp=Math.max(0,r.hp-damage);let y=1;if(r.type==="log")y=toolName==="Fist"?2:correctAxe?6:toolName==="Sword"?1:2;else if(correctAxe||correctPick)y=t.gather;else if(toolName==="Fist")y=t.gather;else if(toolName==="Sword")y=.12;else if(toolName==="Bow")y=.35;else y=.45;y*=this.runPerks(client.sessionId).gatherMul;const key=`${client.sessionId}:${id}`,credit=(this.harvestCredits.get(key)||0)+y,whole=Math.floor(credit+1e-6);this.harvestCredits.set(key,credit-whole);if(whole>0)client.send("resourceReward",{id,kind:isWood?"wood":"stone",amount:whole});else if(toolName==="Sword")client.send("resourceReward",{id,kind:isWood?"wood":"stone",amount:0,tiny:true});}this.broadcastEntityHealth("resource",id,r);if(r.hp<=0){r.hp=0;r.alive=false;this.broadcastEntityHealth("resource",id,r);this.resourceRespawns.set(id,rand(12,22));}}
+  handleSubClaw(client,data={}){
+    const p=this.state.players.get(client.sessionId);if(!p||p.dead||p.vehicleType!=="Sub")return;
+    const now=this.state.worldTime,next=this.playerAttackCd.get(client.sessionId)||0;if(now<next)return;this.playerAttackCd.set(client.sessionId,now+.34);
+    const id=String(data.id||""),r=this.state.resources.get(id);if(!r||!r.alive)return;
+    const info=BIOME_RESOURCE_INFO[r.type],isOceanRock=r.type==="oceanRock",isOceanResource=!!info&&info.biome==="ocean";if(!isOceanRock&&!isOceanResource)return;
+    const tier=Math.min(clamp(Math.floor(Number(data.tier)||0),0,3),this.buildTierForOwner(client.sessionId,"Sub"));
+    const a=Number.isFinite(+data.angle)?+data.angle:p.angle;p.angle=a;const c=resourceCenter(r),dx=c.x-p.x,dy=c.y-p.y,d=Math.hypot(dx,dy),range=108+Math.max(5,Number(r.solidR)||6);if(d>range)return;
+    if(d>18){const dot=(dx/d)*Math.cos(a)+(dy/d)*Math.sin(a);if(dot<-.08)return;}
+    this.broadcast("playerAction",{playerId:client.sessionId,action:"subClaw",tool:"Sub",angle:a,heldSpecial:"Sub",targetKind:"resource",targetId:id});
+    this.broadcastFx({kind:"hit",x:c.x,y:c.y,text:"",color:info?.color||(isOceanRock?"#a9b3bd":"#59c7de")});
+    if(isOceanRock){r.hp=Math.max(0,r.hp-(1.65+tier*.42));const amount=tier>=2?2:1;client.send("resourceReward",{id,kind:"stone",amount});}
+    else{r.hp=Math.max(0,r.hp-(1.45+tier*.34));const amount=tier>=3?2:1,inv=this.playerBiomeMaterials.get(client.sessionId)||{};inv[info.material]=(inv[info.material]||0)+amount;this.playerBiomeMaterials.set(client.sessionId,inv);client.send("resourceReward",{id,kind:"biomeMaterial",material:info.material,amount,label:info.name,color:info.color});}
+    this.broadcastEntityHealth("resource",id,r);if(r.hp<=0){r.hp=0;r.alive=false;this.broadcastEntityHealth("resource",id,r);this.resourceRespawns.set(id,rand(12,22));}
+  }
   handleGoldHit(client,data){const id=String(data.id||""),g=this.state.gold.get(id);if(!g||(!g.infinite&&g.goldLeft<=0))return;if(data.preciseWeapon){const pp=this.state.players.get(client.sessionId),preTool=this.allowedTool(client.sessionId,String(data.tool||"Fist")),preTier=this.weaponTierForOwner(client.sessionId),prePose=preciseWeaponPoseKey(preTool,preTier,String(this.skillState(client.sessionId).weaponChoice||"")),preAng=Number.isFinite(+data.angle)?+data.angle:(pp?.angle||0),preShape=pp&&prePose?preciseWeaponShape(pp,prePose,preAng,clamp(Number(data.attackT)||.54,0,1)):null;if(!preShape||!preciseShapeTouchesGold(preShape,g))return;}else if(!this.playerCanReach(client,g.x,g.y,Math.min(150,g.r)))return;this.addSkillXp(client.sessionId,1);const tool=this.allowedTool(client.sessionId,String(data.tool||"Fist"));const p=this.state.players.get(client.sessionId);this.consumeHydration(client.sessionId,1.05);this.broadcast("playerAction",{playerId:client.sessionId,action:"goldHit",tool,angle:p?.angle||0,heldSpecial:p?.heldSpecial||"",targetKind:"gold",targetId:id});this.broadcastFx({kind:"hit",x:g.x,y:g.y,text:"",color:g.pure?"#fff19a":"#ffd23f"});let take=0,tiny=false;if(tool==="Fist"){const key=`${client.sessionId}:${id}`;let c=(this.goldHandCredits.get(key)||0)+.12;if(c>=1){take=1;c-=1;}else tiny=true;this.goldHandCredits.set(key,c);}else take=g.pure?3:g.size==="huge"?randi(2,4):1;if(!g.infinite)take=Math.min(take,Math.max(0,g.goldLeft));if(take>0){if(!g.infinite)g.goldLeft=Math.max(0,g.goldLeft-take);take=Math.max(1,Math.round(take*this.runPerks(client.sessionId).gatherMul));const p=this.state.players.get(client.sessionId);if(p)p.gold=Math.max(0,Math.floor((Number(p.gold)||0)+take));client.send("resourceReward",{id,kind:"gold",amount:take,pure:!!g.pure,balance:p?p.gold:undefined});}else client.send("resourceReward",{id,kind:"gold",amount:0,tiny});}
 
   maybeRewardWildMaterial(attackerId,a){
@@ -2864,7 +2890,7 @@ export class WorldRoom extends Room {
       else{p.health=Math.min(p.maxHealth,p.health+12);p.hydration=clamp((Number(p.hydration)||0)+10,0,100);send("Sea Fruit — +12 HP, +10 hydration");}
     }
     else if(food==="blueSeaweed"){
-      if((inv.blueSeaweed||0)<1)return;inv.blueSeaweed--;p._blueSeaweedUntil=this.state.worldTime+BLUE_SEAWEED_DURATION;send("Blue Seaweed — underwater protection and full movement for 15s",{duration:BLUE_SEAWEED_DURATION});
+      if((inv.blueSeaweed||0)<1)return;inv.blueSeaweed--;p._blueSeaweedUntil=this.state.worldTime+BLUE_SEAWEED_DURATION;send(`Seaweed — deep-ocean protection and full movement for ${BLUE_SEAWEED_DURATION}s`,{duration:BLUE_SEAWEED_DURATION});
     }
     else if(food==="honey"){
       if((inv.honey||0)<1)return;inv.honey--;
@@ -4852,7 +4878,7 @@ export class WorldRoom extends Room {
       if(!p.dead&&(Number(p._jungleHotUntil)||0)>this.state.worldTime&&p.health<p.maxHealth)p.health=Math.min(p.maxHealth,p.health+(Number(p._jungleHotRate)||4)*dt);
       if(!p.dead&&(Number(p._cactusGoodUntil)||0)>this.state.worldTime){if(p.health<p.maxHealth)p.health=Math.min(p.maxHealth,p.health+(Number(p._cactusHealRate)||2.6)*dt);p.hydration=clamp((Number(p.hydration)||0)+(Number(p._cactusHydrateRate)||3.8)*dt,0,100);}
       if(!p.dead&&(Number(p._badCactusUntil)||0)>this.state.worldTime){p.health=Math.max(0,p.health-(Number(p._badCactusDamageRate)||2.5)*dt);p.hydration=clamp((Number(p.hydration)||0)-(Number(p._badCactusHydrateRate)||4.5)*dt,0,100);if(p.health<=0)this.damageTarget({kind:"player",id},999,"world","");}if(!p.dead&&(Number(p._mountedCactusHydrateUntil)||0)>this.state.worldTime)p.hydration=clamp((Number(p.hydration)||0)+(Number(p._mountedCactusHydrateRate)||3.8)*dt,0,100);if(!p.dead&&(Number(p._mountedBadCactusUntil)||0)>this.state.worldTime)p.hydration=clamp((Number(p.hydration)||0)-(Number(p._mountedBadCactusHydrateRate)||4.5)*dt,0,100);if(!p.dead&&(Number(p._honeyHealUntil)||0)>this.state.worldTime&&p.health<p.maxHealth)p.health=Math.min(p.maxHealth,p.health+(Number(p._honeyHealRate)||4.6)*dt);
-      if(!p.dead&&!p.vehicleType&&worldBiomeAt(p.x,p.y)==="ocean"&&!((Number(p._blueSeaweedUntil)||0)>this.state.worldTime)){
+      if(!p.dead&&!p.vehicleType&&worldBiomeAt(p.x,p.y)==="ocean"&&!((Number(p._blueSeaweedUntil)||0)>this.state.worldTime)&&Number(p.divingSuitTier)<0){
         const rate=oceanDepthDamageRateAt(p.x,p.y);
         if(rate>0){
           // Deep-ocean pressure damages the player directly; riding a pet is not
