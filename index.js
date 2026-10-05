@@ -1168,13 +1168,13 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 595, gameBuild: 682, rulesVersion: "667", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountRecoverySecretStable: !!(process.env.HOSTL_RECOVERY_SECRET||process.env.HOSTL_SESSION_SECRET), accountDbLoadSource:ACCOUNT_LOAD_SOURCE, accountDbLoadHadError:ACCOUNT_LOAD_HAD_ERROR, accountDataDir: DATA_DIR, ...getCubeServerStats() });
+  res.status(200).json({ ok: true, game: "HOSTL", multiplayer: true, serverBuild: 595, gameBuild: 720, rulesVersion: "720", chat: true, googleAuth: !!GOOGLE_CLIENT_ID, rewardedAdsConfigured: REWARDED_ADS_CONFIGURED, accountStoragePersistent: ACCOUNT_STORAGE_PERSISTENT, accountRecoveryBackup: true, accountRecoverySecretStable: !!(process.env.HOSTL_RECOVERY_SECRET||process.env.HOSTL_SESSION_SECRET), accountDbLoadSource:ACCOUNT_LOAD_SOURCE, accountDbLoadHadError:ACCOUNT_LOAD_HAD_ERROR, accountDataDir: DATA_DIR, ...getCubeServerStats() });
 });
 
 app.get("/status", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 595, gameBuild: 682, rulesVersion: "667" });
+  res.status(200).json({ ok: true, ...getCubeServerStats(), maxPlayersPerRoom: 12, serverBuild: 595, gameBuild: 720, rulesVersion: "720" });
 });
 
 app.get("/auth/config", (_req, res) => {
