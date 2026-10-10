@@ -8731,7 +8731,7 @@ const PET_TYPES = {
 
   fennec: { name:"Fennec Fox", emoji:"🦊", elem:"Fire", color:"#e5b86d", abilityCd:12, desc:"Fire orbit — three fireballs swirl around the fox for 4 seconds and hit separately", baseSpeed:104, friendly:true, sizeMul:.90, flee:true, style:"fireorbit", coats:["#e5b86d","#d8a45d","#f0cc8b"] },
 
-  queenbee: { name:"Queen Bee", emoji:"🐝", elem:"Poison", color:"#d2b33b", abilityCd:15, desc:"Royal swarm — calls tiny poison bees that swarm nearby targets and leave a damage-over-time sting", baseSpeed:74, friendly:true, sizeMul:1.42, flee:false, style:"beeswarm", coats:["#d2b33b","#f0d35e","#8a5d20"] },
+  queenbee: { name:"Queen Bee", emoji:"🐝", elem:"Insect", color:"#d2b33b", abilityCd:15, desc:"Royal swarm — releases killable tiny bees that chase targets, sting, and apply poison damage over time", baseSpeed:74, friendly:true, sizeMul:1.42, flee:false, style:"beeswarm", coats:["#d2b33b","#f0d35e","#8a5d20"] },
   workerbee: { name:"Worker Bee", emoji:"🐝", elem:"Poison", color:"#d9b84b", abilityCd:11, desc:"Poison charge — charges into the target and applies stackable poison damage over time", baseSpeed:92, friendly:true, sizeMul:1.06, flee:false, style:"workersting", coats:["#d9b84b","#f0d774","#8b6a22"] },
   dronebee: { name:"Drone Bee", emoji:"🐝", elem:"Normal", color:"#f3f3f0", abilityCd:10, desc:"Ram — slams into the target with a strong body hit", baseSpeed:86, friendly:false, sizeMul:.90, flee:false, style:"droneram", coats:["#f3f3f0","#dfddd8","#c3bfb5"] },};
 const ACTIVE_PET_TYPES = Object.freeze(["dog","cat","dragon","fox","wolf","bear","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee"]);
@@ -12320,8 +12320,15 @@ function nearestPlacedVehicle(maxDist=92){
 }
 function nearestEnterableHive(maxDist=118){
   if(player.vehicleType||game.hiveInterior?.active)return null;
-  let best=null,bestD=Math.max(1,Number(maxDist)||118);
-  for(const r of resources){if(!r||!r.alive||r.type!=="rainforestHive")continue;const c=offlineResourceCenter(r),d=dist(player.x,player.y,c.x,c.y);if(d<=bestD){best=r;bestD=d;}}
+  // Giant hives are solid, so their center is physically unreachable. Measure
+  // interaction range from the hive's outside edge instead.
+  const edgeAllowance=Math.min(58,Math.max(1,Number(maxDist)||58));
+  let best=null,bestGap=Infinity;
+  for(const r of resources){
+    if(!r||!r.alive||r.type!=="rainforestHive")continue;
+    const c=offlineResourceCenter(r),d=dist(player.x,player.y,c.x,c.y),gap=d-Math.max(0,Number(r.solidR)||70);
+    if(gap<=edgeAllowance&&gap<bestGap){best=r;bestGap=gap;}
+  }
   return best;
 }
 const HIVE_INTERIOR_W=1280,HIVE_INTERIOR_H=860;
@@ -16617,6 +16624,41 @@ const CUSTOM_PET_SEGMENTS = {
 let resources = [];
 let enemies = [];
 let projectiles = [];
+
+// Tiny Bee artwork: the game embeds the uploaded Sep sheet only. The three
+// source bands are reassembled at runtime to the Ref layout: top wing stays at
+// Y=0, body/stinger shifts up 30, and bottom wing shifts up 60. Wings remain
+// separate layers so they can flap independently without moving the body.
+const TINY_BEE_SEP_SOURCE="data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIzNC4xNDI4NiIgaGVpZ2h0PSIxMDAuNTQ3MzIiIHZpZXdCb3g9IjAsMCwzNC4xNDI4NiwxMDAuNTQ3MzIiPjxkZWZzPjxyYWRpYWxHcmFkaWVudCBjeD0iMjQzLjc3MTQzIiBjeT0iMjI0LjQxOTA1IiByPSIxMC40OTk2NyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGlkPSJjb2xvci0xIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM5N2ZkZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzk3ZmRmZiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGN4PSIyNDMuNzcxNDMiIGN5PSIxNDMuODQ3NjIiIHI9IjEwLjQ5OTY3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaWQ9ImNvbG9yLTIiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzk3ZmRmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjOTdmZGZmIi8+PC9yYWRpYWxHcmFkaWVudD48L2RlZnM+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIyNS4yLC0xMzMuMDAyNTMpIj48ZyBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpc1BhaW50aW5nTGF5ZXImcXVvdDs6dHJ1ZX0iIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSJub25lIiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2UtZGFzaGFycmF5PSIiIHN0cm9rZS1kYXNob2Zmc2V0PSIwIiBzdHlsZT0ibWl4LWJsZW5kLW1vZGU6IG5vcm1hbCI+PHBhdGggZD0iTTI1OS4zNDI4NiwxODIuODQ3NjJjMCwwIC0yLjIwNjU5LDIuNDI4NTggLTQuOTI4NTcsMi40Mjg1OGMtMi43MjE5NywwIC0yLjIxNDI5LC0xLjIzMDE3IC0yLjIxNDI5LC0yLjU3MTQzYzAsLTEuMzQxMjYgLTAuNTA3NjgsLTIuMjg1NzEgMi4yMTQyOSwtMi4yODU3MWMyLjcyMTk3LDAgNC45Mjg1NywyLjQyODU3IDQuOTI4NTcsMi40Mjg1N3oiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yNTQuMiwxODIuNjMzMzNjMCw2LjM1MTI3IC02LjQ5MTg3LDExLjUgLTE0LjUsMTEuNWMtOC4wMDgxMywwIC0xNC41LC01LjE0ODczIC0xNC41LC0xMS41YzAsLTYuMzUxMjcgNi40OTE4NywtMTEuNSAxNC41LC0xMS41YzguMDA4MTMsMCAxNC41LDUuMTQ4NzMgMTQuNSwxMS41eiIgZmlsbD0iI2ZmZjc2NiIgc3Ryb2tlLXdpZHRoPSJub25lIi8+PHBhdGggZD0iTTIzMy40ODU3MiwxOTMuMjc2MTlsMC4yODU3MiwtMjEuMTQyODZjMCwwIDIuNjY4NDgsLTEuMTQyODUgNC41NzE0MywtMS4xNDI4NWMyLjIzNDE1LDAgOC40Mjg1NywwLjcxNDI4IDguNDI4NTcsMC43MTQyOGwwLjI4NTcxLDIxLjQyODU3YzAsMCAtNC45ODg1OCwxLjMzNTIyIC03LjI4NDk0LDEuMzU5MzljLTIuMjI1MjEsMC4wMjM0MyAtNi4yODY0OSwtMS4yMTY1MyAtNi4yODY0OSwtMS4yMTY1M3oiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yNDkuOTM4MjUsMjE3LjA4MzY2YzQuODgwODcsNC4zNjU4IDYuMzAwNDcsMTAuNzQxNDMgMy4xNzA3NywxNC4yNDAzNmMtMy4xMjk3LDMuNDk4OTMgLTkuNjIzNTUsMi43OTYyIC0xNC41MDQ0MiwtMS41Njk2Yy00Ljg4MDg3LC00LjM2NTggLTYuMzAwNDcsLTEwLjc0MTQzIC0zLjE3MDc3LC0xNC4yNDAzNmMzLjEyOTcsLTMuNDk4OTMgOS42MjM1NSwtMi43OTYyIDE0LjUwNDQyLDEuNTY5NnoiIGZpbGw9InVybCgjY29sb3ItMSkiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yMzQuNTc2NjksMTUxLjAzODMyYy0zLjEyOTcsLTMuNDk4OTMgLTEuNzEwMSwtOS44NzQ1NyAzLjE3MDc3LC0xNC4yNDAzN2M0Ljg4MDg3LC00LjM2NTggMTEuMzc0NzIsLTUuMDY4NTMgMTQuNTA0NDIsLTEuNTY5NmMzLjEyOTcsMy40OTg5MyAxLjcxMDExLDkuODc0NTcgLTMuMTcwNzcsMTQuMjQwMzdjLTQuODgwODcsNC4zNjU4IC0xMS4zNzQ3Miw1LjA2ODUzIC0xNC41MDQ0MiwxLjU2OTZ6IiBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpbmRleCZxdW90OzpudWxsfSIgZmlsbD0idXJsKCNjb2xvci0yKSIgc3Ryb2tlLXdpZHRoPSIwIi8+PC9nPjwvZz48L3N2Zz4=";
+const TINY_BEE_SEP_IMAGE=new Image();TINY_BEE_SEP_IMAGE.decoding="async";TINY_BEE_SEP_IMAGE.src=TINY_BEE_SEP_SOURCE;
+const TINY_BEE_SEP_W=34.14286,TINY_BEE_SEP_H=100.54732,TINY_BEE_REF_H=40.54733;
+function queenBeeSwarmCount(stage){return {baby:10,adult:30,boss:40,superboss:50,bigmomma:80}[String(stage||"adult")]||30;}
+function tinyBeeTargetAliveOffline(t){return !!(t&&t!==player?!t.dead&&((Number.isFinite(Number(t.hp))?Number(t.hp):1)>0):t===player&&!player.dead&&player.health>0);}
+function queenSwarmTargetPoolOffline(p){
+  if(p.hostile){const out=[];if(!player.dead)out.push(player);for(const q of player.pets||[])if(q&&!q.dead)out.push(q);return out;}
+  const out=[];for(const en of enemies)if(en&&!en.dead)out.push(en);for(const a of animals)if(a&&!a.dead&&!a.owned)out.push(a);return out;
+}
+function queenSwarmPickTargetOffline(p,maxRange=920){let best=null,bestD=maxRange;for(const q of queenSwarmTargetPoolOffline(p)){const d=dist(p.x,p.y,q.x,q.y);if(d<bestD){best=q;bestD=d;}}return best;}
+function spawnQueenBeeSwarmOffline(source,hostile,stats={}){
+  if(!source)return;const count=queenBeeSwarmCount(source.stage),sourceKey=(hostile?"wild:":"pet:")+(source.netId||source._spawnId||source.type+":"+Math.round(source.x)+":"+Math.round(source.y));
+  // One active royal storm per queen keeps the 80-bee Big Momma cast bounded.
+  for(const q of projectiles)if(q&&q.kind==="queenSwarmBee"&&q.source===source)q.dead=true;
+  const pool=hostile?queenSwarmTargetPoolOffline({hostile:true}):queenSwarmTargetPoolOffline({hostile:false}),dmg=Math.max(.32,(Number(stats.damage)||16)*.8/Math.max(1,count)),dot=Math.max(2,Number(stats.dot)||14);
+  for(let i=0;i<count;i++){const a=(i/count)*TAU+Math.random()*.22,rad=8+(i%7)*2.2,target=pool.length?pool[i%pool.length]:null,speed=150+Math.random()*42;projectiles.push({x:source.x+Math.cos(a)*rad,y:source.y+Math.sin(a)*rad,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:8.5,r:5.2,hostile:!!hostile,kind:"queenSwarmBee",color:"#ffe66a",dmg,swarmDot:dot,source,targetObj:target,nextHit:0,retargetAt:0,swarmSourceKey:sourceKey,seed:Math.random()*100});}
+}
+function spawnPassiveTinyBeesOffline(){
+  // Three passive mini bees per hive. They never attack; they simply wander.
+  for(const h of resources){if(!h||!h.alive||h.type!=="rainforestHive")continue;const c=offlineResourceCenter(h);for(let i=0;i<3;i++){const a=Math.random()*TAU,rad=(Number(h.solidR)||70)+70+Math.random()*135,speed=34+Math.random()*22;projectiles.push({x:c.x+Math.cos(a)*rad,y:c.y+Math.sin(a)*rad,vx:Math.cos(a+Math.PI*.5)*speed,vy:Math.sin(a+Math.PI*.5)*speed,life:1e9,r:4.8,hostile:false,kind:"tinyBeeRoam",color:"#ffe66a",dmg:0,roamHomeX:c.x,roamHomeY:c.y,roamAngle:a+Math.PI*.5,roamTurn:.4+Math.random()*1.6,seed:Math.random()*100});}}
+}
+function drawTinyBeeProjectile(p){
+  const img=TINY_BEE_SEP_IMAGE,r=Math.max(4,Number(p.r)||5),drawH=Math.max(17,r*4.35),sc=drawH/TINY_BEE_REF_H,drawW=TINY_BEE_SEP_W*sc,left=-drawW*.5,top=-drawH*.5;
+  if(!img.complete||!img.naturalWidth||!img.naturalHeight){ctx.fillStyle="#fff766";ctx.strokeStyle="#111";ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(0,0,r*1.55,r*.95,0,0,TAU);ctx.fill();ctx.stroke();return;}
+  const sxScale=img.naturalWidth/TINY_BEE_SEP_W,syScale=img.naturalHeight/TINY_BEE_SEP_H,phase=game.time*25+(Number(p.seed)||0)+(Number(p.x)||0)*.031+(Number(p.y)||0)*.017,flap=Math.sin(phase)*.28;
+  const band=(sy,sh,dy,rot=0,pivotX=17.2,pivotY=20)=>{ctx.save();const px=left+pivotX*sc,py=top+pivotY*sc;ctx.translate(px,py);ctx.rotate(rot);ctx.translate(-px,-py);ctx.drawImage(img,0,sy*syScale,img.naturalWidth,sh*syScale,left,top+dy*sc,drawW,sh*sc);ctx.restore();};
+  // Body first, then the two independent wing layers, matching the Ref assembly.
+  band(30,40,0,0);band(70,TINY_BEE_SEP_H-70,10,flap,17.2,24.0);band(0,30,0,-flap,17.2,16.5);
+}
+
 let petBlasts = [];
 let walls = [];
 let towers = [];
@@ -18404,6 +18446,7 @@ function restoreCleanWorldTemplate() {
     rebuildStaticCollisionGrid();
     rebuildStaticSpawnCandidateCache();
   }
+  spawnPassiveTinyBeesOffline();
   return true;
 }
 
@@ -18438,6 +18481,7 @@ function initWorld() {
   const bigMommaTargets=[];
   let speciesOrdinal = 0;
   populateRainforestHivesOffline(true);
+  spawnPassiveTinyBeesOffline();
   for (const biome of BIOME_ORDER) {
     for (const type of (BIOME_PROFILES[biome]?.species || [])) {
       if (isWildBeeType(type)) { speciesOrdinal++; continue; }
@@ -19321,6 +19365,11 @@ function meleeAttack(preciseResolve=null) {
     try { net.room.send("attack", { tool: attackTool, tier: player.toolTiers?.[attackTool]||0, angle: resolvingPrecise?preciseResolve.angle:player.angle, animalId: aimedAnimalId, preciseWeapon:!!preciseShape, attackT:resolvingPrecise?preciseResolve.attackT:0 }); } catch (_) {}
   }
   if (!net.room) {
+  for(const bee of projectiles){
+    if(!bee||bee.dead||!(bee.kind==="tinyBeeRoam"||(bee.kind==="queenSwarmBee"&&bee.hostile)))continue;
+    const br=Math.max(5,Number(bee.r)||5),hit=preciseShape?hostlWeaponShapeTouchesCircle(preciseShape,bee.x,bee.y,br):(dist(player.x,player.y,bee.x,bee.y)<t.range+br&&isFacing(bee.x,bee.y,1.08));
+    if(hit){bee.dead=true;hitSomething=true;spark(bee.x,bee.y,"#ffe66a",5,55);}
+  }
   for (const en of enemies) {
     if (en.dead) continue;
     const d = dist(player.x, player.y, en.x, en.y);
@@ -20846,6 +20895,18 @@ function updatePetBlasts(dt) {
 
 function updateProjectiles(dt) {
   for (const p of projectiles) {
+    if(p.kind==="queenSwarmBee"){
+      p.life-=dt;if(p.life<=0){p.dead=true;continue;}
+      if(p.source?.dead){p.dead=true;continue;}
+      if(!tinyBeeTargetAliveOffline(p.targetObj)||dist(p.x,p.y,p.targetObj.x,p.targetObj.y)>1100){if(game.time>=(Number(p.retargetAt)||0)){p.targetObj=queenSwarmPickTargetOffline(p);p.retargetAt=game.time+.34;}}
+      const target=p.targetObj;
+      if(tinyBeeTargetAliveOffline(target)){const ta=angTo(p.x,p.y,target.x,target.y),cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-6.2*dt,6.2*dt),spd=178;p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;const tr=target===player?PLAYER_R:(target.r||18);if(dist(p.x,p.y,target.x,target.y)<=tr+p.r+3&&game.time>=(Number(p.nextHit)||0)){if(p.hostile){if(damageTargetFromWild(p.source,target,p.dmg||.4))applyOfflineFixedDot(target,target!==player,p.source,p.swarmDot||8,5,"#69c84f",true);}else{const isAnimal=animals.includes(target);damagePetAbilityTargetOffline(p.source,target,isAnimal,p.dmg||.4);applyOfflineFixedDot(target,isAnimal,p.source,p.swarmDot||8,5,"#69c84f");}p.nextHit=game.time+1.05;p.vx*=-.34;p.vy*=-.34;}}
+      else{p.roamAngle=(Number(p.roamAngle)||Math.atan2(p.vy,p.vx))+Math.sin((game.time+(p.seed||0))*2.4)*1.8*dt;const spd=95;p.vx=Math.cos(p.roamAngle)*spd;p.vy=Math.sin(p.roamAngle)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;}
+      if(p.x<0||p.y<0||p.x>WORLD_W||p.y>WORLD_H)p.dead=true;continue;
+    }
+    if(p.kind==="tinyBeeRoam"){
+      p.life-=dt;p.roamTurn=(Number(p.roamTurn)||0)-dt;const hx=Number(p.roamHomeX)||p.x,hy=Number(p.roamHomeY)||p.y,dHome=dist(p.x,p.y,hx,hy);if(p.roamTurn<=0){p.roamTurn=.55+Math.random()*1.5;p.roamAngle=(Number(p.roamAngle)||Math.atan2(p.vy,p.vx))+rand(-.9,.9);}if(dHome>330)p.roamAngle=angTo(p.x,p.y,hx,hy)+rand(-.22,.22);const spd=42;p.vx=Math.cos(p.roamAngle)*spd;p.vy=Math.sin(p.roamAngle)*spd;p.x=clamp(p.x+p.vx*dt,8,WORLD_W-8);p.y=clamp(p.y+p.vy*dt,8,WORLD_H-8);continue;
+    }
     if(p.kind==="throwAxe"){
       p.life-=dt;
       if(!p.returning&&p.life<=THROW_AXE_RETURN_AT)p.returning=true;
@@ -20873,6 +20934,7 @@ function updateProjectiles(dt) {
     } else {
       for(const en of enemies){if(!en.dead)consider(segmentCircleT(x0,y0,x1,y1,en.x,en.y,en.r+p.r),"enemy",en);}
       for(const wa of animals){if(wa.dead||wa.owned)continue;consider(animalProjectileSegmentT(wa,x0,y0,x1,y1,p.r),"wild",wa);}
+      for(const bee of projectiles){if(bee===p||bee.dead||!(bee.kind==="tinyBeeRoam"||(bee.kind==="queenSwarmBee"&&bee.hostile)))continue;consider(segmentCircleT(x0,y0,x1,y1,bee.x,bee.y,p.r+(bee.r||5)),"tinyBee",bee);}
     }
 
     for(const w of walls){if((w.hp??1)>0&&!isPlacedVehicleWall(w))consider(segmentCircleT(x0,y0,x1,y1,w.x,w.y,w.r+p.r),"solid",w);}
@@ -20885,6 +20947,7 @@ function updateProjectiles(dt) {
       if(best.type==="player") hitPlayer(p.dmg||8,p.source||null);
       else if(best.type==="pet") damageCreatureFromEnemy(best.obj,p.source,p.dmg||8);
       else if(best.type==="enemy") damageEnemy(best.obj,p.dmg||TOOLS.Bow.dmg,false);
+      else if(best.type==="tinyBee"){best.obj.dead=true;spark(best.obj.x,best.obj.y,"#ffe66a",5,55);}
       else if(best.type==="wild"){
         const wa=best.obj;
         if(p.hostile) damageCreatureFromEnemy(wa,p.source,p.dmg||8);
@@ -21860,7 +21923,7 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
   }else if(pet.type==="walrus"){
     const t=petAbilityTargetOffline(pet,300),dmg=stats.damage||2;if(t){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8,r:petAbilityRangeFor(pet,85,1.8),baseR:petAbilityRangeFor(pet,85,1.8)});game.shake=5;}
   }else if(pet.type==="queenbee"){
-    const range=petAbilityRangeFor(pet,135,2.8),dmg=stats.damage||16,dot=stats.dot||14;const hits=petAbilityAreaOffline(pet,px,py,range,dmg*.42,{knock:12});for(const h of hits||[])applyOfflineFixedDot(h.obj,h.isAnimal,pet,dot,5,"#7ed657");abilityFx.push({type:"beeSwarm",x:px,y:py,life:1.2,maxLife:1.2,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
+    spawnQueenBeeSwarmOffline(pet,false,stats);const range=petAbilityRangeFor(pet,135,2.8);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
   }else if(pet.type==="workerbee"){
     const t=petAbilityTargetOffline(pet,180),dmg=stats.damage||14,dot=stats.dot||10;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);applyOfflineFixedDot(t.obj,t.isAnimal,pet,dot,5,"#79d866");const aa=angTo(px,py,t.obj.x,t.obj.y);pet.x=clamp(px+Math.cos(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_W-20);pet.y=clamp(py+Math.sin(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_H-20);resolveAnimalWorld(pet);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:pet.x,targetY:pet.y,angle:aa,life:.55,maxLife:.55,shockScale:.36});spark(t.obj.x,t.obj.y,"#97df63",12,90);}
   }else if(pet.type==="dronebee"){
@@ -22135,7 +22198,7 @@ function wildUseAbility(a) {
   } else if (a.type === "walrus") {
     const st=petAbilityStats(a),dmg=st.damage||2;if(dTarget<300){makeWalrusSpikePrisonOffline(a,target,dmg);abilityFx.push({type:"earthRingBurst",x:tx,y:ty,life:.8,maxLife:.8,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}
   } else if (a.type === "queenbee") {
-    const st=petAbilityStats(a),dmg=st.damage||16,dot=st.dot||14,range=petAbilityRangeFor(a,130,2.7);const hits=wildAbilityAreaOffline(a,px,py,range,dmg*.42,{knock:12});for(const q of hits||[])applyOfflineFixedDot(q.target,false,a,dot,5,"#7ed657",true);abilityFx.push({type:"beeSwarm",x:px,y:py,life:1.2,maxLife:1.2,r:range,baseR:range,color:"#ffe27c"});
+    const st=petAbilityStats(a),range=petAbilityRangeFor(a,130,2.7);spawnQueenBeeSwarmOffline(a,true,st);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});
   } else if (a.type === "workerbee") {
     const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;
     if(dTarget<185){
@@ -24146,7 +24209,7 @@ function syncHotbar() {
 const ELEM_GLOW = {
   Stone: "#c9a06a", Sound: "#a0e0ff", Fire: "#ff6a2a", Lightning: "#ffe66d",
   Ice: "#a8d8ff", Water: "#4aa3e0", Plant: "#7be08a", Wind: "#c0e8ff",
-  Poison: "#5cb85c", Light: "#ffe66d", Earth: "#8a6040", Combat: "#e07040", Shadow: "#77508f",
+  Poison: "#5cb85c", Insect: "#f2c94c", Light: "#ffe66d", Earth: "#8a6040", Combat: "#e07040", Shadow: "#77508f",
 };
 function petDisplayName(pet) {
   const fallback = PET_TYPES[pet.type] ? PET_TYPES[pet.type].name : "Pet";
@@ -26088,6 +26151,7 @@ function drawProjectile(p) {
   ctx.translate(p.x, p.y);
   ctx.rotate(Math.atan2(p.vy, p.vx));
 
+  if(p.kind==="queenSwarmBee"||p.kind==="tinyBeeRoam"){drawTinyBeeProjectile(p);ctx.restore();return;}
   if (p.kind === "throwAxe") {
     ctx.rotate((game.time*16)*(p.returning?-1:1));
     // Draw the exact same Throwing Axe model that leaves the player's hands.

@@ -485,7 +485,7 @@ const PET_TYPES = {
 
   fennec:{baseSpeed:104,friendly:true,flee:true,sizeMul:.90,color:"#e5b86d",abilityCd:12,elem:"Fire",coats:["#e5b86d","#d8a45d","#f0cc8b"]},
 
-  queenbee:{baseSpeed:74,friendly:true,flee:false,sizeMul:1.42,color:"#d2b33b",abilityCd:15,elem:"Poison",coats:["#d2b33b","#f0d35e","#8a5d20"]},
+  queenbee:{baseSpeed:74,friendly:true,flee:false,sizeMul:1.42,color:"#d2b33b",abilityCd:15,elem:"Insect",coats:["#d2b33b","#f0d35e","#8a5d20"]},
   workerbee:{baseSpeed:92,friendly:true,flee:false,sizeMul:1.06,color:"#d9b84b",abilityCd:11,elem:"Poison",coats:["#d9b84b","#f0d774","#8b6a22"]},
   dronebee:{baseSpeed:86,friendly:false,flee:false,sizeMul:.90,color:"#f3f3f0",abilityCd:10,elem:"Normal",coats:["#f3f3f0","#dfddd8","#c3bfb5"]},};
 
@@ -1510,6 +1510,7 @@ export class WorldRoom extends Room {
     // Organize rainforest bees around their giant hives before clients see the
     // initial wildlife snapshot.
     this.organizeRainforestHives();
+    this.spawnPassiveTinyBees();
     // Explicitly publish when the complete starting wildlife set exists. The
     // browser keeps the Play button loading until it has received this many
     // animals, so wildlife never visibly pops in after gameplay begins.
@@ -2753,6 +2754,8 @@ export class WorldRoom extends Room {
     this.broadcast("playerAction",{playerId:client.sessionId,action:"attack",tool,angle,heldSpecial:p.heldSpecial||"",weaponChoice:choice});this.mountedPetAttack(client.sessionId,p);
     const touches=(x,y,r,legacyMax=.95)=>precise?preciseShapeTouchesCircle(shape,x,y,r):(dist(p.x,p.y,x,y)<t.range+r&&facing(p.x,p.y,angle,x,y,legacyMax));
 
+    for(const[bid,bee]of this.state.projectiles){if(!bee||(bee.kind!=="tinyBeeRoam"&&bee.kind!=="queenSwarmBee"))continue;if(bee.kind==="queenSwarmBee"&&!bee.hostile&&bee.ownerId===client.sessionId)continue;if(touches(bee.x,bee.y,Math.max(5,bee.r||5),1.08)){this.state.projectiles.delete(bid);this.broadcastFx({kind:"hit",x:bee.x,y:bee.y,text:"",color:"#ffe66a"});}}
+
     for(const [pid,target] of this.state.players){
       if(pid===client.sessionId||target.dead||!touches(target.x,target.y,PLAYER_R,.95))continue;
       const crit=Math.random()<.12,dmg=t.dmg*runDmg*(t.doubleHit&&!splitDouble?2:1)*(crit?2:1);
@@ -2974,7 +2977,7 @@ export class WorldRoom extends Room {
   handleHiveEnter(client,data={}){
     const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;const id=String(data.id||""),h=this.state.resources.get(id);
     if(!h||!h.alive||h.type!=="rainforestHive"){client.send("hiveEnterResult",{success:false});return;}
-    const c=this.hiveResourceCenter(h);if(dist(p.x,p.y,c.x,c.y)>Math.max(125,(h.solidR||70)+58)){client.send("hiveEnterResult",{success:false});return;}
+    const c=this.hiveResourceCenter(h),edgeGap=dist(p.x,p.y,c.x,c.y)-Math.max(0,Number(h.solidR)||70);if(edgeGap>58){client.send("hiveEnterResult",{success:false});return;}
     this.playerHiveSessions.set(client.sessionId,{hiveId:id,tamed:false,enteredAt:this.state.worldTime,lastDamageAt:-999});p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";client.send("hiveEnterResult",{success:true,hiveId:id});
   }
   handleHiveTameLarva(client,data={}){
@@ -3178,6 +3181,23 @@ export class WorldRoom extends Room {
     return false;
   }
 
+  queenBeeSwarmCount(stage){return {baby:10,adult:30,boss:40,superboss:50,bigmomma:80}[String(stage||"adult")]||30;}
+  spawnQueenBeeSwarm(ownerId,sourcePetId,sourceAnimalId,source,stats={},hostile=false){
+    if(!source)return;const count=this.queenBeeSwarmCount(source.stage),sourceKey=sourcePetId?`pet:${sourcePetId}`:`wild:${sourceAnimalId}`;
+    for(const[id,q]of this.state.projectiles)if(q?.kind==="queenSwarmBee"&&q._swarmSourceKey===sourceKey)this.state.projectiles.delete(id);
+    const targets=hostile?this.wildAbilityTargetsAround(source.x,source.y,920):this.abilityTargetsAround(ownerId,source.x,source.y,920),direct=Math.max(.32,(Number(stats.damage)||16)*.8/Math.max(1,count)),poison=Math.max(2,Number(stats.dot)||14);
+    for(let i=0;i<count;i++){const a=i/count*TAU+rand(-.10,.10),rad=8+(i%7)*2.2,speed=rand(150,192),target=targets.length?targets[i%targets.length]:null,pid=this.addProjectile({x:source.x+Math.cos(a)*rad,y:source.y+Math.sin(a)*rad,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:8.5,r:5.2,hostile:!!hostile,kind:"queenSwarmBee",color:"#ffe66a",dmg:direct,ownerId:hostile?String(sourceAnimalId||""):String(ownerId||""),petBlast:false,knock:0,sourcePetId:String(sourcePetId||"")}),q=this.state.projectiles.get(pid);if(q){q._swarmSourceKey=sourceKey;q._swarmSourceAnimalId=String(sourceAnimalId||"");q._swarmTargetRef=target?{kind:target.ref.kind,id:target.ref.id}:null;q._swarmPoison=poison;q._swarmNextHit=0;q._swarmRetargetAt=0;q._swarmWander=a;q._swarmSeed=Math.random()*100;}}
+  }
+  spawnPassiveTinyBees(){
+    for(const[,h]of this.state.resources){if(!h||!h.alive||h.type!=="rainforestHive")continue;const c=this.hiveResourceCenter(h);for(let i=0;i<3;i++){const a=rand(0,TAU),rad=(Number(h.solidR)||70)+rand(70,205),speed=rand(34,56),pid=this.addProjectile({x:c.x+Math.cos(a)*rad,y:c.y+Math.sin(a)*rad,vx:Math.cos(a+Math.PI*.5)*speed,vy:Math.sin(a+Math.PI*.5)*speed,life:1e9,r:4.8,hostile:false,kind:"tinyBeeRoam",color:"#ffe66a",dmg:0,ownerId:"",petBlast:false,knock:0,sourcePetId:""}),q=this.state.projectiles.get(pid);if(q){q._roamHomeX=c.x;q._roamHomeY=c.y;q._roamAngle=a+Math.PI*.5;q._roamTurn=rand(.4,2);q._swarmSeed=Math.random()*100;}}}
+  }
+  updateTinyBeeProjectile(id,p,dt){
+    const now=this.state.worldTime;p.life-=dt;if(p.life<=0){this.state.projectiles.delete(id);return;}
+    if(p.kind==="tinyBeeRoam"){p._roamTurn=(Number(p._roamTurn)||0)-dt;const hx=Number(p._roamHomeX)||p.x,hy=Number(p._roamHomeY)||p.y,dHome=dist(p.x,p.y,hx,hy);if(p._roamTurn<=0){p._roamTurn=rand(.55,2.05);p._roamAngle=(Number(p._roamAngle)||Math.atan2(p.vy,p.vx))+rand(-.9,.9);}if(dHome>330)p._roamAngle=angTo(p.x,p.y,hx,hy)+rand(-.22,.22);const spd=42;p.vx=Math.cos(p._roamAngle)*spd;p.vy=Math.sin(p._roamAngle)*spd;p.x=clamp(p.x+p.vx*dt,8,WORLD_W-8);p.y=clamp(p.y+p.vy*dt,8,WORLD_H-8);return;}
+    let ref=p._swarmTargetRef;if(!ref||!this.abilityStatusAlive(ref)||dist(p.x,p.y,this.targetObject(ref)?.x??p.x,this.targetObject(ref)?.y??p.y)>1100){if(now>=(Number(p._swarmRetargetAt)||0)){const pool=p.hostile?this.wildAbilityTargetsAround(p.x,p.y,920):this.abilityTargetsAround(p.ownerId,p.x,p.y,920);let best=null,bestD=Infinity;for(const h of pool){const d=dist(p.x,p.y,h.obj.x,h.obj.y);if(d<bestD){best=h;bestD=d;}}ref=best?{kind:best.ref.kind,id:best.ref.id}:null;p._swarmTargetRef=ref;p._swarmRetargetAt=now+.34;}}
+    const target=ref&&this.abilityStatusAlive(ref)?this.targetObject(ref):null;if(target){const ta=angTo(p.x,p.y,target.x,target.y),cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-6.2*dt,6.2*dt),spd=178;p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;const tr=ref.kind==="player"?PLAYER_R:(target.r||18);if(dist(p.x,p.y,target.x,target.y)<=tr+p.r+3&&now>=(Number(p._swarmNextHit)||0)){if(p.hostile){this.damageTarget(ref,p.dmg,"animal",p._swarmSourceAnimalId);this.applyAbilityFixedDot(ref,p._swarmPoison||8,5,"","",p._swarmSourceAnimalId);}else{this.petAbilityDamage(ref,p.dmg,p.ownerId,p.sourcePetId);this.applyAbilityFixedDot(ref,p._swarmPoison||8,5,p.ownerId,p.sourcePetId,"");}p._swarmNextHit=now+1.05;p.vx*=-.34;p.vy*=-.34;}}else{p._swarmWander=(Number(p._swarmWander)||Math.atan2(p.vy,p.vx))+Math.sin((now+(p._swarmSeed||0))*2.4)*1.8*dt;const spd=95;p.vx=Math.cos(p._swarmWander)*spd;p.vy=Math.sin(p._swarmWander)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;}
+    if(p.x<0||p.y<0||p.x>WORLD_W||p.y>WORLD_H)this.state.projectiles.delete(id);
+  }
   abilityStatusAlive(ref){const o=this.targetObject(ref);if(!o)return false;if(ref.kind==="player"&&!this.isPlayerCombatReady(ref.id))return false;if(ref.kind==="pet"&&o.ownerId&&!this.isPlayerCombatReady(o.ownerId))return false;return ref.kind==="player"?!o.dead&&o.health>0:!o.dead&&o.hp>0;}
   applyAbilityStun(ref,seconds){const o=this.targetObject(ref);if(!o)return;o._abilityStunUntil=Math.max(Number(o._abilityStunUntil)||0,this.state.worldTime+Math.max(0,Number(seconds)||0));}
   applyTornadoTrap(ref,seconds,cx,cy){const o=this.targetObject(ref);if(!o)return;const t=Math.max(.1,Number(seconds)||2.2);this.applyAbilityStun(ref,t);o._tornadoTrapUntil=Math.max(Number(o._tornadoTrapUntil)||0,this.state.worldTime+t);o._tornadoTrapMax=t;o._tornadoCenterX=Number.isFinite(Number(cx))?Number(cx):o.x;o._tornadoCenterY=Number.isFinite(Number(cy))?Number(cy):o.y;o._tornadoPhase=Math.atan2(o.y-o._tornadoCenterY,o.x-o._tornadoCenterX);o._tornadoRadius=clamp(Math.max(20,Math.hypot(o.x-o._tornadoCenterX,o.y-o._tornadoCenterY)),20,52);}
@@ -3258,7 +3278,7 @@ export class WorldRoom extends Room {
       const dmg=stats.damage||10,t=this.petAbilityTarget(ownerId,id,p,600);if(t){this.launchArcticShardVolley(ownerId,id,p,t,dmg);sendFx("owlWave",{angle:angTo(p.x,p.y,t.obj.x,t.obj.y),range:95,life:.45});}else{this.activePetAbilities=this.activePetAbilities.filter(f=>!(f.type==="arcticShardOrbit"&&f.petId===id));this.activePetAbilities.push({type:"arcticShardOrbit",petId:id,ownerId,time:1e9,damage:dmg});sendFx("arcticShardOrbit",{range:Math.max(p.r+28,48),life:1e9});}
     }else if(p.type==="walrus"){
       const t=this.petAbilityTarget(ownerId,id,p,300),dmg=stats.damage||2;if(t){const stage=uploadedAnimalStageKey(p.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((t.obj.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const a=i/6*TAU,wx=t.obj.x+Math.cos(a)*ring,wy=t.obj.y+Math.sin(a)*ring;this.addWall(wx,wy,wallR,4,ownerId,{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:id});}sendFx("earthRingBurst",{targetX:t.obj.x,targetY:t.obj.y,range:ring+wallR,life:.8});}
-    }else if(p.type==="queenbee"){const range=petAbilityRangeFor(p,135,2.8),dmg=stats.damage||16,dot=stats.dot||14,hits=this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg*.42,{knock:12});for(const h of hits)this.applyAbilityFixedDot(h.ref,dot,5,ownerId,id,"");sendFx("beeSwarm",{range,life:1.2,color:"#ffe27c"});
+    }else if(p.type==="queenbee"){const range=petAbilityRangeFor(p,135,2.8);this.spawnQueenBeeSwarm(ownerId,id,"",p,stats,false);sendFx("beeSwarm",{range,life:.45,color:"#ffe27c"});
     }else if(p.type==="workerbee"){const t=this.petAbilityTarget(ownerId,id,p,180),dmg=stats.damage||14,dot=stats.dot||10;if(t){this.petAbilityDamage(t.ref,dmg,ownerId,id);this.applyAbilityFixedDot(t.ref,dot,5,ownerId,id,"");const aa=angTo(p.x,p.y,t.obj.x,t.obj.y),dash=Math.min(95,Math.max(24,t.d-18)),ox=p.x,oy=p.y;p.x=clamp(p.x+Math.cos(aa)*dash,20,WORLD_W-20);p.y=clamp(p.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);sendFx("pounce",{fromX:ox,fromY:oy,targetX:p.x,targetY:p.y,angle:aa,life:.55,shockScale:.36});}
     }else if(p.type==="dronebee"){const t=this.petAbilityTarget(ownerId,id,p,210),dmg=stats.damage||20;if(t){const aa=angTo(p.x,p.y,t.obj.x,t.obj.y),dash=Math.min(120,Math.max(40,t.d-Math.max(10,t.obj.r||18))),ox=p.x,oy=p.y;p.x=clamp(p.x+Math.cos(aa)*dash,20,WORLD_W-20);p.y=clamp(p.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);this.petAbilityDamage(t.ref,dmg,ownerId,id);sendFx("pounce",{fromX:ox,fromY:oy,targetX:p.x,targetY:p.y,angle:aa,life:.62,shockScale:.46});}
     }else if(p.type==="muskox"){const range=petAbilityRangeFor(p,125,2.3),dmg=stats.damage||18;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:18});sendFx("earthRingBurst",{range,life:1});
@@ -3405,7 +3425,7 @@ export class WorldRoom extends Room {
     else if(a.type==="walrus"){
       const dmg=petAbilityStats(a).damage||2;if(d<320){const stage=uploadedAnimalStageKey(a.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((target.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const aa=i/6*TAU,wx=target.x+Math.cos(aa)*ring,wy=target.y+Math.sin(aa)*ring,wid=this.addWall(wx,wy,wallR,4,"",{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:""});this.hostileWildWalls.set(wid,id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Stone",fxType:"earthRingBurst",x:a.x,y:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,range:ring+wallR,life:.8});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"SPIKE PRISON",color:"#a9a9a2"});
     }
-    else if(a.type==="queenbee"){const st=petAbilityStats(a),dmg=st.damage||16,dot=st.dot||14,range=Math.max(130,(a.r||18)*2.6),hits=this.wildAbilityTargetsAround(a.x,a.y,range);for(const h of hits){this.damageTarget(h.ref,dmg*.42,"animal",id);this.applyAbilityFixedDot(h.ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"beeSwarm",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:1.2,color:"#ffe27c"});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ROYAL SWARM",color:"#ffe27c"});}
+    else if(a.type==="queenbee"){const st=petAbilityStats(a),range=Math.max(130,(a.r||18)*2.6);this.spawnQueenBeeSwarm("","",id,a,st,true);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Insect",fxType:"beeSwarm",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:.45,color:"#ffe27c"});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ROYAL SWARM",color:"#ffe27c"});}
     else if(a.type==="workerbee"){const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(d<185){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(95,Math.max(24,d-Math.max(8,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,8)){this.damageTarget(ref,dmg,"animal",id);this.applyAbilityFixedDot(ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.55,shockScale:.3});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"POISON CHARGE",color:"#90de68"});}
     else if(a.type==="dronebee"){const dmg=petAbilityStats(a).damage||20;if(d<210){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(120,Math.max(40,d-Math.max(10,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,10))this.damageTarget(ref,dmg,"animal",id);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Normal",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.6,shockScale:.42});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"RAM",color:"#f3f3e8"});}
     else if(a.type==="muskox"){if(d<145){this.damageTarget(ref,18,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,18);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"GROUND BRACE",color:"#9c805c"});}
@@ -4631,8 +4651,9 @@ export class WorldRoom extends Room {
   }
 
   updateProjectiles(dt){
-    const dynKinds=new Set(["enemy","animal"]);
+    const dynKinds=new Set(["enemy","animal"]),tinyBeeTargets=[];for(const[bid,b]of this.state.projectiles)if(b&&(b.kind==="tinyBeeRoam"||b.kind==="queenSwarmBee"))tinyBeeTargets.push([bid,b]);
     for(const[id,p]of this.state.projectiles){
+      if(p.kind==="queenSwarmBee"||p.kind==="tinyBeeRoam"){this.updateTinyBeeProjectile(id,p,dt);continue;}
       p.life-=dt;
       if(p.kind==="throwAxe"){
         if(!p.returning&&p.life<=THROW_AXE_RETURN_AT)p.returning=true;
@@ -4657,6 +4678,7 @@ export class WorldRoom extends Room {
         }
       }else{
         for(const[pid,pl]of this.state.players){if(pid===p.ownerId||pl.dead)continue;consider(segmentCircleT(x0,y0,x1,y1,pl.x,pl.y,p.r+PLAYER_R),"pvp",{pid,pl});}
+        for(const[bid,bee]of tinyBeeTargets){if(bid===id||!this.state.projectiles.has(bid))continue;if(bee.kind==="queenSwarmBee"&&!bee.hostile&&bee.ownerId===p.ownerId)continue;consider(segmentCircleT(x0,y0,x1,y1,bee.x,bee.y,p.r+(bee.r||5)),"tinyBee",{bid,bee});}
         const mx=(x0+x1)*.5,my=(y0+y1)*.5,range=Math.hypot(x1-x0,y1-y0)*.5+180;
         for(const rec of this.nearbyDynamic(mx,my,range,dynKinds)){
           if(rec.kind==="enemy")consider(segmentCircleT(x0,y0,x1,y1,rec.obj.x,rec.obj.y,p.r+rec.obj.r),"enemy",{eid:rec.id,en:rec.obj});
@@ -4681,6 +4703,7 @@ export class WorldRoom extends Room {
         else if(best.type==="pet"){if(p.petBlast&&p.sourcePetId)this.petAbilityDamage({kind:"pet",id:best.petId},p.dmg,p.ownerId,p.sourcePetId);else this.damageTarget({kind:"pet",id:best.petId},p.dmg,"projectile",p.ownerId);}
         else if(best.type==="pvp"){if(p.petBlast&&p.sourcePetId)this.petAbilityDamage({kind:"player",id:best.pid},p.dmg,p.ownerId,p.sourcePetId);else this.damageTarget({kind:"player",id:best.pid},p.dmg,"playerProjectile",p.ownerId);this.broadcastFx({kind:"hit",x:best.pl.x,y:best.pl.y-8,text:Math.round(p.dmg),color:"#8fd4ff"});}
         else if(best.type==="enemy"){if(p.petBlast&&p.sourcePetId)this.petAbilityDamage({kind:"enemy",id:best.eid},p.dmg,p.ownerId,p.sourcePetId);else this.hitEnemy(best.eid,best.en,p.dmg,p.ownerId,false,p.sourcePetId?{kind:"pet",id:p.sourcePetId}:null);if(p.knock&&this.state.enemies.has(best.eid)){const a=Math.atan2(p.vy,p.vx);best.en.x+=Math.cos(a)*p.knock;best.en.y+=Math.sin(a)*p.knock;}}
+        else if(best.type==="tinyBee"){this.state.projectiles.delete(best.bid);this.broadcastFx({kind:"hit",x:best.bee.x,y:best.bee.y,text:"",color:"#ffe66a"});}
         else if(best.type==="wild"){
           if(p.hostile){const a=best.a,dmg=animalDamageTaken(a.type,a.stage,p.dmg);a.hp=Math.max(0,a.hp-dmg);a.flash=.12;a.recentHit=4;this.markWildStayAwake(a,6.5);a.sleeping=false;a.enraged=true;a.combat=8;if(a.hp>0&&this.state.enemies.has(p.ownerId))this.setWildReactionToAttacker(best.aid,a,{kind:"enemy",id:p.ownerId});if(a.hp<=0){this.awardPetXpContributors("animal",best.aid,a,"");this.broadcastSpectateKill("animal",best.aid,"projectile",p.ownerId);this.state.animals.delete(best.aid);this.animalAggro.delete(best.aid);this.animalFleeFrom.delete(best.aid);}}
           else{if(p.petBlast&&p.sourcePetId)this.petAbilityDamage({kind:"animal",id:best.aid},p.dmg,p.ownerId,p.sourcePetId);else this.hitWild(best.aid,best.a,p.dmg,p.ownerId,false,p.sourcePetId?{kind:"pet",id:p.sourcePetId}:null);if(p.knock&&this.state.animals.has(best.aid)){const q=Math.atan2(p.vy,p.vx),push=p.knock*animalKnockbackScale(best.a);best.a.x+=Math.cos(q)*push;best.a.y+=Math.sin(q)*push;this.resolveStatic(best.a,(best.a.r||18)*.68);}}
