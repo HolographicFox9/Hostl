@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "745";
+const CUBE_SHARED_RULES_VERSION = "746";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -627,7 +627,7 @@ const TOOL = {
   Fist:    { dmg: 1.0, range: 42, cadence: 0.50, gather: 0.06, resourcePower: 0.08, woodWall:1.0, stoneWall:0.45 },
   Axe:     { dmg: 5.5, range: 50, cadence: 0.58, gather: 2.4,  resourcePower: 0.95, woodWall:9.0, stoneWall:2.0 },
   Pickaxe: { dmg: 5.0, range: 50, cadence: 0.50, gather: 2.5,  resourcePower: 1.15, woodWall:4.0, stoneWall:14.0 },
-  Sword:   { dmg: 8.0, range: 62, cadence: 0.42, gather: 0.08, resourcePower: 0.10, woodWall:4.0, stoneWall:1.8 },
+  Sword:   { dmg: 8.0, range: 70, cadence: 0.42, gather: 0.08, resourcePower: 0.10, woodWall:4.0, stoneWall:1.8 },
   Bow:     { dmg: 9.0, range: 46, cadence: 0.55, gather: 0.12, resourcePower: 0.18, woodWall:2.0, stoneWall:1.5 },
   TigerClaws:{ dmg:7.0, range:44, cadence:.30, gather:.16, resourcePower:.20, woodWall:2.8, stoneWall:1.6 },
   BoxingGloves:{ dmg:6.2, range:48, cadence:.34, gather:.10, resourcePower:.12, woodWall:2.2, stoneWall:1.4 },
@@ -843,7 +843,7 @@ function preciseSwingTransform(poseKey,t){
   const isAxe=String(poseKey||"").startsWith("axe");let rot=0,dx=0,dy=0;t=clamp(Number(t)||0,0,1);
   const ease=q=>{q=clamp(q,0,1);return q*q*(3-2*q);};
   if(isAxe){if(t<=0){}else if(t<.20){const q=ease(t/.20);rot=.16*q;dx=1.5*q;dy=-q;}else if(t<.68){const q=ease((t-.20)/.48);rot=.16+(-1.20-.16)*q;dx=1.5-4.5*q;dy=-1+5*q;}else{const q=ease((t-.68)/.32);rot=-1.20*(1-q);dx=-3*(1-q);dy=4*(1-q);}}
-  else{if(t<.70){const q=ease(t/.70);rot=-1.22*q;dx=3.5*q;dy=6*q;}else{const q=ease((t-.70)/.30);rot=-1.22*(1-q);dx=3.5*(1-q);dy=6*(1-q);}}
+  else{if(t<.70){const q=ease(t/.70);rot=-1.55*q;dx=8*q;dy=12*q;}else{const q=ease((t-.70)/.30);rot=-1.55*(1-q);dx=8*(1-q);dy=12*(1-q);}}
   return{rot,dx,dy};
 }
 function preciseRotateLocal(x,y,px,py,rot,dx=0,dy=0){const rx=x-px,ry=y-py,c=Math.cos(rot),s=Math.sin(rot);return{x:px+dx+rx*c-ry*s,y:py+dy+rx*s+ry*c};}
@@ -2268,7 +2268,7 @@ export class WorldRoom extends Room {
     const t=this.toolStats(name,this.weaponTierForOwner(ownerId)),spec=String(this.skillState(ownerId).weaponChoice||"");
     if(name==="Sword"){
       if(spec==="daggers")Object.assign(t,{dmg:7.2,range:44,cadence:.36,doubleHit:true});
-      else if(spec==="longSword")Object.assign(t,{dmg:21,range:74,cadence:.50});
+      else if(spec==="longSword")Object.assign(t,{dmg:21,range:84,cadence:.50});
       else if(spec==="spear")Object.assign(t,{dmg:16,range:96,cadence:.46});
     }else if(name==="Axe"){
       if(spec==="doubleAxe")Object.assign(t,{dmg:8.8,range:66,cadence:.72,gather:4.0,resourcePower:1.50,doubleHit:true});

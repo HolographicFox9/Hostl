@@ -6469,12 +6469,12 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "745";
+const CUBE_SHARED_RULES_VERSION = "746";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
   Pickaxe: { dmg: 5.0, gather: 2.5, resourcePower: 1.15, range: 50, swing: 0.28, cadence: 0.50, cost: { wood: 6, stone: 4 }, gatherFor: "rock", woodWall: 4.0, stoneWall: 14.0 },
-  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 62, swing: 0.42, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
+  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 70, swing: 0.48, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
   Bow:     { dmg: 9.0, gather: 0.12, resourcePower: 0.18, range: 46, swing: 0.22, cadence: 0.55, cost: null, woodWall: 2.0, stoneWall: 1.5 },
   TigerClaws:{ dmg: 7.0, gather: 0.16, resourcePower: 0.20, range: 44, swing: 0.18, cadence: 0.30, cost: null, woodWall: 2.8, stoneWall: 1.6 },
   BoxingGloves:{ dmg: 6.2, gather: 0.10, resourcePower: 0.12, range: 48, swing: 0.20, cadence: 0.34, cost: null, woodWall: 2.2, stoneWall: 1.4 },
@@ -6629,7 +6629,7 @@ const SKILL_MILESTONE_CHOICES = [
 ];
 const SPECIAL_WEAPON_HOVER_STATS={
   daggers:"Damage 7.2 per hit • Double-hit style • Range 44 • Attack delay 0.36s",
-  longSword:"Damage 21 • Range 74 • Attack delay 0.50s",
+  longSword:"Damage 21 • Range 84 • Attack delay 0.50s",
   spear:"Damage 16 • Range 96 • Attack delay 0.46s",
   doubleAxe:"Damage 8.8 per hit • Double-hit style • Range 66 • Attack delay 0.72s",
   throwingAxe:"Damage 16 • Range 50 • Attack delay 0.72s • One-handed thrown axe",
@@ -11402,7 +11402,7 @@ function applyPlayerActionEvent(data={}) {
   if(typeof data.weaponChoice==="string"&&data.weaponChoice)v.skillWeaponChoice=String(data.weaponChoice);
   if(Number.isFinite(Number(data.toolTier))){v.toolTiers=v.toolTiers||{};v.toolTiers[tool]=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
   const visualChoice=String(data.weaponChoice||v.skillWeaponChoice||"");
-  const visualDuration=tool==="Axe"?(visualChoice==="doubleAxe"?.58:visualChoice==="battleAxe"?.56:visualChoice==="throwingAxe"?.34:.50):tool==="Sword"?(visualChoice==="longSword"?.42:visualChoice==="spear"?.34:visualChoice==="daggers"?.36:.36):.26;
+  const visualDuration=tool==="Axe"?(visualChoice==="doubleAxe"?.58:visualChoice==="battleAxe"?.56:visualChoice==="throwingAxe"?.34:.50):tool==="Sword"?(visualChoice==="longSword"?.50:visualChoice==="spear"?.34:visualChoice==="daggers"?.36:.44):.26;
   v.attackTimer=action==="shoot"?.20:visualDuration;v._attackVisualDuration=action==="shoot"?.20:visualDuration;
   if(data.throwing){v._throwAxePendingUntil=game.time+.35;v.skillWeaponChoice="throwingAxe";v.toolTiers=v.toolTiers||{};v.toolTiers.Axe=clamp(Math.floor(Number(data.toolTier)||0),0,2);}
   v.punchSide=(v.punchSide||1)*-1;
@@ -12624,7 +12624,9 @@ const hostlMusic = (() => {
     [["D",2],["A",2],["E",3]], [["G",2],["D",3],["A",3]],
     [["B",2],["Fs",3],["D",3]], [["A",2],["E",3],["B",3]]
   ];
-  const GAME_PLUCK=[["D",4],["A",4],["E",5],["Fs",4],["B",4],["D",5],["A",4],["E",5]];
+  const GAME_HARP=[["D",4],["A",4],["E",5],["D",5],["B",4],["Fs",5],["A",4],["E",5]];
+  const GAME_FLUTE=[0,["A",5],0,["Fs",5], ["D",5],0,["E",5],0, 0,["B",5],0,["A",5], ["Fs",5],0,["E",5],0];
+  const GAME_BELLS=[["D",6],0,["A",5],0, ["G",6],0,["D",6],0, ["B",5],0,["Fs",6],0, ["A",5],0,["E",6],0];
 
   function ctx(){
     try{
@@ -12657,6 +12659,32 @@ const hostlMusic = (() => {
   function chord(notes,start,dur,vol,type="sine"){
     notes.forEach((n,i)=>tone(hz(n[0],n[1]),start,dur,vol,type,.18,.7,(i-1)*2,(i-1)*.18));
   }
+  function fluteTone(freq,start,dur,vol=.022,pan=0){
+    tone(freq,start,dur,vol,"sine",.11,.42,-3,pan);
+    tone(freq*2,start,dur*.82,vol*.12,"sine",.15,.36,4,pan*.65);
+  }
+  function glassBell(freq,start,dur=.9,vol=.014,pan=0){
+    tone(freq,start,dur,vol,"sine",.006,.62,0,pan);
+    tone(freq*2.01,start,dur*.72,vol*.34,"sine",.004,.48,3,-pan*.55);
+    tone(freq*3.98,start,dur*.44,vol*.12,"sine",.003,.30,-4,pan*.35);
+  }
+  function harpTone(freq,start,dur=.62,vol=.020,pan=0){
+    tone(freq,start,dur,vol,"triangle",.004,.42,-2,pan);
+    tone(freq*2,start,dur*.58,vol*.16,"sine",.003,.30,2,-pan*.45);
+  }
+  function windWash(start,dur,vol=.0065,pan=0){
+    const ac=ctx(),out=ensureMaster();if(!ac||!out)return;
+    const frames=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,frames,ac.sampleRate),data=buf.getChannelData(0);
+    for(let i=0;i<frames;i++)data[i]=(Math.random()*2-1)*.62;
+    const src=ac.createBufferSource(),bp=ac.createBiquadFilter(),lp=ac.createBiquadFilter(),g=ac.createGain();
+    bp.type="bandpass";bp.frequency.value=1850;bp.Q.value=.42;lp.type="lowpass";lp.frequency.value=5200;
+    src.buffer=buf;src.connect(bp);bp.connect(lp);lp.connect(g);
+    if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));g.connect(p);p.connect(out);}else g.connect(out);
+    const a=Math.min(.65,dur*.22),r=Math.min(.85,dur*.28);
+    g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),start+a);
+    g.gain.setValueAtTime(Math.max(.0002,vol*.72),Math.max(start+a,start+dur-r));g.gain.exponentialRampToValueAtTime(.0001,start+dur);
+    src.start(start);src.stop(start+dur+.02);
+  }
   function noiseHit(start,dur=.08,vol=.018,low=1200,high=8000,pan=0){
     const ac=ctx(),out=ensureMaster();if(!ac||!out)return;
     const frames=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,frames,ac.sampleRate),data=buf.getChannelData(0);
@@ -12678,76 +12706,91 @@ const hostlMusic = (() => {
   function scheduleHome(ac,idx,t,beatDur){
     const bar=Math.floor(idx/4)%8,beat=idx%4;
     const harmony=HOME_CHORDS[bar];
-    // Warm pad + brighter string-like layer.
+    // Everything rhythmic is snapped to the WebAudio beat grid. No free-running
+    // millisecond offsets, so percussion/lead layers cannot sound late.
     if(beat===0){
-      chord(harmony,t,beatDur*3.9,.030,"sine");
-      chord(harmony.map(n=>[n[0],n[1]+1]),t+.015,beatDur*3.7,.010,"sawtooth");
+      chord(harmony,t,beatDur*3.82,.030,"sine");
+      chord(harmony.map(n=>[n[0],n[1]+1]),t,beatDur*3.72,.010,"sawtooth");
       const root=harmony[0];
-      tone(hz(root[0],root[1]-1),t,beatDur*1.8,.050,"triangle",.025,.35,-5,-.06); // bass
+      tone(hz(root[0],root[1]-1),t,beatDur*1.75,.050,"triangle",.025,.35,-5,-.06);
       kick(t,.046);
     }
     if(beat===2){
-      const root=harmony[0];tone(hz(root[0],root[1]-1),t,beatDur*.95,.040,"triangle",.018,.25,2,.05);
+      const root=harmony[0];tone(hz(root[0],root[1]-1),t,beatDur*.92,.040,"triangle",.018,.25,2,.05);
       kick(t,.032);
     }
     const m=HOME_MELODY[idx%HOME_MELODY.length];
     if(m){
-      tone(hz(m[0],m[1]),t,beatDur*.74,.050,"triangle",.012,.20,0,beat%2?.24:-.24); // lead
-      tone(hz(m[0],m[1]+1),t+.025,beatDur*.44,.012,"sine",.008,.14,5,beat%2?-.32:.32); // bell shimmer
+      tone(hz(m[0],m[1]),t,beatDur*.72,.050,"triangle",.012,.20,0,beat%2?.24:-.24);
+      glassBell(hz(m[0],m[1]+1),t+beatDur*.5,beatDur*.38,.010,beat%2?-.32:.32);
     }
-    // Adventure pluck / pseudo-guitar.
-    if(beat===0||beat===2){const root=harmony[0];tone(hz(root[0],root[1]+1),t+.03,beatDur*.46,.030,"triangle",.008,.15,-4,beat===0?-.18:.18);}
-    // Soft percussion: shaker every beat, clap-like noise on 2/4.
-    noiseHit(t+.02,beatDur*.15,beat%2?.022:.014,2500,9000,beat%2?.35:-.35);
-    if(beat===1||beat===3)noiseHit(t+.04,beatDur*.20,.025,600,4200,beat===1?-.12:.12);
+    if(beat===0||beat===2){const root=harmony[0];harpTone(hz(root[0],root[1]+1),t,beatDur*.44,.026,beat===0?-.18:.18);}
+    noiseHit(t,beatDur*.13,beat%2?.019:.012,2500,9000,beat%2?.35:-.35);
+    if(beat===1||beat===3)noiseHit(t,beatDur*.18,.021,600,4200,beat===1?-.12:.12);
   }
   function scheduleGame(ac,idx,t,beatDur){
     const bar=Math.floor(idx/4)%4,beat=idx%4,harmony=GAME_CHORDS[bar];
+    const phraseIndex=idx%16;
     if(beat===0){
-      // Wide ambient pad plus a very soft string/synth layer.
-      chord(harmony,t,beatDur*7.6,.022,"sine");
-      chord(harmony.map(n=>[n[0],n[1]+1]),t+.05,beatDur*7.1,.0065,"sawtooth");
+      // Airy exploration bed: shorter chord tails prevent the next harmony from
+      // piling on top, while wind/noise gives space without a heavy beat.
+      chord(harmony,t,beatDur*3.82,.020,"sine");
+      chord(harmony.map(n=>[n[0],n[1]+1]),t,beatDur*3.60,.0052,"triangle");
       const root=harmony[0];
-      tone(hz(root[0],root[1]-1),t,beatDur*3.2,.036,"triangle",.22,.8,-7,-.10); // bass drone
-      tone(hz(root[0],root[1]+2),t+.08,beatDur*6.8,.008,"sine",.8,1.6,3,.18); // air
-      kick(t,.022);
+      tone(hz(root[0],root[1]-1),t,beatDur*3.72,.025,"sine",.30,.92,-6,-.12);
+      tone(hz(root[0],root[1]+2),t,beatDur*3.48,.0072,"sine",.70,1.05,3,.22);
+      windWash(t,beatDur*3.75,.0062,bar%2?.30:-.30);
     }
     if(beat===0||beat===2){
-      const n=GAME_PLUCK[(bar*2+(beat===2?1:0))%GAME_PLUCK.length];
-      tone(hz(n[0],n[1]),t+.05,beatDur*.95,.024,"triangle",.025,.42,-3,beat===2?.30:-.30); // pluck
-      tone(hz(n[0],n[1]+1),t+.12,beatDur*.52,.0075,"sine",.012,.22,4,beat===2?-.24:.24); // chime
+      const n=GAME_HARP[(bar*2+(beat===2?1:0))%GAME_HARP.length];
+      harpTone(hz(n[0],n[1]),t,beatDur*.82,.019,beat===2?.32:-.32);
     }
-    // Sparse atmospheric rhythm so exploration still breathes.
-    noiseHit(t+.03,beatDur*.13,beat%2?.010:.006,3000,9000,beat%2?.28:-.28);
-    if(beat===3)noiseHit(t+.08,beatDur*.25,.012,700,3500,.08);
+    const flute=GAME_FLUTE[phraseIndex];
+    if(flute)fluteTone(hz(flute[0],flute[1]),t,beatDur*.88,.020,beat%2?.22:-.22);
+    const bell=GAME_BELLS[phraseIndex];
+    if(bell)glassBell(hz(bell[0],bell[1]),t+beatDur*.5,beatDur*.58,.010,bar%2?.36:-.36);
+    // Only a very light breath/shaker on exact beats. No kick in exploration.
+    if(beat===1||beat===3)noiseHit(t,beatDur*.10,.0065,3600,9500,beat===1?-.34:.34);
   }
-  function currentBeatDuration(){return 60/(mode==="home"?96:68);}
+  let requestedMode="";
+  function currentBeatDuration(){return 60/(mode==="home"?96:70);}
   function scheduler(myGen){
     const ac=ctx(); if(!ac||myGen!==generation||!mode)return;
     const beatDur=currentBeatDuration();
-    if(!nextBeat||nextBeat<ac.currentTime-.5)nextBeat=ac.currentTime+.06;
-    while(nextBeat<ac.currentTime+.65){
+    if(!nextBeat||nextBeat<ac.currentTime-.20)nextBeat=ac.currentTime+.015;
+    while(nextBeat<ac.currentTime+.75){
       if(mode==="home")scheduleHome(ac,beatIndex,nextBeat,beatDur); else scheduleGame(ac,beatIndex,nextBeat,beatDur);
       nextBeat+=beatDur;beatIndex++;
     }
   }
   async function start(nextMode){
     if(nextMode!=="home"&&nextMode!=="game")return;
-    mode=nextMode;generation++;beatIndex=0;nextBeat=0;
+    requestedMode=nextMode;
+    mode=nextMode;generation++;const myGen=generation;beatIndex=0;nextBeat=0;
     const ac=ctx(),out=ensureMaster(); if(!ac||!out)return;
-    try{if(ac.state==="suspended")await ac.resume();unlocked=ac.state==="running";}catch(_){}
+    try{if(ac.state==="suspended")await ac.resume();}catch(_){}
+    if(myGen!==generation||requestedMode!==nextMode)return;
+    unlocked=ac.state==="running";
     if(!unlocked)return;
     const now=ac.currentTime,target=nextMode==="home"?.92:.72;
-    try{out.gain.cancelScheduledValues(now);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),now);out.gain.exponentialRampToValueAtTime(target,now+.65);}catch(_){out.gain.value=target;}
+    try{out.gain.cancelScheduledValues(now);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),now);out.gain.exponentialRampToValueAtTime(target,now+.18);}catch(_){out.gain.value=target;}
     if(timer)clearInterval(timer);
-    const g=generation;scheduler(g);timer=setInterval(()=>scheduler(g),240);
+    nextBeat=ac.currentTime+.015;
+    scheduler(myGen);
+    timer=setInterval(()=>scheduler(myGen),100);
   }
   function stop(fade=.45){
-    generation++;mode="";if(timer){clearInterval(timer);timer=0;}
+    generation++;requestedMode="";mode="";if(timer){clearInterval(timer);timer=0;}
     const ac=ctx();if(ac&&master){const now=ac.currentTime;try{master.gain.cancelScheduledValues(now);master.gain.setValueAtTime(Math.max(.0001,master.gain.value),now);master.gain.exponentialRampToValueAtTime(.0001,now+fade);}catch(_){}}
   }
   function sync(){return start(game.started?"game":"home");}
-  function unlock(){unlocked=true;return sync();}
+  async function unlock(){
+    const ac=ctx();ensureMaster();if(!ac)return;
+    try{if(ac.state==="suspended")await ac.resume();}catch(_){}
+    unlocked=ac.state==="running";
+    if(!unlocked)return;
+    return start(requestedMode||(game.started?"game":"home"));
+  }
   return {startHome:()=>start("home"),startGame:()=>start("game"),stop,sync,unlock};
 })();
 // Browsers require a user gesture before music can begin. The first pointer/key
@@ -19104,8 +19147,8 @@ function hostlGenericWeaponSwingTransform(poseKey, attackT){
     // The blade starts at the Ref pose, sweeps DOWN/forward across the player's
     // face, then returns quickly along the same front-side arc. Negative canvas
     // rotation keeps a left-pointing blade in front instead of behind the head.
-    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=restRot+(-1.34*q);dx=5.5*q;dy=9*q;}
-    else{const q=hostlAnimEase((attackT-.70)/.30);rot=restRot+(-1.34*(1-q));dx=5.5*(1-q);dy=9*(1-q);}
+    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=restRot+(-1.55*q);dx=8*q;dy=12*q;}
+    else{const q=hostlAnimEase((attackT-.70)/.30);rot=restRot+(-1.55*(1-q));dx=8*(1-q);dy=12*(1-q);}
   }
   return {rot,dx,dy,isAxe};
 }
@@ -24671,7 +24714,7 @@ function applyToolTierStats(){
   if((t.BoxingGloves||0)>=1)Object.assign(TOOLS.BoxingGloves,{dmg:9.2,range:51,cadence:.30});if((t.BoxingGloves||0)>=2)Object.assign(TOOLS.BoxingGloves,{dmg:13.5,range:54,cadence:.28});
   const spec=String(player.skillWeaponChoice||"");
   if(spec==="daggers")Object.assign(TOOLS.Sword,{dmg:7.2,range:44,cadence:.36,swing:.36,doubleHit:true});
-  else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:74,cadence:.50,swing:.42});
+  else if(spec==="longSword")Object.assign(TOOLS.Sword,{dmg:21,range:84,cadence:.50,swing:.48});
   else if(spec==="spear")Object.assign(TOOLS.Sword,{dmg:16,range:96,cadence:.46,swing:.34});
   else if(spec==="doubleAxe")Object.assign(TOOLS.Axe,{dmg:8.8,range:66,cadence:.72,swing:.58,gather:4.0,resourcePower:1.50,doubleHit:true});
   else if(spec==="throwingAxe")Object.assign(TOOLS.Axe,{dmg:16,range:50,cadence:.72,swing:.34,gather:1.7,resourcePower:.72,throwing:true});
@@ -27942,7 +27985,7 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
     // then sweeps forward/up through a broad swish arc.
     restAngle=spec==="spear"?.02:2.08;
     swingAngle=swing*(spec==="spear"?-.35:-2.38);
-    if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(4,1,56,2.0,2.0-2.32*swing,true);ctx.stroke();ctx.restore();}
+    if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(5,1,64,2.0,2.0-2.55*swing,true);ctx.stroke();ctx.restore();}
   }
   let rot=restAngle+swingAngle;
   if(weapon==="Axe"&&spec==="doubleAxe"){
@@ -30583,6 +30626,9 @@ async function maybeShowPlayInterstitial(){
 }
 el("playBtn").addEventListener("click", async () => {
   if ((game.started && !game.over) || playStartInProgress) return;
+  // Explicitly unlock WebAudio on the Play gesture so music is ready before the
+  // world-loading work finishes instead of sometimes starting seconds later.
+  hostlMusic.unlock();
   playStartInProgress = true;
   updatePlayAvailability();
   // Play is intentionally simple: the button owns the tiny loading moment, then
