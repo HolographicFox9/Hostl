@@ -6547,10 +6547,10 @@ const BUILD_TIER_META={
     {name:"Iron Scuba Suit",cost:{stone:18,gold:9},desc:"A much larger tank with near-normal underwater movement."},
     {name:"Gem Scuba Suit",cost:{stone:20,gold:13},desc:"Final scuba suit. Ruby is fastest, Emerald makes oxygen last longest, Diamond gives a larger tank and better protection while suffocating."}],
   BattleBot:[
-    {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A very durable combat robot that follows you and attacks enemies."},
-    {name:"Reinforced Battle Bot",cost:{stone:24,gold:10},desc:"More health, stronger attacks, and better combat range."},
-    {name:"Iron Battle Bot",cost:{stone:28,gold:14},desc:"Heavy combat bot ready for an elemental core."},
-    {name:"Elemental Battle Bot",cost:{stone:24,gold:18},desc:"Final Battle Bot. Choose Water, Fire, Lightning, Plant, Void, or Light forever for this run."}],
+    {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A durable melee combat robot that follows you closely and attacks nearby enemies."},
+    {name:"Reinforced Battle Bot",cost:{stone:24,gold:10},desc:"More health and stronger melee attacks while keeping pace with you."},
+    {name:"Iron Battle Bot",cost:{stone:28,gold:14},desc:"Choose its permanent combat style: stronger Melee or faster-attacking Ranger."},
+    {name:"Elemental Battle Bot",cost:{stone:24,gold:18},desc:"Final Battle Bot. Keep your Melee/Ranger style and add Water, Fire, Lightning, Plant, Void, or Light."}],
   PetArmor:[
     {name:"Wood Pet Armor",cost:{wood:14},desc:"Craft armor that can be fitted to one of your pets."},
     {name:"Stone Pet Armor",cost:{wood:5,stone:14},desc:"Stronger pet armor with better damage reduction."},
@@ -6616,9 +6616,13 @@ function buildMaxTier(id){return Math.max(0,Math.floor(Number(BUILD_MAX_TIER[id]
 function buildBranchChoiceId(build,variant){return `build${build}@${variant}`;}
 function parseBuildUpgradeChoice(raw){const m=String(raw||"").match(/^build([A-Za-z]+)(?:@([A-Za-z]+))?$/);return m?{build:m[1],variant:(m[2]||"").toLowerCase()}:null;}
 function buildVariantFromMilestones(build){let v="";for(const raw of Object.values(player.skillMilestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&p.build===build&&p.variant)v=p.variant;}return v;}
+function battleBotCombatRoleFromMilestones(){let role="melee";for(const raw of Object.values(player.skillMilestones||{})){const p=parseBuildUpgradeChoice(raw);if(p?.build==="BattleBot"&&(p.variant==="melee"||p.variant==="ranged"))role=p.variant;}return role;}
 function buildUpgradeCountFromMilestones(build){let n=0;for(const raw of Object.values(player.skillMilestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&p.build===build)n++;}return n;}
 function buildTierMeta(build,tier=buildUnlockTier(build),variant=buildVariantFromMilestones(build)){
   const arr=BUILD_TIER_META[build]||[];let base=arr[Math.min(Math.max(0,tier),Math.max(0,arr.length-1))]||{name:build,cost:{},desc:""};
+  if(build==="BattleBot"&&tier===2&&(variant==="melee"||variant==="ranged")){
+    base={...base,name:variant==="ranged"?"Ranger Iron Battle Bot":"Melee Iron Battle Bot",desc:variant==="ranged"?"Locks the bot into ranged combat. It fires much faster while still keeping up with you.":"Keeps the bot as a melee fighter and increases its attack damage."};
+  }
   if(tier>=buildMaxTier(build)&&variant){const br=(BUILD_FINAL_BRANCHES[build]||[]).find(x=>x.variant===variant);if(br)base={...base,name:br.name,desc:br.desc};}
   return base;
 }
@@ -6698,12 +6702,14 @@ function buildIsKnown(id){
 function buildIcon(build){return build==="Wall"?"🧱":build==="Tower"?"🗼":build==="Saddle"?"🐎":build==="Windmill"?"🌬️":build==="Boat"?"🛶":build==="Sub"?"🚤":build==="Chakrams"?"⭕":build==="Flute"?"🎵":build==="DivingSuit"?"🥽":build==="BattleBot"?"🤖":build==="PetArmor"?"🛡️":"💠";}
 function buildUpgradeChoiceInfo(build,variant=""){
   const t=buildUnlockTier(build),next=Math.min(buildMaxTier(build),t+1),base=buildTierMeta(build,next,variant);
+  if(build==="BattleBot"&&(variant==="melee"||variant==="ranged"))return {id:buildBranchChoiceId(build,variant),icon:variant==="ranged"?"🏹":"⚔️",name:`Upgrade Craft: ${base.name}`,desc:base.desc};
   if(variant){const branch=(BUILD_FINAL_BRANCHES[build]||[]).find(x=>x.variant===variant);return {id:buildBranchChoiceId(build,variant),icon:branch?.icon||buildIcon(build),name:`Upgrade Craft: ${branch?.name||base.name}`,desc:branch?.desc||base.desc};}
   return {id:`build${build}`,icon:buildIcon(build),name:`Upgrade Craft: ${base.name}`,desc:`Upgrades only your locked ${build} path. Items you already crafted do not upgrade for free.`};
 }
 function buildUpgradeChoices(build){
   if(!build||!buildIsKnown(build))return [];
   const tier=buildUnlockTier(build),max=buildMaxTier(build);if(tier>=max)return [];
+  if(build==="BattleBot"&&tier===1)return [buildUpgradeChoiceInfo(build,"melee"),buildUpgradeChoiceInfo(build,"ranged")];
   if(tier===max-1&&(BUILD_FINAL_BRANCHES[build]||[]).length)return BUILD_FINAL_BRANCHES[build].map(b=>buildUpgradeChoiceInfo(build,b.variant));
   return [buildUpgradeChoiceInfo(build)];
 }
@@ -11279,7 +11285,7 @@ function syncNetworkFullWorld(force = false) {
   for(const id of Array.from(net.wallVisuals.keys()))if(!wallSeen.has(id))net.wallVisuals.delete(id); walls=Array.from(net.wallVisuals.values());
 
   const towerSeen = new Set();
-  eachNetworkCollection("towers",(s,id)=>{towerSeen.add(id);let v=net.towerVisuals.get(id)||{netId:id};v.x=Number(s.x)||0;v.y=Number(s.y)||0;v.cd=Number(s.cd)||0;v.ownerId=s.ownerId||"";v.tier=Number(s.tier)||0;v.kind=String(s.kind||"tower");v.variant=String(s.variant||"");v.angle=Number(s.angle)||0;v.hp=damageLockedHp(v,Math.max(0,Number(s.hp)||0));v.maxHp=Math.max(1,Number(s.maxHp)||1);net.towerVisuals.set(id,v);});
+  eachNetworkCollection("towers",(s,id)=>{towerSeen.add(id);let v=net.towerVisuals.get(id)||{netId:id};v.x=Number(s.x)||0;v.y=Number(s.y)||0;v.cd=Number(s.cd)||0;v.ownerId=s.ownerId||"";v.tier=Number(s.tier)||0;v.kind=String(s.kind||"tower");v.variant=String(s.variant||"");v.botRole=String(s.botRole||"");v.angle=Number(s.angle)||0;v.hp=damageLockedHp(v,Math.max(0,Number(s.hp)||0));v.maxHp=Math.max(1,Number(s.maxHp)||1);net.towerVisuals.set(id,v);});
   for(const id of Array.from(net.towerVisuals.keys()))if(!towerSeen.has(id))net.towerVisuals.delete(id); towers=Array.from(net.towerVisuals.values());
 
   const projSeen = new Set(), normal=[], blasts=[];
@@ -11700,10 +11706,12 @@ async function connectMultiplayer(options={}) {
       startHiveInterior(hive||{x:player.x,y:player.y,netId:data.hiveId},{hiveId:String(data.hiveId||"")});
     });
     room.onMessage("hiveTameResult", (data={})=>{
-      const h=game.hiveInterior;if(!h?.active)return;h.tamePending=false;
+      const h=game.hiveInterior;if(!h?.active)return;const larvaId=String(data.larvaId||h.tamePendingLarvaId||""),larva=(h.larvae||[]).find(v=>v.id===larvaId)||hiveNearestLarva(9999);h.tamePendingLarvaId="";
+      if(larva)larva.tamePending=false;
       if(data?.reason==="max"){if(game.tameHeartFx)game.tameHeartFx.life=0;banner("Max 4 regular pets!",true);updateVehicleEnterButton();return;}
-      if(data?.success){h.larvaTamed=true;h.petType=String(data.type||"workerbee");h.aggro=true;tameHeartResolve(true,{x:h.larvaX,y:h.larvaY,r:18});if(sfx.tame)sfx.tame();achievementTamedSpecies(h.petType);banner(`Larva tamed — ${PET_TYPES[h.petType]?.name||"Bee"}! Every bee in the hive is angry. ESCAPE!`);}
-      else{tameHeartResolve(false,{x:h.larvaX,y:h.larvaY,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}
+      if(data?.reason==="taken"){if(larva)larva.tamed=true;if(game.tameHeartFx)game.tameHeartFx.life=0;banner("That larva is already tamed.",true);updateVehicleEnterButton();return;}
+      if(data?.success&&larva){larva.tamed=true;larva.petType=String(data.type||"workerbee");h.aggro=true;for(const b of h.bees||[])if(b&&!b.dead)b.aggro=true;tameHeartResolve(true,{x:larva.x,y:larva.y,r:18});if(sfx.tame)sfx.tame();achievementTamedSpecies(larva.petType);banner(`Larva tamed — ${PET_TYPES[larva.petType]?.name||"Bee"}. The hive bees are angry!`);}
+      else if(larva){tameHeartResolve(false,{x:larva.x,y:larva.y,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}
       updateVehicleEnterButton();
     });
     room.onMessage("hiveForceExit",()=>{if(game.hiveInterior?.active)leaveHiveInterior();});
@@ -12331,87 +12339,201 @@ function nearestEnterableHive(maxDist=118){
   }
   return best;
 }
-const HIVE_INTERIOR_W=1280,HIVE_INTERIOR_H=860;
+const HIVE_INTERIOR_W=2400,HIVE_INTERIOR_H=1700;
+const HIVE_EXIT_PORTALS=[
+  {key:"northWest",side:"top",x:590,y:18,w:180,h:72,dx:0,dy:-1,label:"Hive opening"},
+  {key:"northEast",side:"top",x:1640,y:18,w:180,h:72,dx:0,dy:-1,label:"Hive opening"},
+  {key:"southWest",side:"bottom",x:410,y:HIVE_INTERIOR_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
+  {key:"southEast",side:"bottom",x:1810,y:HIVE_INTERIOR_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
+  {key:"west",side:"left",x:18,y:735,w:72,h:210,dx:-1,dy:0,label:"Hive opening"},
+  {key:"east",side:"right",x:HIVE_INTERIOR_W-90,y:735,w:72,h:210,dx:1,dy:0,label:"Hive opening"}
+];
+const HIVE_LARVA_SPAWNS=[
+  {id:"larva1",x:460,y:420},{id:"larva2",x:1900,y:420},
+  {id:"larva3",x:620,y:840},{id:"larva4",x:1740,y:840},
+  {id:"larva5",x:460,y:1120},{id:"larva6",x:1900,y:1260},
+  {id:"larva7",x:1100,y:1400},{id:"larva8",x:1420,y:280}
+];
+// The hive is a branching interior biome, not a one-path minigame. These walls
+// form rooms, loops and alternate corridors while keeping several exterior openings.
 const HIVE_MAZE_WALLS=[
-  {x:0,y:0,w:1280,h:34},{x:0,y:826,w:1280,h:34},{x:0,y:0,w:34,h:860},{x:1246,y:0,w:34,h:860},
-  {x:185,y:110,w:38,h:540},{x:185,y:110,w:285,h:38},{x:432,y:110,w:38,h:250},
-  {x:335,y:322,w:310,h:38},{x:607,y:150,w:38,h:210},{x:607,y:150,w:360,h:38},
-  {x:929,y:150,w:38,h:330},{x:705,y:442,w:262,h:38},{x:705,y:442,w:38,h:245},
-  {x:335,y:520,w:408,h:38},{x:335,y:520,w:38,h:205},{x:335,y:687,w:260,h:38},
-  {x:557,y:610,w:38,h:115},{x:870,y:590,w:38,h:236},{x:870,y:590,w:250,h:38},
-  {x:1082,y:370,w:38,h:258}
+  // outer shell with six doorway gaps
+  {x:0,y:0,w:560,h:34},{x:790,y:0,w:820,h:34},{x:1840,y:0,w:560,h:34},
+  {x:0,y:HIVE_INTERIOR_H-34,w:380,h:34},{x:630,y:HIVE_INTERIOR_H-34,w:1140,h:34},{x:2030,y:HIVE_INTERIOR_H-34,w:370,h:34},
+  {x:0,y:0,w:34,h:700},{x:0,y:980,w:34,h:720},
+  {x:HIVE_INTERIOR_W-34,y:0,w:34,h:700},{x:HIVE_INTERIOR_W-34,y:980,w:34,h:720},
+  // upper-left chambers / loop
+  {x:250,y:210,w:560,h:34},{x:250,y:210,w:34,h:370},{x:250,y:546,w:330,h:34},
+  {x:548,y:390,w:34,h:360},{x:548,y:716,w:430,h:34},{x:944,y:450,w:34,h:300},
+  // upper-right chambers / loop
+  {x:1280,y:190,w:760,h:34},{x:1280,y:190,w:34,h:300},{x:1280,y:456,w:330,h:34},
+  {x:1576,y:456,w:34,h:280},{x:1576,y:702,w:560,h:34},{x:2102,y:360,w:34,h:376},
+  // central broken walls leave multiple crossings
+  {x:840,y:315,w:34,h:235},{x:840,y:315,w:250,h:34},{x:1056,y:315,w:34,h:165},
+  {x:1110,y:610,w:300,h:34},{x:1110,y:610,w:34,h:285},{x:1376,y:610,w:34,h:285},
+  // lower-left loops
+  {x:210,y:980,w:470,h:34},{x:646,y:980,w:34,h:300},{x:340,y:1246,w:340,h:34},
+  {x:340,y:1246,w:34,h:240},{x:340,y:1452,w:500,h:34},{x:806,y:1180,w:34,h:306},
+  // lower-right loops
+  {x:1500,y:1000,w:690,h:34},{x:1500,y:1000,w:34,h:250},{x:1500,y:1216,w:340,h:34},
+  {x:1806,y:1216,w:34,h:280},{x:1806,y:1462,w:390,h:34},{x:2162,y:1120,w:34,h:376},
+  // short islands that make the middle feel organic rather than a hallway
+  {x:790,y:900,w:300,h:34},{x:980,y:1080,w:34,h:260},{x:980,y:1306,w:300,h:34},
+  {x:1280,y:930,w:280,h:34},{x:1280,y:930,w:34,h:220},{x:1160,y:1116,w:154,h:34}
 ];
 function hiveCircleRectHit(x,y,r,rect){const qx=clamp(x,rect.x,rect.x+rect.w),qy=clamp(y,rect.y,rect.y+rect.h),dx=x-qx,dy=y-qy;return dx*dx+dy*dy<r*r;}
+function hiveBeeHitboxes(b){
+  if(!b)return[];const hits=animalTorsoHeadHitboxes(b);return hits.length?hits:[{x:Number(b.x)||0,y:Number(b.y)||0,r:Math.max(7,(Number(b.r)||16)*.72)}];
+}
+function hiveResolveCircleAgainstBee(pos,r,b){
+  let hit=false;
+  for(const hb of hiveBeeHitboxes(b)){
+    let dx=pos.x-hb.x,dy=pos.y-hb.y,d=Math.hypot(dx,dy),min=Math.max(2,r)+Math.max(2,hb.r);
+    if(d>=min)continue;if(d<.001){const a=(Number(b.angle)||0)+Math.PI;dx=Math.cos(a);dy=Math.sin(a);d=1;}
+    const push=min-d+.35;pos.x+=dx/d*push;pos.y+=dy/d*push;hit=true;
+  }
+  return hit;
+}
+function hiveResolvePlayerBeeHitboxes(h){
+  if(!h?.active)return;let changed=false;for(const b of h.bees||[]){if(!b||b.dead)continue;if(hiveResolveCircleAgainstBee(h,PLAYER_R*.72,b))changed=true;}if(changed)hiveResolveWalls(h,PLAYER_R*.72);
+}
+function hiveSeparateBees(bees){
+  const live=(bees||[]).filter(b=>b&&!b.dead);
+  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],b=live[j],ar=Math.max(7,(a.r||16)*.55),br=Math.max(7,(b.r||16)*.55),dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=ar+br;if(d>=min)continue;const ux=d>.001?dx/d:Math.cos((i+j)*1.37),uy=d>.001?dy/d:Math.sin((i+j)*1.37),push=(min-Math.max(.001,d))*.5;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;hiveResolveWalls(a,ar);hiveResolveWalls(b,br);}
+}
 function hiveResolveWalls(pos,r=13){
   pos.x=clamp(pos.x,r,HIVE_INTERIOR_W-r);pos.y=clamp(pos.y,r,HIVE_INTERIOR_H-r);
   for(let pass=0;pass<3;pass++)for(const w of HIVE_MAZE_WALLS){if(!hiveCircleRectHit(pos.x,pos.y,r,w))continue;const left=Math.abs(pos.x-(w.x-r)),right=Math.abs(pos.x-(w.x+w.w+r)),top=Math.abs(pos.y-(w.y-r)),bottom=Math.abs(pos.y-(w.y+w.h+r)),m=Math.min(left,right,top,bottom);if(m===left)pos.x=w.x-r;else if(m===right)pos.x=w.x+w.w+r;else if(m===top)pos.y=w.y-r;else pos.y=w.y+w.h+r;}
 }
-function makeHiveBee(i){const types=["workerbee","workerbee","workerbee","dronebee","workerbee","workerbee","dronebee","workerbee","queenbee"];return{type:types[i%types.length],x:250+(i*173)%870,y:95+(i*127)%650,angle:(i*.73)%TAU,wander:(i*.51)%TAU,wanderT:1+(i%4)*.4,atkCd:0};}
+function hivePortalByKey(key){return HIVE_EXIT_PORTALS.find(p=>p.key===key)||HIVE_EXIT_PORTALS[2];}
+function hivePortalContains(portal,x,y,pad=0){return !!(portal&&x>=portal.x-pad&&x<=portal.x+portal.w+pad&&y>=portal.y-pad&&y<=portal.y+portal.h+pad);}
+function hiveExitAt(x,y,pad=18){return HIVE_EXIT_PORTALS.find(p=>hivePortalContains(p,x,y,pad))||null;}
+function hiveEntryPortalForApproach(hive){
+  const c=offlineResourceCenter(hive||{}),a=Math.atan2(player.y-c.y,player.x-c.x),vx=Math.cos(a),vy=Math.sin(a);
+  if(Math.abs(vx)>.72)return hivePortalByKey(vx<0?"west":"east");
+  if(vy<0)return hivePortalByKey(vx<0?"northWest":"northEast");
+  return hivePortalByKey(vx<0?"southWest":"southEast");
+}
+function hiveSpawnInsidePortal(portal){
+  const cx=portal.x+portal.w*.5,cy=portal.y+portal.h*.5,margin=72;
+  return{x:clamp(cx-portal.dx*margin,58,HIVE_INTERIOR_W-58),y:clamp(cy-portal.dy*margin,58,HIVE_INTERIOR_H-58),angle:Math.atan2(-portal.dy,-portal.dx)};
+}
+function makeHiveBee(i){
+  const types=["workerbee","workerbee","dronebee","workerbee","workerbee","dronebee","workerbee","queenbee"],type=types[i%types.length],stage=type==="queenbee"?"adult":(i%5===0?"baby":"adult"),r=animalRadius(type,stage),maxHp=Math.max(12,Math.round(typeHp(type,stage)*.72));
+  const cols=5,row=Math.floor(i/cols),col=i%cols;
+  return{type,stage,x:390+col*390+(row%2)*70,y:270+row*310,angle:(i*.73)%TAU,r,hp:maxHp,maxHp,speed:animalSpeed(type,stage,false),coat:(PET_TYPES[type]?.coats||[PET_TYPES[type]?.color||"#f2c94c"])[0],spots:[],spotCol:"#392b18",sleeping:stage==="baby"&&i%2===0,owned:false,dead:false,flash:0,attackAnim:0,wander:(i*.51)%TAU,wanderT:1+(i%4)*.4,atkCd:0,aggro:false,flee:false};
+}
 function startHiveInterior(hive,data={}){
   if(game.hiveInterior?.active)return;
-  const c=offlineResourceCenter(hive||{}),hiveId=String(data.hiveId||hive?.netId||hive?.id||"");
-  game.hiveInterior={active:true,hiveId,worldX:c.x||player.x,worldY:c.y||player.y,x:84,y:770,angle:-Math.PI/2,larvaX:1165,larvaY:92,larvaTamed:false,tamePending:false,aggro:false,bees:Array.from({length:18},(_,i)=>makeHiveBee(i)),hitCd:0,enteredAt:performance.now(),petType:""};
-  player._preHiveVehicle=player.vehicleType||"";player.vehicleType="";player.riding=null;
+  const c=offlineResourceCenter(hive||{}),hiveId=String(data.hiveId||hive?.netId||hive?.id||""),portal=hiveEntryPortalForApproach(hive),spawn=hiveSpawnInsidePortal(portal);
+  game.hiveInterior={active:true,hiveId,worldX:player.x,worldY:player.y,hiveWorldX:c.x||player.x,hiveWorldY:c.y||player.y,entryKey:portal.key,x:spawn.x,y:spawn.y,angle:spawn.angle,camX:0,camY:0,larvae:HIVE_LARVA_SPAWNS.map(v=>({...v,tamed:false,tamePending:false,petType:""})),tamePendingLarvaId:"",aggro:false,bees:Array.from({length:20},(_,i)=>makeHiveBee(i)),hitCd:0,enteredAt:performance.now(),petFollowers:(player.pets||[]).filter(p=>p&&!p.dead).map((p,i)=>({ref:p,x:spawn.x-42-(i%3)*30,y:spawn.y+34+Math.floor(i/3)*34,angle:spawn.angle}))};
+  player._preHiveVehicle=player.vehicleType||"";player.vehicleType="";player.riding=null;player.swimming=false;
   mouse.down=false;mouse.rdown=false;keys.clear();
-  banner("Inside the hive — movement is slower in the honey. Find the sleeping larva, tame it, then escape!");
+  banner("Entered GIANT HIVE biome");
   updateVehicleEnterButton();
 }
-function leaveHiveInterior(){
-  const h=game.hiveInterior;if(!h?.active)return;
-  game.hiveInterior=null;player.x=h.worldX;player.y=h.worldY+Math.max(90,Number(resources.find(r=>String(r?.netId||r?.id||"")===h.hiveId)?.solidR)||70);player.angle=Math.PI/2;
-  if(net.room){try{net.room.send("hiveExit",{hiveId:h.hiveId});}catch(_){}}
-  updateVehicleEnterButton();banner(h.aggro?"You escaped the hive!":"You left the hive.");
+function hiveWorldExitPoint(h,portal){
+  const hive=resources.find(r=>String(r?.netId||r?.id||"")===String(h.hiveId||""));
+  const c=offlineResourceCenter(hive||{x:h.hiveWorldX||h.worldX,y:h.hiveWorldY||h.worldY}),solid=Math.max(70,Number(hive?.solidR)||70),gap=solid+52;
+  return{x:clamp(c.x+portal.dx*gap,24,WORLD_W-24),y:clamp(c.y+portal.dy*gap,24,WORLD_H-24),angle:Math.atan2(portal.dy,portal.dx)};
+}
+function leaveHiveInterior(portalOrKey=null){
+  const h=game.hiveInterior;if(!h?.active)return;const portal=typeof portalOrKey==="string"?hivePortalByKey(portalOrKey):(portalOrKey||hiveExitAt(h.x,h.y,80)||hivePortalByKey(h.entryKey)),out=hiveWorldExitPoint(h,portal);
+  game.hiveInterior=null;player.x=out.x;player.y=out.y;player.angle=out.angle;player.swimming=false;
+  for(const p of player.pets||[]){if(!p||p.dead)continue;p.x=player.x+rand(-32,32);p.y=player.y+rand(-32,32);}
+  if(net.room){try{net.room.send("hiveExit",{hiveId:h.hiveId,exitKey:portal.key});}catch(_){}}
+  updateVehicleEnterButton();banner("Left GIANT HIVE biome");
 }
 function enterNearestHive(){
   const hive=nearestEnterableHive();if(!hive){banner("Move closer to a hive first.",true);return;}
   if(net.room){try{net.room.send("hiveEnter",{id:String(hive.netId||hive.id||"")});}catch(_){banner("Could not enter the hive.",true);}return;}
   startHiveInterior(hive,{hiveId:String(hive.netId||hive.id||"")});
 }
-function hiveNearLarva(){const h=game.hiveInterior;return !!(h?.active&&!h.larvaTamed&&dist(h.x,h.y,h.larvaX,h.larvaY)<=68);}
-function hiveNearExit(){const h=game.hiveInterior;return !!(h?.active&&h.x<118&&h.y>700);}
+function hiveNearestLarva(maxDist=74){
+  const h=game.hiveInterior;if(!h?.active)return null;let best=null,bestD=Math.max(0,Number(maxDist)||0);
+  for(const larva of h.larvae||[]){if(!larva||larva.tamed)continue;const d=dist(h.x,h.y,larva.x,larva.y);if(d<=bestD){best=larva;bestD=d;}}
+  return best;
+}
+function hiveNearLarva(){return hiveNearestLarva(74);}
+function hiveNearExit(){const h=game.hiveInterior;return h?.active?(hiveExitAt(h.x,h.y,62)||null):null;}
 function addOfflineHiveLarvaPet(type){
   const info=PET_TYPES[type];if(!info)return;const stage="baby",rr=animalRadius(type,stage),maxHp=upgradedPetMaxHp(type,stage),coat=(info.coats||[info.color])[0]||info.color;
   const pet={type,stage,x:player.x,y:player.y,angle:0,r:rr,hp:maxHp,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:`${info.name} Larva`,gender:canonicalAnimalGender(type,Math.random()<.5?"Female":"Male"),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0};
   player.pets.push(pet);achievementTamedSpecies(type);if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[type]=(meta.speciesCards[type]||0)+TAME_SPECIES_CARD_REWARD;saveMeta();syncPetCards();
+  const h=game.hiveInterior;if(h?.active)h.petFollowers.push({ref:pet,x:h.x-48,y:h.y+34,angle:h.angle});
 }
 function tryTameHiveLarva(){
-  const h=game.hiveInterior;if(!h?.active||h.larvaTamed||h.tamePending)return false;if(!hiveNearLarva()){banner("Get closer to the sleeping larva.",true);return true;}
+  const h=game.hiveInterior;if(!h?.active||h.tamePendingLarvaId)return false;const larva=hiveNearLarva();if(!larva){banner("Get closer to a sleeping larva.",true);return true;}
   if(player.pets.filter(p=>p&&!p.dead&&!p.bredChild).length>=4){banner("Max 4 regular pets!",true);return true;}
-  h.tamePending=true;tameHeartStart({x:h.larvaX,y:h.larvaY,r:18,type:"workerbee",stage:"baby"},"hiveLarva");if(sfx.tameTry)sfx.tameTry();banner("Stealing the larva… 50% tame chance");
-  if(net.room){try{net.room.send("hiveTameLarva",{hiveId:h.hiveId});}catch(_){h.tamePending=false;}return true;}
-  setTimeout(()=>{if(!game.hiveInterior?.active)return;const cur=game.hiveInterior;cur.tamePending=false;if(Math.random()<.5){const roll=Math.random(),type=roll<.12?"queenbee":roll<.72?"workerbee":"dronebee";cur.larvaTamed=true;cur.petType=type;cur.aggro=true;tameHeartResolve(true,{x:cur.larvaX,y:cur.larvaY,r:18});addOfflineHiveLarvaPet(type);banner(`Larva tamed — ${PET_TYPES[type]?.name||"Bee"}! Every bee in the hive is angry. ESCAPE!`);}else{tameHeartResolve(false,{x:cur.larvaX,y:cur.larvaY,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}updateVehicleEnterButton();},650);return true;
+  larva.tamePending=true;h.tamePendingLarvaId=larva.id;tameHeartStart({x:larva.x,y:larva.y,r:18,type:"workerbee",stage:"baby"},"hiveLarva");if(sfx.tameTry)sfx.tameTry();banner("Trying to tame the larva… 50% tame chance · successful larvae are 50/50 Worker or Queen");
+  if(net.room){try{net.room.send("hiveTameLarva",{hiveId:h.hiveId,larvaId:larva.id});}catch(_){larva.tamePending=false;h.tamePendingLarvaId="";}return true;}
+  setTimeout(()=>{if(!game.hiveInterior?.active)return;const cur=game.hiveInterior,target=(cur.larvae||[]).find(v=>v.id===larva.id);cur.tamePendingLarvaId="";if(!target)return;target.tamePending=false;if(Math.random()<.5){const type=Math.random()<.5?"workerbee":"queenbee";target.tamed=true;target.petType=type;cur.aggro=true;for(const b of cur.bees)if(b&&!b.dead)b.aggro=true;tameHeartResolve(true,{x:target.x,y:target.y,r:18});addOfflineHiveLarvaPet(type);banner(`Larva tamed — ${PET_TYPES[type]?.name||"Bee"}. The hive bees are angry!`);}else{tameHeartResolve(false,{x:target.x,y:target.y,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}updateVehicleEnterButton();},650);return true;
+}
+function hiveBeeDamagePlayer(b,dmg){
+  if(net.room){try{net.room.send("hiveDamage",{amount:dmg});}catch(_){}}else hitPlayer(dmg,b);
+  game.shake=Math.max(game.shake||0,3);player.hurtFlash=Math.max(Number(player.hurtFlash)||0,.12);
+}
+function hiveInteriorAttack(toolName=null,toolData=null){
+  const h=game.hiveInterior;if(!h?.active||player.dead)return false;const name=String(toolName||player.tool||"Fist"),t=toolData||TOOLS[name]||TOOLS.Fist;if(player.attackCd>0)return true;
+  player.attackCd=Math.max(.18,Number(t.cadence)||Number(t.swing)||.35);player.punchSide*=-1;player.punchTimer=Math.max(.16,Number(t.swing)||.22);player.swingWeapon=name;
+  const isBow=name==="Bow",range=isBow?300:Math.max(44,Number(t.range)||48)+18,base=Math.max(1,Number(t.dmg)||1),tier=Math.max(0,Math.floor(Number(player.toolTiers?.[name])||0)),damage=base*(1+tier*.34);
+  let best=null,bestD=Infinity;for(const b of h.bees){if(!b||b.dead)continue;for(const hb of hiveBeeHitboxes(b)){const d=dist(h.x,h.y,hb.x,hb.y),aim=Math.abs(islandAngleDelta(h.angle,angTo(h.x,h.y,hb.x,hb.y)));if(d<=range+hb.r&&aim<(isBow?.45:1.05)&&d<bestD){best=b;bestD=d;}}}
+  if(best){best.hp=Math.max(0,best.hp-damage);best.flash=.16;best.sleeping=false;best.aggro=true;h.aggro=true;spark(best.x,best.y,"#f1b82f",7,88);floatText(best.x,best.y-(best.r||16)-8,`${Math.round(damage)}`,"#fff0a5");if(best.hp<=0){best.dead=true;spark(best.x,best.y,"#ffd851",14,120);floatText(best.x,best.y-26,"DEFEATED","#fff0a5");}}
+  else if(isBow){spark(h.x+Math.cos(h.angle)*95,h.y+Math.sin(h.angle)*95,"#efe6d2",3,40);}
+  return true;
+}
+function updateHiveFollowers(h,dt){
+  const currentRefs=new Set((h.petFollowers||[]).map(v=>v?.ref).filter(Boolean));for(const p of player.pets||[])if(p&&!p.dead&&!currentRefs.has(p)){h.petFollowers.push({ref:p,x:h.x-48,y:h.y+34,angle:h.angle});currentRefs.add(p);}
+  const live=(h.petFollowers||[]).filter(v=>v?.ref&&!v.ref.dead);h.petFollowers=live;
+  for(let i=0;i<live.length;i++){const f=live[i],row=Math.floor(i/3),side=(i%3)-1,back=56+row*44,tx=h.x-Math.cos(h.angle)*back+Math.cos(h.angle+Math.PI/2)*side*42,ty=h.y-Math.sin(h.angle)*back+Math.sin(h.angle+Math.PI/2)*side*42,dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy),fr=Math.max(9,(f.ref.r||16)*.55);if(d>3){const sp=Math.min(d,Math.max(100,Number(f.ref.speed)||120)*1.4*dt);f.angle=Math.atan2(dy,dx);f.x+=dx/Math.max(1,d)*sp;f.y+=dy/Math.max(1,d)*sp;hiveResolveWalls(f,fr);}else f.angle=h.angle;for(const b of h.bees||[]){if(!b||b.dead)continue;hiveResolveCircleAgainstBee(f,fr,b);}hiveResolveWalls(f,fr);}
 }
 function updateHiveInterior(dt){
-  const h=game.hiveInterior;if(!h?.active)return;const mv=currentMoveVector(),ml=Math.hypot(mv.x,mv.y);if(ml>.05){h.angle=Math.atan2(mv.y,mv.x);h.x+=mv.x*72*dt;h.y+=mv.y*72*dt;hiveResolveWalls(h,13);}
+  const h=game.hiveInterior;if(!h?.active)return;
+  if(player.attackCd>0)player.attackCd=Math.max(0,player.attackCd-dt);if(player.shootCd>0)player.shootCd=Math.max(0,player.shootCd-dt);if(player.punchTimer>0)player.punchTimer=Math.max(0,player.punchTimer-dt);if(player.hurtFlash>0)player.hurtFlash=Math.max(0,player.hurtFlash-dt);
+  const targetCamX=clamp(h.x-W*.5,0,Math.max(0,HIVE_INTERIOR_W-W)),targetCamY=clamp(h.y-H*.5,0,Math.max(0,HIVE_INTERIOR_H-H));h.camX+=(targetCamX-(h.camX||0))*Math.min(1,dt*9);h.camY+=(targetCamY-(h.camY||0))*Math.min(1,dt*9);
+  if(!player.vehicleType){if(mobileMode)h.angle=mobileFacingAngle;else h.angle=angTo(h.x,h.y,mouse.sx+(h.camX||0),mouse.sy+(h.camY||0));}
+  const mv=currentMoveVector(),ml=Math.hypot(mv.x,mv.y);if(ml>.05){lastMovementInputAt=performance.now();let speed=148*starterMoveMul()*hydrationMoveMul()*stoneFruitMoveMul()*(((Number(player._honeyRushUntil)||0)>game.time)?(Number(player._honeyHasteMul)||1.2):1);if(player.heldSpecial==="Wall")speed*=.64;const nx=mv.x/ml,ny=mv.y/ml,oldX=h.x,oldY=h.y;h.x+=nx*speed*dt;h.y+=ny*speed*dt;const portal=hiveExitAt(h.x,h.y,22);if(portal&&(h.x<42||h.x>HIVE_INTERIOR_W-42||h.y<42||h.y>HIVE_INTERIOR_H-42)){leaveHiveInterior(portal);return;}hiveResolveWalls(h,PLAYER_R*.72);hiveResolvePlayerBeeHitboxes(h);player._actualMoveVX=(h.x-oldX)/Math.max(.001,dt);player._actualMoveVY=(h.y-oldY)/Math.max(.001,dt);player._actualMoving=Math.hypot(player._actualMoveVX,player._actualMoveVY)>2.5;}else{player._actualMoveVX=0;player._actualMoveVY=0;player._actualMoving=false;}
   h.hitCd=Math.max(0,(h.hitCd||0)-dt);
-  for(const b of h.bees){b.atkCd=Math.max(0,(b.atkCd||0)-dt);if(h.aggro){const a=Math.atan2(h.y-b.y,h.x-b.x);b.angle=a;b.x+=Math.cos(a)*68*dt;b.y+=Math.sin(a)*68*dt;hiveResolveWalls(b,11);if(dist(b.x,b.y,h.x,h.y)<27&&b.atkCd<=0){b.atkCd=.72;const dmg=b.type==="queenbee"?11:b.type==="dronebee"?8:6;if(net.room){try{net.room.send("hiveDamage",{amount:dmg});}catch(_){}}else hitPlayer(dmg,null);game.shake=Math.max(game.shake,3);}}else{b.wanderT-=dt;if(b.wanderT<=0){b.wander=rand(0,TAU);b.wanderT=rand(1,3);}b.angle=b.wander;b.x+=Math.cos(b.angle)*24*dt;b.y+=Math.sin(b.angle)*24*dt;hiveResolveWalls(b,11);}}
+  for(const b of h.bees){if(!b||b.dead)continue;b.atkCd=Math.max(0,(b.atkCd||0)-dt);b.flash=Math.max(0,(b.flash||0)-dt);b.attackAnim=Math.max(0,(b.attackAnim||0)-dt);const hpRatio=b.hp/Math.max(1,b.maxHp);if(b.type==="dronebee"&&hpRatio<.28)b.flee=true;if(b.aggro&&!b.flee){const a=Math.atan2(h.y-b.y,h.x-b.x);b.angle=a;b.x+=Math.cos(a)*Math.max(52,(b.speed||60)*.62)*dt;b.y+=Math.sin(a)*Math.max(52,(b.speed||60)*.62)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));if(animalHeadTouchesTarget(b,{x:h.x,y:h.y,r:PLAYER_R})&&b.atkCd<=0){b.atkCd=b.type==="queenbee"?.85:.72;b.attackAnim=.24;const dmg=b.type==="queenbee"?11:b.type==="dronebee"?8:6;hiveBeeDamagePlayer(b,dmg);}}else if(b.flee){const a=Math.atan2(b.y-h.y,b.x-h.x);b.angle=a;b.x+=Math.cos(a)*Math.max(72,(b.speed||60)*.78)*dt;b.y+=Math.sin(a)*Math.max(72,(b.speed||60)*.78)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}else{b.wanderT-=dt;if(b.wanderT<=0){b.wander=rand(0,TAU);b.wanderT=rand(1.2,3.4);}b.angle=b.wander;b.x+=Math.cos(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;b.y+=Math.sin(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}}
+  hiveSeparateBees(h.bees);hiveResolvePlayerBeeHitboxes(h);
+  updateHiveFollowers(h,dt);
+  if(!player.dead&&!game.over){if(mouse.down||keys.has("f"))hiveInteriorAttack(player.tool||"Fist",TOOLS[player.tool||"Fist"]||TOOLS.Fist);}
   if(player.dead||game.over){game.hiveInterior=null;return;}updateAbilityFx(dt);updateFx(dt);updateVehicleEnterButton();
 }
-function drawHiveBeeTopDown(b){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle);ctx.fillStyle=b.type==="queenbee"?"#ffd34d":"#f2c94c";ctx.beginPath();ctx.ellipse(0,0,b.type==="queenbee"?19:14,b.type==="queenbee"?11:9,0,0,TAU);ctx.fill();ctx.fillStyle="#2d2413";for(let x=-6;x<=6;x+=6)ctx.fillRect(x,-8,2,16);ctx.fillStyle="rgba(235,250,255,.72)";ctx.beginPath();ctx.ellipse(-2,-12,8,5,-.4,0,TAU);ctx.ellipse(-2,12,8,5,.4,0,TAU);ctx.fill();ctx.fillStyle="#2a1d10";ctx.beginPath();ctx.arc(13,0,5,0,TAU);ctx.fill();ctx.restore();}
+function drawHiveHoneycombFloor(){
+  ctx.fillStyle="#dcae25";ctx.fillRect(0,0,HIVE_INTERIOR_W,HIVE_INTERIOR_H);ctx.strokeStyle="rgba(107,69,10,.22)";ctx.lineWidth=2;
+  const startX=Math.floor((game.hiveInterior?.camX||0)/64)*64-80,startY=Math.floor((game.hiveInterior?.camY||0)/56)*56-80,endX=startX+W+190,endY=startY+H+190;
+  for(let y=startY;y<endY;y+=56)for(let x=startX+(Math.floor(y/56)&1)*32;x<endX;x+=64){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+24*Math.cos(a),py=y+24*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();}
+}
+function drawHiveWall(w){
+  // Collision stays simple and fast, while the visible wax wall is built from
+  // raised hex cells so the hive walls read as segmented honeycomb.
+  ctx.save();ctx.beginPath();ctx.rect(w.x,w.y,w.w,w.h);ctx.clip();ctx.fillStyle="#9a6110";ctx.fillRect(w.x,w.y,w.w,w.h);
+  const rr=18,stepX=rr*1.52,stepY=rr*1.32,startX=w.x-rr,startY=w.y-rr;
+  for(let y=startY,row=0;y<=w.y+w.h+rr;y+=stepY,row++)for(let x=startX+(row&1)*stepX*.5;x<=w.x+w.w+rr;x+=stepX){
+    ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+rr*Math.cos(a),py=y+rr*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fillStyle=(row&1)?"#e0a01b":"#e8ad24";ctx.fill();ctx.strokeStyle="rgba(103,57,5,.62)";ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();for(let i=0;i<3;i++){const a=Math.PI/3*i+Math.PI,px=x+(rr-4)*Math.cos(a),py=y+(rr-4)*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.strokeStyle="rgba(255,221,91,.20)";ctx.lineWidth=1.3;ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawHivePortal(p){ctx.save();ctx.fillStyle="rgba(70,47,14,.48)";ctx.fillRect(p.x,p.y,p.w,p.h);ctx.strokeStyle="rgba(255,232,129,.75)";ctx.lineWidth=3;ctx.strokeRect(p.x+3,p.y+3,p.w-6,p.h-6);ctx.fillStyle="#fff0a8";ctx.font="700 13px sans-serif";ctx.textAlign="center";ctx.fillText("OUT",p.x+p.w*.5,p.y+p.h*.5+5);ctx.restore();}
 function drawHiveInterior(){
-  const h=game.hiveInterior;if(!h?.active)return;ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);ctx.fillStyle="#f5cf2f";ctx.fillRect(0,0,W,H);const scale=Math.min(W/HIVE_INTERIOR_W,H/HIVE_INTERIOR_H),ox=(W-HIVE_INTERIOR_W*scale)/2,oy=(H-HIVE_INTERIOR_H*scale)/2;ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  ctx.fillStyle="#ffd93f";ctx.fillRect(0,0,HIVE_INTERIOR_W,HIVE_INTERIOR_H);
-  // subtle honeycomb floor without random splats
-  ctx.strokeStyle="rgba(155,94,8,.16)";ctx.lineWidth=2;for(let y=55;y<HIVE_INTERIOR_H;y+=52)for(let x=48+(Math.floor(y/52)%2)*30;x<HIVE_INTERIOR_W;x+=60){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+22*Math.cos(a),py=y+22*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();}
-  for(const w of HIVE_MAZE_WALLS){ctx.fillStyle="#d89316";ctx.fillRect(w.x,w.y,w.w,w.h);ctx.fillStyle="#ffb817";ctx.fillRect(w.x+5,w.y+5,Math.max(0,w.w-10),Math.max(0,w.h-10));ctx.fillStyle="rgba(255,226,82,.85)";if(w.w>w.h){for(let x=w.x+18;x<w.x+w.w-10;x+=48){ctx.beginPath();ctx.moveTo(x,w.y+w.h);ctx.quadraticCurveTo(x+9,w.y+w.h+22,x+18,w.y+w.h);ctx.fill();}}}
-  ctx.fillStyle="#6f4510";ctx.font="900 24px sans-serif";ctx.fillText("EXIT",44,815);
-  if(!h.larvaTamed){ctx.save();ctx.translate(h.larvaX,h.larvaY);ctx.fillStyle="#f7dc75";ctx.beginPath();ctx.ellipse(0,0,24,15,-.1,0,TAU);ctx.fill();ctx.strokeStyle="#b88418";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#7d5b1b";ctx.font="bold 16px sans-serif";ctx.fillText("Z",22,-13);ctx.font="bold 12px sans-serif";ctx.fillText("z",34,-24);ctx.restore();}
-  for(const b of h.bees)drawHiveBeeTopDown(b);
-  if(h.larvaTamed&&h.petType){ctx.fillStyle="#fff1a8";ctx.beginPath();ctx.ellipse(h.x-17*Math.cos(h.angle),h.y-17*Math.sin(h.angle),13,8,h.angle,0,TAU);ctx.fill();}
-  ctx.save();ctx.translate(h.x,h.y);ctx.rotate(h.angle);ctx.fillStyle=player.color||"#6ec1ff";ctx.beginPath();ctx.arc(0,0,13,0,TAU);ctx.fill();ctx.fillStyle="#efe5d2";ctx.beginPath();ctx.arc(10,0,7,0,TAU);ctx.fill();ctx.restore();
-  safeCanvasDrawCall("tame heart",drawTameHeartOverlay);safeCanvasDrawCall("hive effects",drawFx);
-  ctx.restore();ctx.fillStyle="rgba(82,45,4,.88)";ctx.fillRect(14,14,Math.min(590,W-28),54);ctx.fillStyle="#fff1a8";ctx.font="800 15px sans-serif";ctx.fillText(h.aggro?"THE HIVE IS AGGRO — FIND THE EXIT!":"HIVE INTERIOR — honey slows you down · find the sleeping larva",28,46);
+  const h=game.hiveInterior;if(!h?.active)return;ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);let sx=0,sy=0;if(game.shake>0){sx=rand(-game.shake,game.shake);sy=rand(-game.shake,game.shake);game.shake*=.85;if(game.shake<.3)game.shake=0;}
+  ctx.save();ctx.translate(-(h.camX||0)+sx,-(h.camY||0)+sy);drawHiveHoneycombFloor();for(const w of HIVE_MAZE_WALLS)drawHiveWall(w);for(const p of HIVE_EXIT_PORTALS)drawHivePortal(p);
+  for(const larva of h.larvae||[]){if(!larva||larva.tamed)continue;ctx.save();ctx.translate(larva.x,larva.y);ctx.fillStyle=larva.tamePending?"#fff0a2":"#f7dc75";ctx.beginPath();ctx.ellipse(0,0,27,17,-.1,0,TAU);ctx.fill();ctx.strokeStyle="#8f6212";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#7d5b1b";ctx.font="bold 16px sans-serif";ctx.fillText("Z",24,-14);ctx.font="bold 12px sans-serif";ctx.fillText("z",37,-26);ctx.restore();}
+  for(const b of h.bees){if(!b||b.dead)continue;safeCanvasDrawCall("hive bee",()=>drawAnimal(b));}
+  for(const f of h.petFollowers||[]){if(!f?.ref||f.ref.dead)continue;const v={...f.ref,x:f.x,y:f.y,angle:f.angle,owned:true};safeCanvasDrawCall("hive pet",()=>drawAnimal(v));}
+  const ox=player.x,oy=player.y,oa=player.angle,os=player.swimming,or=player.riding,ov=player.vehicleType;player.x=h.x;player.y=h.y;player.angle=h.angle;player.swimming=false;player.riding=null;player.vehicleType="";safeCanvasDrawCall("hive player",drawPlayer);player.x=ox;player.y=oy;player.angle=oa;player.swimming=os;player.riding=or;player.vehicleType=ov;
+  safeCanvasDrawCall("tame heart",drawTameHeartOverlay);safeCanvasDrawCall("hive effects",drawFx);ctx.restore();
+  ctx.fillStyle="rgba(65,41,5,.78)";ctx.fillRect(14,14,Math.min(420,W-28),42);ctx.fillStyle="#fff1a8";ctx.font="800 14px sans-serif";ctx.fillText("GIANT HIVE · interior biome",28,40);
 }
 function updateVehicleEnterButton(){
-  if(!vehicleEnterBtn)return;
-  const h=game.hiveInterior;
-  if(h?.active){const tame=hiveNearLarva()&&!h.larvaTamed&&!h.tamePending,exit=hiveNearExit();const show=tame||exit;vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=tame?"TAME":exit?"EXIT HIVE":"";vehicleEnterBtn.title=tame?"Try to tame the sleeping larva (50%)":"Escape the hive";return;}
-  const hive=game.started&&!player.dead&&!player.vehicleType?nearestEnterableHive(118):null;
-  const parked=game.started&&!player.dead&&!player.vehicleType&&!hive?nearestPlacedVehicle(92):null;
-  const show=!!(game.started&&!player.dead&&(player.vehicleType||hive||parked));vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=player.vehicleType?"EXIT":hive?"ENTER":"ENTER";vehicleEnterBtn.title=player.vehicleType?`Exit ${player.vehicleType}`:(hive?"Enter hive":parked?`Enter ${placedVehicleType(parked)}`:"Enter nearby vehicle");
+  if(!vehicleEnterBtn)return;const h=game.hiveInterior;
+  if(h?.active){const nearLarva=hiveNearLarva(),tame=!!nearLarva&&!h.tamePendingLarvaId,exit=hiveNearExit(),show=tame||!!exit;vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=tame?"TAME":exit?"EXIT HIVE":"";vehicleEnterBtn.title=tame?"Try to tame this larva — 50% success; successful larvae are 50/50 Worker or Queen":"Leave through this hive opening";return;}
+  const hive=game.started&&!player.dead&&!player.vehicleType?nearestEnterableHive(118):null,parked=game.started&&!player.dead&&!player.vehicleType&&!hive?nearestPlacedVehicle(92):null,show=!!(game.started&&!player.dead&&(player.vehicleType||hive||parked));vehicleEnterBtn.classList.toggle("show",show);vehicleEnterBtn.setAttribute("aria-hidden",show?"false":"true");vehicleEnterBtn.textContent=player.vehicleType?"EXIT":hive?"ENTER":"ENTER";vehicleEnterBtn.title=player.vehicleType?`Exit ${player.vehicleType}`:(hive?"Enter hive":parked?`Enter ${placedVehicleType(parked)}`:"Enter nearby vehicle");
 }
 if(waterFillBtn)waterFillBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();fillBucketFromWater();},{passive:false});
-if(vehicleEnterBtn)vehicleEnterBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();if(game.hiveInterior?.active){if(hiveNearLarva()&&!game.hiveInterior.larvaTamed)tryTameHiveLarva();else if(hiveNearExit())leaveHiveInterior();return;}if(player.vehicleType)leaveVehicle();else if(nearestEnterableHive(118))enterNearestHive();else boardNearestPlacedVehicle();},{passive:false});
+if(vehicleEnterBtn)vehicleEnterBtn.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();if(game.hiveInterior?.active){if(hiveNearLarva()&&!game.hiveInterior.tamePendingLarvaId)tryTameHiveLarva();else{const exit=hiveNearExit();if(exit)leaveHiveInterior(exit);}return;}if(player.vehicleType)leaveVehicle();else if(nearestEnterableHive(118))enterNearestHive();else boardNearestPlacedVehicle();},{passive:false});
 function syncMobilePrimaryButton() {
   if (!mobileAttackBtn) return;
   const special = player?.vehicleType || player?.heldSpecial || "";
@@ -19043,9 +19165,9 @@ function placeWindmill(){
   consumeCraftedItem("Windmill");sfx.craft();syncHud();return true;
 }
 function deployBattleBot(){
-  if(craftedItemCount("BattleBot")<1){banner("Craft a Battle Bot first",true);return false;}const tier=craftedBuildTier("BattleBot"),variant=craftedBuildVariant("BattleBot"),a=player.angle,x=player.x+Math.cos(a)*62,y=player.y+Math.sin(a)*62;
-  if(net.room){try{net.room.send("build",{kind:"battlebot",angle:a,botTier:tier,variant});}catch(_){}}else{const hp=[520,760,1050,1350][clamp(tier,0,3)];towers.push({x,y,cd:.25,tier,variant,kind:"battlebot",angle:a,ownerId:"local",hp,maxHp:hp});}
-  consumeCraftedItem("BattleBot");sfx.craft();banner(`${buildTierMeta("BattleBot",tier,variant).name} deployed`);syncHud();return true;
+  if(craftedItemCount("BattleBot")<1){banner("Craft a Battle Bot first",true);return false;}const tier=craftedBuildTier("BattleBot"),variant=craftedBuildVariant("BattleBot"),botRole=tier>=2?battleBotCombatRoleFromMilestones():"melee",a=player.angle,x=player.x+Math.cos(a)*62,y=player.y+Math.sin(a)*62;
+  if(net.room){try{net.room.send("build",{kind:"battlebot",angle:a,botTier:tier,variant,botRole});}catch(_){}}else{const hp=[520,760,1050,1350][clamp(tier,0,3)];towers.push({x,y,cd:.25,tier,variant,botRole,kind:"battlebot",angle:a,ownerId:"local",hp,maxHp:hp});}
+  consumeCraftedItem("BattleBot");sfx.craft();banner(`${buildTierMeta("BattleBot",tier,variant).name} deployed · ${botRole==="ranged"?"Ranger":"Melee"}`);syncHud();return true;
 }
 function placeRepairBuilding(){
   if(craftedItemCount("RepairBuilding")<1){banner("Craft a Repair Building first",true);return false;}const tier=craftedBuildTier("RepairBuilding"),a=player.angle,x=player.x+Math.cos(a)*55,y=player.y+Math.sin(a)*55,hp=[150,220,310,430][clamp(tier,0,3)];
@@ -19303,6 +19425,12 @@ function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
 
 function meleeAttack(preciseResolve=null) {
   const resolvingPrecise=!!preciseResolve;
+  if(!resolvingPrecise&&game.hiveInterior?.active){
+    const hs=String(player.heldSpecial||"");
+    if(["Wall","Tower","Windmill","Boat","Sub","BattleBot","RepairBuilding","PetArmor"].includes(hs)){banner("That can’t be placed inside a hive.",true);player.attackCd=.24;return;}
+    if(hs==="Chakrams")return hiveInteriorAttack("Chakrams",{dmg:7.5,range:270,cadence:.44,swing:.20});
+    if(hs==="Flute"){const h=game.hiveInterior;for(const b of h.bees||[]){if(!b||b.dead)continue;b.aggro=false;b.flee=false;}h.aggro=false;player.attackCd=.6;banner("The flute calmed the nearby hive bees.");return;}
+  }
   if(!resolvingPrecise&&player.vehicleType){if(player.vehicleType==="Sub")subClawAttack();return;}
   if(!resolvingPrecise){
     if (player.heldSpecial === "HoneyComb") { return; }
@@ -19324,6 +19452,10 @@ function meleeAttack(preciseResolve=null) {
   }
   const attackTool=resolvingPrecise?String(preciseResolve.tool||"Fist"):String(player.tool||"Fist");
   const t=TOOLS[attackTool]||TOOLS.Fist;
+  if(game.hiveInterior?.active){
+    if(resolvingPrecise)return false;
+    return hiveInteriorAttack(attackTool,t);
+  }
   if(!resolvingPrecise){
     if (player.attackCd > 0) return;
     if(attackTool==="Axe"&&t.throwing){
@@ -20983,14 +21115,16 @@ function battleBotDamageOffline(bot,target,isAnimal,raw){
   const before=Math.max(0,Number(target.hp)||0);damageEnemy(target,raw,false,bot);return Math.max(0,before-Math.max(0,Number(target.hp)||0));
 }
 function battleBotElementAttackOffline(t,target,isAnimal){
-  const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||"");
-  let dmg=[22,30,38,42][tier],range=[285,325,365,380][tier],cd=[.85,.72,.60,.58][tier],color="#9fe8ff";
-  if(tier>=3&&v==="water"){range=650;dmg=34;cd=.56;color="#64cfff";}
+  const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),role=tier>=2&&String(t.botRole||"")==="ranged"?"ranged":"melee";
+  let dmg=[22,30,38,42][tier],range=role==="ranged"?[285,325,365,390][tier]:[62,68,76,84][tier],cd=[.85,.72,.60,.58][tier],color="#9fe8ff";
+  if(tier>=3&&v==="water"){range=role==="ranged"?650:128;dmg=34;cd=.56;color="#64cfff";}
   if(tier>=3&&v==="fire"){dmg=48;cd=.64;color="#ff754d";}
   if(tier>=3&&v==="lightning"){dmg=58;cd=.78;color="#ffe56b";}
   if(tier>=3&&v==="plant"){dmg=35;cd=.62;color="#77dd72";}
   if(tier>=3&&v==="void"){dmg=45;cd=.75;color="#b27cff";}
   if(tier>=3&&v==="light"){dmg=39;cd=.58;color="#fff2a3";}
+  if(tier>=2&&role==="melee")dmg*=1.35;
+  if(tier>=2&&role==="ranged")cd*=.62;
   const dealt=battleBotDamageOffline(t,target,isAnimal,dmg);
   if(v==="fire")applyOfflineFixedDot(target,isAnimal,null,Math.max(18,dealt*.65),5,"#ff754d",false);
   else if(v==="lightning")applyOfflineAbilityStun(target,4);
@@ -21006,8 +21140,8 @@ function battleBotElementAttackOffline(t,target,isAnimal){
     for(const wa of animals){if(wa.dead||wa.owned||dist(target.x,target.y,wa.x,wa.y)>rr)continue;const a=angTo(target.x,target.y,wa.x,wa.y);wa.x+=Math.cos(a)*push*animalKnockbackScale(wa);wa.y+=Math.sin(a)*push*animalKnockbackScale(wa);resolveAnimalWorld(wa);}
     abilityFx.push({type:"pulse",x:target.x,y:target.y,r:rr,life:.5,maxLife:.5,color});
   }
-  spark(target.x,target.y,color,9,100);t.cd=cd;t.angle=angTo(t.x,t.y,target.x,target.y);
-  return {range,color};
+  spark(target.x,target.y,color,9,100);t.cd=Math.max(.12,cd);t.angle=angTo(t.x,t.y,target.x,target.y);
+  return {range,color,role};
 }
 function updateTowers(dt) {
   for (const t of towers) {
@@ -21018,17 +21152,22 @@ function updateTowers(dt) {
     }
     if(t.kind==="battlebot"){
       if(net.room)continue;
-      // Battle Bots are tough mobile helpers, but only the owner-alive simulation moves them.
-      if(t.ownerId==="local"&&!player.dead){
-        const dOwner=dist(t.x,t.y,player.x,player.y);
-        if(dOwner>105){const a=angTo(t.x,t.y,player.x,player.y),spd=88+clamp(Number(t.tier)||0,0,3)*10;t.angle=a;t.x+=Math.cos(a)*spd*dt;t.y+=Math.sin(a)*spd*dt;resolveEnemyWorld(t);}
-      }
-      t.cd=Math.max(0,(Number(t.cd)||0)-dt);if(t.cd>0)continue;
-      const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),range=tier>=3&&v==="water"?650:[285,325,365,380][tier];
-      let nearest=null,isAnimal=false,bestD=range;
+      const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),role=tier>=2&&String(t.botRole||"")==="ranged"?"ranged":"melee";
+      const rangedRange=tier>=3&&v==="water"?650:[285,325,365,390][tier],meleeRange=tier>=3&&v==="water"?128:[62,68,76,84][tier],attackRange=role==="ranged"?rangedRange:meleeRange,detectRange=role==="ranged"?attackRange:Math.max(300,attackRange+220);
+      let nearest=null,isAnimal=false,bestD=detectRange;
       for(const en of enemies){if(en.dead)continue;const d=dist(t.x,t.y,en.x,en.y);if(d<bestD){bestD=d;nearest=en;isAnimal=false;}}
       for(const a of animals){if(a.dead||a.owned)continue;const d=dist(t.x,t.y,a.x,a.y);if(d<bestD){bestD=d;nearest=a;isAnimal=true;}}
-      if(nearest)battleBotElementAttackOffline(t,nearest,isAnimal);
+      // Battle Bots catch up aggressively and regroup if a very fast player
+      // creates an extreme gap, so speed upgrades never strand the robot.
+      if(t.ownerId==="local"&&!player.dead){
+        let dOwner=dist(t.x,t.y,player.x,player.y);
+        if(dOwner>900){const back=Number(player.angle)||0;t.x=clamp(player.x-Math.cos(back)*68,20,WORLD_W-20);t.y=clamp(player.y-Math.sin(back)*68,20,WORLD_H-20);t.angle=back;resolveEnemyWorld(t);dOwner=dist(t.x,t.y,player.x,player.y);}
+        if(dOwner>165){const a=angTo(t.x,t.y,player.x,player.y),spd=Math.min(760,280+dOwner*1.15+tier*24);t.angle=a;t.x+=Math.cos(a)*spd*dt;t.y+=Math.sin(a)*spd*dt;resolveEnemyWorld(t);}
+        else if(role==="melee"&&nearest&&bestD>attackRange+Math.max(8,Number(nearest.r)||18)*.58){const a=angTo(t.x,t.y,nearest.x,nearest.y),spd=230+tier*24;t.angle=a;t.x+=Math.cos(a)*spd*dt;t.y+=Math.sin(a)*spd*dt;resolveEnemyWorld(t);bestD=dist(t.x,t.y,nearest.x,nearest.y);}
+        else if(dOwner>92){const a=angTo(t.x,t.y,player.x,player.y),spd=Math.min(620,250+dOwner*.9+tier*20);t.angle=a;t.x+=Math.cos(a)*spd*dt;t.y+=Math.sin(a)*spd*dt;resolveEnemyWorld(t);}
+      }
+      t.cd=Math.max(0,(Number(t.cd)||0)-dt);if(t.cd>0)continue;
+      if(nearest&&bestD<=attackRange+Math.max(8,Number(nearest.r)||18)*.58)battleBotElementAttackOffline(t,nearest,isAnimal);else t.cd=.08;
       continue;
     }
     t.cd -= dt; if (t.cd > 0) continue;
@@ -25908,16 +26047,22 @@ function drawTower(t) {
   const tier=clamp(Math.floor(Number(t.tier)||0),0,3),variant=String(t.variant||""),ink="#191a17";
   ctx.save();ctx.translate(t.x,t.y);if(Number.isFinite(Number(t.angle)))ctx.rotate(Number(t.angle));
   if(t.kind==="battlebot"){
-    // Fully top-down Battle Bot: armored circular chassis, forward cannon and elemental core.
-    const body=tier>=2?"#6e7c84":tier>=1?"#78858a":"#8d765c",core=variant==="water"?"#58c8ff":variant==="fire"?"#ff694d":variant==="lightning"?"#ffe35b":variant==="plant"?"#62d66f":variant==="void"?"#9f65dc":variant==="light"?"#fff1a0":"#8fe8ff";
+    // Battle Bots begin as melee. Tier 2 locks either the stronger melee frame
+    // or the faster Ranger cannon, and the later elemental core keeps that role.
+    const botRole=tier>=2&&String(t.botRole||"")==="ranged"?"ranged":"melee",body=tier>=2?"#6e7c84":tier>=1?"#78858a":"#8d765c",core=variant==="water"?"#58c8ff":variant==="fire"?"#ff694d":variant==="lightning"?"#ffe35b":variant==="plant"?"#62d66f":variant==="void"?"#9f65dc":variant==="light"?"#fff1a0":"#8fe8ff";
     ctx.fillStyle="rgba(0,0,0,.18)";ctx.beginPath();ctx.ellipse(0,5,24,17,0,0,TAU);ctx.fill();
     ctx.fillStyle="#434b50";ctx.strokeStyle=ink;ctx.lineWidth=3;for(const y of[-14,14]){roundRect(-17,y-5,34,10,4);ctx.fill();ctx.stroke();}
     ctx.fillStyle=body;ctx.beginPath();ctx.arc(0,0,20,0,TAU);ctx.fill();ctx.stroke();
-    ctx.fillStyle="#3d4549";roundRect(4,-5,28,10,4);ctx.fill();ctx.stroke();
+    if(botRole==="ranged"){
+      ctx.fillStyle="#3d4549";roundRect(4,-5,30,10,4);ctx.fill();ctx.stroke();ctx.fillStyle="#cbd5da";roundRect(25,-3,11,6,2);ctx.fill();ctx.stroke();
+    }else{
+      ctx.fillStyle="#4a5358";ctx.strokeStyle=ink;ctx.lineWidth=2.5;roundRect(6,-7,20,14,5);ctx.fill();ctx.stroke();
+      ctx.fillStyle="#d3dce0";for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(21,side*5);ctx.lineTo(35,side*11);ctx.lineTo(30,side*2);ctx.closePath();ctx.fill();ctx.stroke();}
+    }
     ctx.fillStyle=core;ctx.shadowColor=core;ctx.shadowBlur=10;circ(0,0,8);ctx.shadowBlur=0;ctx.strokeStyle="#233037";ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle="#d8e1e5";circ(-8,-7,2.2);circ(-8,7,2.2);
     ctx.restore();
-    if((t.maxHp||0)>0&&(t.hp??t.maxHp)<t.maxHp)drawTopHealthBar(t.x,t.y-37,50,6,smoothDamageRatio(t,(t.hp||0)/Math.max(1,t.maxHp)),core,"BATTLE BOT");
+    if((t.maxHp||0)>0&&(t.hp??t.maxHp)<t.maxHp)drawTopHealthBar(t.x,t.y-37,50,6,smoothDamageRatio(t,(t.hp||0)/Math.max(1,t.maxHp)),core,botRole==="ranged"?"RANGER BOT":"MELEE BOT");
     return;
   }
   // Watch Tower is top-down: outer material ring, platform, center gem and forward launcher.
@@ -28215,7 +28360,7 @@ function drawPlayer() {
   const p = player;
   ctx.save();
   ctx.translate(p.x, p.y);
-  const pondScale = !p.riding ? waterDepthScaleAt(p.x,p.y) : 1;
+  const pondScale = game.hiveInterior?.active ? 1 : (!p.riding ? waterDepthScaleAt(p.x,p.y) : 1);
   if (pondScale < .999) ctx.scale(pondScale,pondScale);
 
   if (p.dead) {

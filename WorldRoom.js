@@ -587,7 +587,8 @@ const BUILD_FINAL_VARIANTS={
 function parseBuildUpgradeChoice(raw){const m=String(raw||"").match(/^build([A-Za-z]+)(?:@([A-Za-z]+))?$/);return m?{build:m[1],variant:(m[2]||"").toLowerCase()}:null;}
 function buildUpgradeCountFromSkill(s,build){let n=0;for(const raw of Object.values(s?.milestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&p.build===build)n++;}return n;}
 function buildTierFromSkill(s,build){return clamp(buildUpgradeCountFromSkill(s,build),0,BUILD_MAX_TIER[build]||0);}
-function buildVariantFromSkill(s,build){let v="";for(const raw of Object.values(s?.milestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&p.build===build&&p.variant)v=p.variant;}return v;}
+function buildVariantFromSkill(s,build){let v="";for(const raw of Object.values(s?.milestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&p.build===build&&p.variant&&!["melee","ranged"].includes(p.variant))v=p.variant;}return v;}
+function battleBotCombatRoleFromSkill(s){let role="melee";for(const raw of Object.values(s?.milestones||{})){const p=parseBuildUpgradeChoice(raw);if(p?.build==="BattleBot"&&(p.variant==="melee"||p.variant==="ranged"))role=p.variant;}return role;}
 function newCraftGroupForBuildServer(id){return NEW_CRAFT_GROUPS.find(g=>g.ids.includes(id))||null;}
 function selectedNewCraftPathFromSkill(s,groupId=""){const group=groupId?NEW_CRAFT_GROUPS.find(g=>g.id===groupId):null;for(const raw of Object.values(s?.milestones||{})){const m=String(raw).match(/^unlock([A-Za-z]+)$/);if(!m||!NEW_CRAFT_IDS.includes(m[1]))continue;if(!group||group.ids.includes(m[1]))return m[1];}return "";}
 function selectedStartingCraftPathFromSkill(s){for(const raw of Object.values(s?.milestones||{})){const p=parseBuildUpgradeChoice(raw);if(p&&STARTING_CRAFT_IDS.includes(p.build))return p.build;}return "";}
@@ -595,6 +596,8 @@ function buildKnownFromSkill(s,build){if(STARTING_CRAFT_IDS.includes(build))retu
 function buildUpgradeAllowedIds(s,build){
   if(!buildKnownFromSkill(s,build))return [];
   const tier=buildTierFromSkill(s,build),max=BUILD_MAX_TIER[build]||0;if(tier>=max)return [];
+  // Battle Bot gets its combat-role branch one upgrade before the elemental core.
+  if(build==="BattleBot"&&tier===1)return ["buildBattleBot@melee","buildBattleBot@ranged"];
   if(tier===max-1&&(BUILD_FINAL_VARIANTS[build]||[]).length)return BUILD_FINAL_VARIANTS[build].map(v=>`build${build}@${v}`);
   return [`build${build}`];
 }
@@ -752,9 +755,9 @@ defineTypes(WallState, {
 });
 
 class TowerState extends Schema {
-  constructor() { super(); this.x=0; this.y=0; this.cd=0.5; this.ownerId=""; this.tier=0; this.hp=120; this.maxHp=120; this.kind="tower"; this.variant=""; this.angle=0; }
+  constructor() { super(); this.x=0; this.y=0; this.cd=0.5; this.ownerId=""; this.tier=0; this.hp=120; this.maxHp=120; this.kind="tower"; this.variant=""; this.botRole=""; this.angle=0; }
 }
-defineTypes(TowerState, { x:"number", y:"number", cd:"number", ownerId:"string", tier:"number", hp:"number", maxHp:"number", kind:"string", variant:"string", angle:"number" });
+defineTypes(TowerState, { x:"number", y:"number", cd:"number", ownerId:"string", tier:"number", hp:"number", maxHp:"number", kind:"string", variant:"string", botRole:"string", angle:"number" });
 
 class ProjectileState extends Schema {
   constructor() {
@@ -2177,7 +2180,7 @@ export class WorldRoom extends Room {
     for(const[id,a]of this.state.animals)bounceOne(id,a,false);
     for(const[id,p]of this.state.pets)bounceOne(id,p,true);
   }
-  addTower(x,y,ownerId="",tier=0,opts={}){const t=new TowerState(),tt=clamp(Math.floor(Number(tier)||0),0,3),kind=String(opts.kind||"tower"),variant=String(opts.variant||"");let hp=kind==="battlebot"?[520,760,1050,1350][tt]:[120,180,260,350][tt];if(kind==="tower"&&tt>=3&&variant==="diamond")hp=500;Object.assign(t,{x,y,cd:.5,ownerId,tier:tt,hp,maxHp:hp,kind,variant,angle:Number(opts.angle)||0});const id=`t${this.nextTowerId++}`;this.state.towers.set(id,t);return id;}
+  addTower(x,y,ownerId="",tier=0,opts={}){const t=new TowerState(),tt=clamp(Math.floor(Number(tier)||0),0,3),kind=String(opts.kind||"tower"),variant=String(opts.variant||""),botRole=kind==="battlebot"?(String(opts.botRole||"melee")==="ranged"?"ranged":"melee"):"";let hp=kind==="battlebot"?[520,760,1050,1350][tt]:[120,180,260,350][tt];if(kind==="tower"&&tt>=3&&variant==="diamond")hp=500;Object.assign(t,{x,y,cd:.5,ownerId,tier:tt,hp,maxHp:hp,kind,variant,botRole,angle:Number(opts.angle)||0});const id=`t${this.nextTowerId++}`;this.state.towers.set(id,t);return id;}
   addProjectile(data){const p=new ProjectileState();Object.assign(p,data);const id=`q${this.nextProjectileId++}`;this.state.projectiles.set(id,p);return id;}
 
   scatter(type,count,hp,minCenter){for(let i=0;i<count;i++){for(let tries=0;tries<85;tries++){let scale=1,solid=12,canopy=0;if(type==="tree"){scale=rand(1.2,2.3);solid=8.8*scale;canopy=46*scale;}else if(type==="rock"){scale=rand(1,2.05);solid=26.5*scale;}else if(type==="log"){scale=rand(1,1.6);solid=17.5*scale;}else if(type==="bush"){scale=rand(1.08,1.7);solid=10.8*scale;canopy=24*scale;}const pos=randomLandPoint(Math.max(120,solid+80)),x=pos.x,y=pos.y,biome=worldBiomeAt(x,y);const chance=biome==="arctic"?(type==="tree"?.34:type==="bush"?.44:type==="log"?.40:.86):biome==="desert"?(type==="tree"?.18:type==="bush"?.22:type==="log"?.08:.92):biome==="mountains"?(type==="tree"?.26:type==="bush"?.34:type==="log"?.20:.98):type==="tree"?(biome==="rainforest"?1:.88):type==="bush"?(biome==="rainforest"?1:.82):type==="log"?(biome==="rainforest"?.90:.78):(biome==="rainforest"?.56:.68);if(Math.random()>chance)continue;if(!this.canPlace(x,y,solid,minCenter))continue;this.addResource(type,x,y,hp,solid,canopy,scale,type==="log"?rand(0,TAU):0);break;}}}
@@ -2978,23 +2981,30 @@ export class WorldRoom extends Room {
     const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;const id=String(data.id||""),h=this.state.resources.get(id);
     if(!h||!h.alive||h.type!=="rainforestHive"){client.send("hiveEnterResult",{success:false});return;}
     const c=this.hiveResourceCenter(h),edgeGap=dist(p.x,p.y,c.x,c.y)-Math.max(0,Number(h.solidR)||70);if(edgeGap>58){client.send("hiveEnterResult",{success:false});return;}
-    this.playerHiveSessions.set(client.sessionId,{hiveId:id,tamed:false,enteredAt:this.state.worldTime,lastDamageAt:-999});p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";client.send("hiveEnterResult",{success:true,hiveId:id});
+    this.playerHiveSessions.set(client.sessionId,{hiveId:id,tamedLarvae:new Set(),enteredAt:this.state.worldTime,lastDamageAt:-999});p.ridingPetId="";p.vehicleType="";p.vehicleTier=0;p.vehicleVariant="";client.send("hiveEnterResult",{success:true,hiveId:id});
   }
   handleHiveTameLarva(client,data={}){
-    const p=this.state.players.get(client.sessionId),sess=this.playerHiveSessions.get(client.sessionId);if(!p||p.dead||!sess||sess.tamed)return;
+    const p=this.state.players.get(client.sessionId),sess=this.playerHiveSessions.get(client.sessionId);if(!p||p.dead||!sess)return;
     if(String(data.hiveId||"")&&String(data.hiveId)!==String(sess.hiveId)){client.send("hiveTameResult",{success:false,reason:"hive"});return;}
-    let count=0;for(const[,pet]of this.state.pets)if(pet.ownerId===client.sessionId&&!pet.dead&&!pet.bredChild)count++;if(count>=4){client.send("hiveTameResult",{success:false,reason:"max"});return;}
-    if(Math.random()>=.5){client.send("hiveTameResult",{success:false,chance:.5});return;}
-    const roll=Math.random(),type=roll<.12?"queenbee":roll<.72?"workerbee":"dronebee";sess.tamed=true;sess.aggro=true;
-    const petId=this.addPet(client.sessionId,type,"baby",p.x,p.y,{petName:`${PET_TYPES[type]?.name||"Bee"} Larva`,gender:Math.random()<.5?"Female":"Male"});
+    const larvaId=String(data.larvaId||"");if(!/^larva[1-8]$/.test(larvaId)){client.send("hiveTameResult",{success:false,reason:"larva",larvaId});return;}
+    if(!(sess.tamedLarvae instanceof Set))sess.tamedLarvae=new Set();if(sess.tamedLarvae.has(larvaId)){client.send("hiveTameResult",{success:false,reason:"taken",larvaId});return;}
+    let count=0;for(const[,pet]of this.state.pets)if(pet.ownerId===client.sessionId&&!pet.dead&&!pet.bredChild)count++;if(count>=4){client.send("hiveTameResult",{success:false,reason:"max",larvaId});return;}
+    // Taming keeps the existing 50% success roll. A successful larva can only
+    // become a Worker or Queen, split evenly; hive larvae never roll Drone.
+    if(Math.random()>=.5){client.send("hiveTameResult",{success:false,chance:.5,larvaId});return;}
+    const type=Math.random()<.5?"workerbee":"queenbee";sess.tamedLarvae.add(larvaId);sess.aggro=true;
+    const petId=this.addPet(client.sessionId,type,"baby",p.x,p.y,{petName:`${PET_TYPES[type]?.name||"Bee"} Larva`,gender:canonicalAnimalGender(type,"Female")});
     this.addSkillXp(client.sessionId,25);this.sendReward(client.sessionId,{kind:"cards",species:type,amount:TAME_SPECIES_CARD_REWARD},{x:p.x,y:p.y,tame:true,hiveLarva:true,guaranteed:true});this.recordAccountAchievement(client.sessionId,"first_tame",{species:type});this.recordAccountAchievement(client.sessionId,`tame_${type}`,{species:type});
-    client.send("hiveTameResult",{success:true,type,petId,chance:.5});
+    client.send("hiveTameResult",{success:true,type,petId,chance:.5,larvaId});
   }
   handleHiveDamage(client,data={}){
-    const sess=this.playerHiveSessions.get(client.sessionId),p=this.state.players.get(client.sessionId);if(!sess||!sess.aggro||!p||p.dead)return;const now=Number(this.state.worldTime)||0;if(now-(Number(sess.lastDamageAt)||-999)<.30)return;sess.lastDamageAt=now;const amount=clamp(Number(data.amount)||6,1,14);this.damageTarget({kind:"player",id:client.sessionId},amount,"hiveBee",`hive:${sess.hiveId}`);
+    const sess=this.playerHiveSessions.get(client.sessionId),p=this.state.players.get(client.sessionId);if(!sess||!p||p.dead)return;const now=Number(this.state.worldTime)||0;if(now-(Number(sess.lastDamageAt)||-999)<.30)return;sess.lastDamageAt=now;const amount=clamp(Number(data.amount)||6,1,14);this.damageTarget({kind:"player",id:client.sessionId},amount,"hiveBee",`hive:${sess.hiveId}`);
   }
   handleHiveExit(client,data={}){
-    const sess=this.playerHiveSessions.get(client.sessionId);if(!sess)return;if(String(data.hiveId||"")&&String(data.hiveId)!==String(sess.hiveId))return;this.playerHiveSessions.delete(client.sessionId);
+    const sess=this.playerHiveSessions.get(client.sessionId);if(!sess)return;if(String(data.hiveId||"")&&String(data.hiveId)!==String(sess.hiveId))return;
+    const p=this.state.players.get(client.sessionId),h=this.state.resources.get(String(sess.hiveId||""));
+    if(p&&h&&h.alive&&h.type==="rainforestHive"){const dirs={northWest:[0,-1],northEast:[0,-1],southWest:[0,1],southEast:[0,1],west:[-1,0],east:[1,0]},d=dirs[String(data.exitKey||"")]||[0,1],c=this.hiveResourceCenter(h),gap=Math.max(70,Number(h.solidR)||70)+52;p.x=clamp(c.x+d[0]*gap,24,WORLD_W-24);p.y=clamp(c.y+d[1]*gap,24,WORLD_H-24);p.angle=Math.atan2(d[1],d[0]);}
+    this.playerHiveSessions.delete(client.sessionId);
   }
   handleTame(client,data){
     const p=this.state.players.get(client.sessionId);if(!p||p.dead)return;
@@ -3044,8 +3054,8 @@ export class WorldRoom extends Room {
       const wkind=`windmill${tier}${variant?`@${variant}`:""}`;this.addWall(p.x+Math.cos(angle)*58,p.y+Math.sin(angle)*58,25,-1,client.sessionId,{hp,kind:wkind});
       const amount=tier>=3&&variant==="ruby"?7:tier>=3&&variant==="diamond"?5:[1,2,3,4][tier];p.gold=Math.max(0,(p.gold||0)+amount);client.send("resourceReward",{kind:"gold",amount,x:p.x,y:p.y,source:"windmill"});
     }else if(kind==="battlebot"){
-      if(!buildKnownFromSkill(s,"BattleBot"))return;const tier=Math.min(clamp(Math.floor(Number(data.botTier)||0),0,3),this.buildTierForOwner(client.sessionId,"BattleBot")),variant=tier>=3?validVariant("BattleBot",String(data.variant||"")):"";
-      this.addTower(p.x+Math.cos(angle)*62,p.y+Math.sin(angle)*62,client.sessionId,tier,{kind:"battlebot",variant,angle});
+      if(!buildKnownFromSkill(s,"BattleBot"))return;const tier=Math.min(clamp(Math.floor(Number(data.botTier)||0),0,3),this.buildTierForOwner(client.sessionId,"BattleBot")),variant=tier>=3?validVariant("BattleBot",String(data.variant||"")):"",botRole=tier>=2?battleBotCombatRoleFromSkill(s):"melee";
+      this.addTower(p.x+Math.cos(angle)*62,p.y+Math.sin(angle)*62,client.sessionId,tier,{kind:"battlebot",variant,botRole,angle});
     }else if(kind==="repair"){
       if(!buildKnownFromSkill(s,"RepairBuilding"))return;const tier=Math.min(clamp(Math.floor(Number(data.repairTier)||0),0,3),this.buildTierForOwner(client.sessionId,"RepairBuilding")),hp=[150,220,310,430][tier];
       this.addWall(p.x+Math.cos(angle)*55,p.y+Math.sin(angle)*55,26,-1,client.sessionId,{hp,kind:`repair${tier}`});
@@ -4802,13 +4812,35 @@ export class WorldRoom extends Room {
       const owner=t.ownerId?this.state.players.get(t.ownerId):null;
       if(owner&&owner.dead){t.hp=Math.max(0,t.hp-(Math.max(1,t.maxHp||t.hp||120)/75)*dt);if(t.hp<=0){this.state.towers.delete(id);continue;}}
       if(t.kind==="battlebot"){
-        if(owner&&!owner.dead){const od=dist(t.x,t.y,owner.x,owner.y);if(od>105){const a=angTo(t.x,t.y,owner.x,owner.y),spd=88+clamp(Number(t.tier)||0,0,3)*10;t.angle=a;t.x=clamp(t.x+Math.cos(a)*spd*dt,20,WORLD_W-20);t.y=clamp(t.y+Math.sin(a)*spd*dt,20,WORLD_H-20);this.resolveStatic(t,18);}}
-        t.cd-=dt;if(t.cd>0)continue;const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),range=tier>=3&&v==="water"?650:[285,325,365,380][tier];
-        let target=null,best=range;
-        for(const rec of this.nearbyDynamic(t.x,t.y,range+100,new Set(["enemy","animal"]))){const o=rec.obj;if(!o||o.dead||o.hp<=0)continue;const d=dist(t.x,t.y,o.x,o.y);if(d<best){best=d;target={kind:rec.kind==="animal"?"animal":"enemy",id:rec.id,obj:o};}}
+        const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),role=tier>=2&&String(t.botRole||"")==="ranged"?"ranged":"melee";
+        const ownerDist=owner&&!owner.dead?dist(t.x,t.y,owner.x,owner.y):0;
+        // Bots must never be left behind by speed upgrades, mounts, honey rushes,
+        // or lag correction. At extreme separation, safely regroup beside owner.
+        if(owner&&!owner.dead&&ownerDist>900){
+          const back=Number(owner.angle)||0;t.x=clamp(owner.x-Math.cos(back)*68,20,WORLD_W-20);t.y=clamp(owner.y-Math.sin(back)*68,20,WORLD_H-20);t.angle=back;this.resolveStatic(t,18);
+        }
+        const rangedRange=tier>=3&&v==="water"?650:[285,325,365,390][tier];
+        const meleeRange=tier>=3&&v==="water"?128:[62,68,76,84][tier];
+        const attackRange=role==="ranged"?rangedRange:meleeRange,detectRange=role==="ranged"?attackRange:Math.max(300,attackRange+220);
+        let target=null,best=detectRange;
+        for(const rec of this.nearbyDynamic(t.x,t.y,detectRange+100,new Set(["enemy","animal"]))){const o=rec.obj;if(!o||o.dead||o.hp<=0)continue;const d=dist(t.x,t.y,o.x,o.y);if(d<best){best=d;target={kind:rec.kind==="animal"?"animal":"enemy",id:rec.id,obj:o};}}
         for(const[pid,pl]of this.state.players){if(pid===t.ownerId||pl.dead)continue;const d=dist(t.x,t.y,pl.x,pl.y);if(d<best){best=d;target={kind:"player",id:pid,obj:pl};}}
-        if(!target){t.cd=.18;continue;}
+        if(owner&&!owner.dead){
+          const od=dist(t.x,t.y,owner.x,owner.y);
+          if(od>165){
+            const a=angTo(t.x,t.y,owner.x,owner.y),spd=Math.min(760,280+od*1.15+tier*24);t.angle=a;t.x=clamp(t.x+Math.cos(a)*spd*dt,20,WORLD_W-20);t.y=clamp(t.y+Math.sin(a)*spd*dt,20,WORLD_H-20);this.resolveStatic(t,18);
+          }else if(role==="melee"&&target&&best>attackRange+Math.max(8,Number(target.obj.r)||PLAYER_R)*.58){
+            const a=angTo(t.x,t.y,target.obj.x,target.obj.y),spd=230+tier*24;t.angle=a;t.x=clamp(t.x+Math.cos(a)*spd*dt,20,WORLD_W-20);t.y=clamp(t.y+Math.sin(a)*spd*dt,20,WORLD_H-20);this.resolveStatic(t,18);best=dist(t.x,t.y,target.obj.x,target.obj.y);
+          }else if(od>92){
+            const a=angTo(t.x,t.y,owner.x,owner.y),spd=Math.min(620,250+od*.9+tier*20);t.angle=a;t.x=clamp(t.x+Math.cos(a)*spd*dt,20,WORLD_W-20);t.y=clamp(t.y+Math.sin(a)*spd*dt,20,WORLD_H-20);this.resolveStatic(t,18);
+          }
+        }
+        t.cd=Math.max(0,(Number(t.cd)||0)-dt);if(t.cd>0)continue;
+        if(!target){t.cd=.12;continue;}
+        const targetR=Math.max(8,Number(target.obj.r)||PLAYER_R);if(best>attackRange+targetR*.58){t.cd=.08;continue;}
         let dmg=[22,30,38,42][tier],cd=[.85,.72,.60,.58][tier];if(tier>=3&&v==="water"){dmg=34;cd=.56;}else if(tier>=3&&v==="fire"){dmg=48;cd=.64;}else if(tier>=3&&v==="lightning"){dmg=58;cd=.78;}else if(tier>=3&&v==="plant"){dmg=35;cd=.62;}else if(tier>=3&&v==="void"){dmg=45;cd=.75;}else if(tier>=3&&v==="light"){dmg=39;cd=.58;}
+        if(tier>=2&&role==="melee")dmg*=1.35;
+        if(tier>=2&&role==="ranged")cd*=.62;
         const before=target.kind==="player"?target.obj.health:target.obj.hp;
         if(target.kind==="enemy")this.hitEnemy(target.id,target.obj,dmg,t.ownerId,false,null);else if(target.kind==="animal")this.hitWild(target.id,target.obj,dmg,t.ownerId,false,null);else this.damageTarget({kind:"player",id:target.id},dmg,"projectile",t.ownerId);
         const after=target.kind==="player"?target.obj.health:target.obj.hp,dealt=Math.max(0,(Number(before)||0)-(Number(after)||0)),ref={kind:target.kind,id:target.id};
@@ -4816,7 +4848,7 @@ export class WorldRoom extends Room {
         else if(v==="lightning")this.applyAbilityStun(ref,4);
         else if(v==="plant"&&owner){owner.health=Math.min(owner.maxHealth,owner.health+dealt);for(const[,pet]of this.state.pets)if(pet.ownerId===t.ownerId&&!pet.dead)pet.hp=Math.min(pet.maxHp,pet.hp+dealt);}
         else if((v==="void"||v==="light")&&target.obj){const rr=120,force=v==="void"?60:72;for(const rec of this.nearbyDynamic(target.obj.x,target.obj.y,rr,new Set(["enemy","animal"]))){const o=rec.obj;if(!o||o.dead)continue;const a=v==="void"?angTo(o.x,o.y,target.obj.x,target.obj.y):angTo(target.obj.x,target.obj.y,o.x,o.y),mul=rec.kind==="animal"?animalKnockbackScale(o):1;o.x=clamp(o.x+Math.cos(a)*force*mul,20,WORLD_W-20);o.y=clamp(o.y+Math.sin(a)*force*mul,20,WORLD_H-20);this.resolveStatic(o,(o.r||18)*.68);}this.broadcast("abilityEvent",{petId:"",ownerId:t.ownerId,wildAnimalId:"",elem:v==="void"?"Void":"Light",fxType:"pulse",x:target.obj.x,y:target.obj.y,range:rr,life:.55});}
-        t.angle=angTo(t.x,t.y,target.obj.x,target.obj.y);t.cd=cd;this.broadcastFx({kind:"ability",x:target.obj.x,y:target.obj.y,text:v?v.toUpperCase():"BOT",color:v==="fire"?"#ff754d":v==="lightning"?"#ffe56b":v==="plant"?"#77dd72":v==="void"?"#b27cff":v==="light"?"#fff2a3":"#64cfff"});continue;
+        t.angle=angTo(t.x,t.y,target.obj.x,target.obj.y);t.cd=Math.max(.12,cd);this.broadcastFx({kind:"ability",x:target.obj.x,y:target.obj.y,text:v?v.toUpperCase():(role==="ranged"?"RANGER":"MELEE"),color:v==="fire"?"#ff754d":v==="lightning"?"#ffe56b":v==="plant"?"#77dd72":v==="void"?"#b27cff":v==="light"?"#fff2a3":"#64cfff"});continue;
       }
       t.cd-=dt;if(t.cd>0)continue;const tier=clamp(Math.floor(Number(t.tier)||0),0,3),variant=String(t.variant||""),range=tier>=3&&variant==="diamond"?460:tier>=3?400:tier>=2?380:tier>=1?310:250;let target=null,best=range;
       for(const rec of this.nearbyDynamic(t.x,t.y,range+120,new Set(["enemy","animal"]))){const o=rec.obj;if(!o||o.dead||o.hp<=0)continue;const d=dist(t.x,t.y,o.x,o.y);if(d<best){best=d;target={kind:rec.kind,id:rec.id,obj:o};}}
