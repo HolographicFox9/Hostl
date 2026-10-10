@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "741";
+const CUBE_SHARED_RULES_VERSION = "742";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -627,7 +627,7 @@ const TOOL = {
   Fist:    { dmg: 1.0, range: 42, cadence: 0.50, gather: 0.06, resourcePower: 0.08, woodWall:1.0, stoneWall:0.45 },
   Axe:     { dmg: 5.5, range: 50, cadence: 0.58, gather: 2.4,  resourcePower: 0.95, woodWall:9.0, stoneWall:2.0 },
   Pickaxe: { dmg: 5.0, range: 50, cadence: 0.50, gather: 2.5,  resourcePower: 1.15, woodWall:4.0, stoneWall:14.0 },
-  Sword:   { dmg: 8.0, range: 54, cadence: 0.42, gather: 0.08, resourcePower: 0.10, woodWall:4.0, stoneWall:1.8 },
+  Sword:   { dmg: 8.0, range: 62, cadence: 0.42, gather: 0.08, resourcePower: 0.10, woodWall:4.0, stoneWall:1.8 },
   Bow:     { dmg: 9.0, range: 46, cadence: 0.55, gather: 0.12, resourcePower: 0.18, woodWall:2.0, stoneWall:1.5 },
   TigerClaws:{ dmg:7.0, range:44, cadence:.30, gather:.16, resourcePower:.20, woodWall:2.8, stoneWall:1.6 },
   BoxingGloves:{ dmg:6.2, range:48, cadence:.34, gather:.10, resourcePower:.12, woodWall:2.2, stoneWall:1.4 },
@@ -1094,7 +1094,11 @@ function animalTorsoHeadCopyPartCount(a){
   return total<=2?total:total-1;
 }
 function expandCopiedAnimalCrossSection(a,h){
-  const ang=Number(a?.angle)||0,sa=Math.sin(ang),ca=Math.cos(ang),sourceR=Math.max(1,Number(h?.r)||1),rr=sourceR*.75,side=sourceR*.25;
+  const ang=Number(a?.angle)||0,sa=Math.sin(ang),ca=Math.cos(ang),type=String(a?.type||""),stage=String(a?.stage||"");
+  let sizeMul=1;
+  if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.93;
+  if(["queenbee","workerbee","dronebee"].includes(type))sizeMul*=1.07;
+  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.74,side=sourceR*.26;
   return[
     {x:h.x-sa*side,y:h.y+ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y},
     {x:h.x+sa*side,y:h.y-ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y}

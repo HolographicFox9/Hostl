@@ -6469,12 +6469,12 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "741";
+const CUBE_SHARED_RULES_VERSION = "742";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
   Pickaxe: { dmg: 5.0, gather: 2.5, resourcePower: 1.15, range: 50, swing: 0.28, cadence: 0.50, cost: { wood: 6, stone: 4 }, gatherFor: "rock", woodWall: 4.0, stoneWall: 14.0 },
-  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 54, swing: 0.36, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
+  Sword:   { dmg: 8.0, gather: 0.08, resourcePower: 0.10, range: 62, swing: 0.42, cadence: 0.42, cost: { wood: 9 }, woodWall: 4.0, stoneWall: 1.8 },
   Bow:     { dmg: 9.0, gather: 0.12, resourcePower: 0.18, range: 46, swing: 0.22, cadence: 0.55, cost: null, woodWall: 2.0, stoneWall: 1.5 },
   TigerClaws:{ dmg: 7.0, gather: 0.16, resourcePower: 0.20, range: 44, swing: 0.18, cadence: 0.30, cost: null, woodWall: 2.8, stoneWall: 1.6 },
   BoxingGloves:{ dmg: 6.2, gather: 0.10, resourcePower: 0.12, range: 48, swing: 0.20, cadence: 0.34, cost: null, woodWall: 2.2, stoneWall: 1.4 },
@@ -9284,12 +9284,15 @@ function animalTorsoHeadCopyPartCount(a){
   return total<=2?total:total-1;
 }
 function expandCopiedAnimalCrossSection(a,h){
-  // Two smaller side circles approximate the copied torso/head cross-section.
-  // Together they reach the SAME side-to-side width as the source part, while
-  // avoiding the oversized front/back bulge of one giant round hitbox.
+  // True copied torso/head collision, with only tiny tuning: babies are a bit
+  // tighter and bees are a little bigger so they fit the visible art better.
   const ang=Number(a?.angle)||0, sa=Math.sin(ang), ca=Math.cos(ang);
-  const sourceR=Math.max(1,Number(h?.r)||1);
-  const rr=sourceR*.75, side=sourceR*.25;
+  const type=String(a?.type||""), stage=String(a?.stage||"");
+  let sizeMul=1;
+  if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type)) sizeMul*=0.93;
+  if(["queenbee","workerbee","dronebee"].includes(type)) sizeMul*=1.07;
+  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul;
+  const rr=sourceR*.74, side=sourceR*.26;
   return [
     {x:h.x-sa*side,y:h.y+ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y},
     {x:h.x+sa*side,y:h.y-ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y}
@@ -11419,6 +11422,39 @@ function applyPhaseNetworkEvent(data={}) {
 function remoteMountedPetIds(){const ids=new Set();for(const v of net.remoteVisuals.values())if(v?.ridingPetId)ids.add(String(v.ridingPetId));return ids;}
 function drawRemoteMountedPets(){const ids=remoteMountedPetIds();for(const p of net.remotePetVisuals.values())if(ids.has(String(p.netId||""))&&inView(p.x,p.y,90))drawAnimal(p);}
 function drawRemotePets(){const ids=remoteMountedPetIds();for(const p of net.remotePetVisuals.values())if(!ids.has(String(p.netId||""))&&inView(p.x,p.y,60))drawAnimal(p);}
+function animalVisualDrawSize(a){
+  if(!a)return 0;
+  const type=String(a.type||""),stage=String(a.stage||"");
+  const dims=uploadedAnimalVisibleDimensions(type,stage);
+  if(dims)return Math.max(Number(dims.w)||0,Number(dims.h)||0);
+  const r=Math.max(4,Number(a.r)||18);
+  if(type==="queenbee")return r*2.9;
+  if(type==="workerbee")return r*2.45;
+  if(type==="dronebee")return r*2.2;
+  return r*2;
+}
+function compareAnimalsByVisualSize(a,b){
+  const ds=animalVisualDrawSize(a)-animalVisualDrawSize(b);
+  if(Math.abs(ds)>.1)return ds;
+  return (Number(a?.y)||0)-(Number(b?.y)||0);
+}
+function visibleAnimalsForDraw(){
+  const out=[];
+  const ids=remoteMountedPetIds();
+  if(player.riding&&!player.riding.dead&&renderInView(player.riding.x,player.riding.y,Math.max(135,(Number(player.riding.r)||18)*3.5)))out.push({kind:"ridden pet",entity:player.riding});
+  for(const a of animals)if(a&&!a.dead&&!a.owned&&renderInView(a.x,a.y,Math.max(135,(Number(a.r)||18)*3.5)))out.push({kind:"wild animal",entity:a});
+  for(const p of player.pets)if(p&&p!==player.riding&&!p.dead&&renderInView(p.x,p.y,Math.max(135,(Number(p.r)||18)*3.5)))out.push({kind:"pet",entity:p});
+  if(net.room){
+    for(const p of net.remotePetVisuals.values()){
+      if(!p||p.dead)continue;
+      const mounted=ids.has(String(p.netId||""));
+      const pad=mounted?90:60;
+      if(renderInView(p.x,p.y,Math.max(pad,(Number(p.r)||18)*3.5)))out.push({kind:mounted?"remote mounted pet":"remote pet",entity:p});
+    }
+  }
+  out.sort((a,b)=>compareAnimalsByVisualSize(a.entity,b.entity));
+  return out;
+}
 
 function applyNetworkHarvestReward(data = {}) {
   const kind = data.kind;
@@ -18910,8 +18946,8 @@ function hostlGenericWeaponSwingTransform(poseKey, attackT){
     // The blade starts at the Ref pose, sweeps DOWN/forward across the player's
     // face, then returns quickly along the same front-side arc. Negative canvas
     // rotation keeps a left-pointing blade in front instead of behind the head.
-    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=restRot+(-1.22*q);dx=3.5*q;dy=6*q;}
-    else{const q=hostlAnimEase((attackT-.70)/.30);rot=restRot+(-1.22*(1-q));dx=3.5*(1-q);dy=6*(1-q);}
+    if(attackT<.70){const q=hostlAnimEase(attackT/.70);rot=restRot+(-1.34*q);dx=5.5*q;dy=9*q;}
+    else{const q=hostlAnimEase((attackT-.70)/.30);rot=restRot+(-1.34*(1-q));dx=5.5*(1-q);dy=9*(1-q);}
   }
   return {rot,dx,dy,isAxe};
 }
@@ -27280,7 +27316,7 @@ for (const [k, meta] of Object.entries(HOSTL_PLAYER_SPRITE_ASSETS)) {
   HOSTL_PLAYER_SPRITES[k] = Object.assign({}, meta, { img });
 }
 // Axe pose calibration: runtime pieces come from the matching Sep art; Ref art is reference-only for assembly/hand placement.
-const HOSTL_PLAYER_POSES = {"player":{"body":{"asset":"player_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"player_arm0","x":-24.0,"y":-3.0,"w":16,"h":33},{"asset":"player_arm1","x":8.0,"y":-2.0,"w":17,"h":32}],"tools":[]},"axeWood":{"body":{"asset":"axeWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeWood_arm0","x":9.0,"y":-2.0,"w":18,"h":31},{"asset":"axeWood_arm1","x":8.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeWood_tool0","x":-47.0,"y":1.0,"w":70,"h":34}]},"axeStone":{"body":{"asset":"axeStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeStone_arm0","x":8.0,"y":-1.0,"w":18,"h":31},{"asset":"axeStone_arm1","x":8.0,"y":-3.0,"w":16,"h":33}],"tools":[{"asset":"axeStone_tool0","x":-52.0,"y":-6.0,"w":80,"h":41}]},"axeIron":{"body":{"asset":"axeIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeIron_arm0","x":-27.0,"y":-10.0,"w":19,"h":31},{"asset":"axeIron_arm1","x":7.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeIron_tool0","x":-49.0,"y":8.0,"w":74,"h":29}]},"axeDouble":{"body":{"asset":"axeDouble_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeDouble_arm0","x":-26.0,"y":-12.0,"w":17,"h":33},{"asset":"axeDouble_arm1","x":9.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeDouble_tool0","x":-78.0,"y":-5.0,"w":154,"h":57}]},"axeThrow":{"body":{"asset":"axeThrow_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeThrow_arm0","x":-27.0,"y":-2.0,"w":16,"h":33}],"tools":[{"asset":"axeThrow_tool0","x":12.0,"y":-2.0,"w":44,"h":42}]},"axeWar":{"body":{"asset":"axeWar_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"axeWar_arm0","x":-26.5,"y":-11.0,"w":19,"h":31},{"asset":"axeWar_arm1","x":2.5,"y":-20.0,"w":18,"h":33}],"tools":[{"asset":"axeWar_tool0","x":-96.5,"y":-23.0,"w":142,"h":62}]},"swordWood":{"body":{"asset":"swordWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordWood_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordWood_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordWood_tool0","x":-78.0,"y":-23.0,"w":87,"h":58}]},"swordStone":{"body":{"asset":"swordStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordStone_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordStone_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordStone_tool0","x":-74.0,"y":-19.0,"w":85,"h":57}]},"swordIron":{"body":{"asset":"swordIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordIron_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordIron_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordIron_tool0","x":-83.0,"y":-15.0,"w":93,"h":49}]},"daggers":{"body":{"asset":"daggers_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"daggers_arm0","x":-36.0,"y":-1.0,"w":30,"h":22},{"asset":"daggers_arm1","x":5.0,"y":1.0,"w":31,"h":22}],"tools":[{"asset":"daggers_tool0","x":-35.0,"y":8.0,"w":22,"h":42},{"asset":"daggers_tool1","x":11.0,"y":8.0,"w":23,"h":42}]},"longSword":{"body":{"asset":"longSword_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"longSword_arm0","x":-26.5,"y":-3.0,"w":19,"h":32},{"asset":"longSword_arm1","x":-8.5,"y":8.0,"w":27,"h":25}],"tools":[{"asset":"longSword_tool0","x":-119.5,"y":-52.0,"w":133,"h":91}]},"spear":{"body":{"asset":"spear_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"spear_arm0","x":-19.5,"y":-1.0,"w":21,"h":31},{"asset":"spear_arm1","x":-2.5,"y":7.0,"w":20,"h":30}],"tools":[{"asset":"spear_tool0","x":-29.5,"y":-29.0,"w":60,"h":133}]}};
+const HOSTL_PLAYER_POSES = {"player":{"body":{"asset":"player_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"player_arm0","x":-24.0,"y":-3.0,"w":16,"h":33},{"asset":"player_arm1","x":8.0,"y":-2.0,"w":17,"h":32}],"tools":[]},"axeWood":{"body":{"asset":"axeWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeWood_arm0","x":-21.0,"y":-2.0,"w":18,"h":31},{"asset":"axeWood_arm1","x":6.0,"y":-2.0,"w":16,"h":33}],"tools":[{"asset":"axeWood_tool0","x":-47.0,"y":1.0,"w":70,"h":34}]},"axeStone":{"body":{"asset":"axeStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeStone_arm0","x":-21.0,"y":-2.0,"w":18,"h":31},{"asset":"axeStone_arm1","x":6.0,"y":-2.0,"w":16,"h":33}],"tools":[{"asset":"axeStone_tool0","x":-52.0,"y":-6.0,"w":80,"h":41}]},"axeIron":{"body":{"asset":"axeIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeIron_arm0","x":-22.0,"y":-3.0,"w":19,"h":31},{"asset":"axeIron_arm1","x":6.0,"y":-2.0,"w":17,"h":33}],"tools":[{"asset":"axeIron_tool0","x":-49.0,"y":8.0,"w":74,"h":29}]},"axeDouble":{"body":{"asset":"axeDouble_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeDouble_arm0","x":-16.0,"y":-3.0,"w":17,"h":33},{"asset":"axeDouble_arm1","x":4.0,"y":-3.0,"w":17,"h":33}],"tools":[{"asset":"axeDouble_tool0","x":-78.0,"y":-5.0,"w":154,"h":57}]},"axeThrow":{"body":{"asset":"axeThrow_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"axeThrow_arm0","x":-22.0,"y":-2.0,"w":16,"h":33}],"tools":[{"asset":"axeThrow_tool0","x":12.0,"y":-2.0,"w":44,"h":42}]},"axeWar":{"body":{"asset":"axeWar_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"axeWar_arm0","x":-21.5,"y":-4.0,"w":19,"h":31},{"asset":"axeWar_arm1","x":5.5,"y":-4.0,"w":18,"h":33}],"tools":[{"asset":"axeWar_tool0","x":-96.5,"y":-23.0,"w":142,"h":62}]},"swordWood":{"body":{"asset":"swordWood_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordWood_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordWood_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordWood_tool0","x":-78.0,"y":-23.0,"w":87,"h":58}]},"swordStone":{"body":{"asset":"swordStone_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordStone_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordStone_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordStone_tool0","x":-74.0,"y":-19.0,"w":85,"h":57}]},"swordIron":{"body":{"asset":"swordIron_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"swordIron_arm0","x":-23.0,"y":-3.0,"w":18,"h":33},{"asset":"swordIron_arm1","x":-8.0,"y":8.0,"w":26,"h":25}],"tools":[{"asset":"swordIron_tool0","x":-83.0,"y":-15.0,"w":93,"h":49}]},"daggers":{"body":{"asset":"daggers_body","x":-20.0,"y":-20.0,"w":40,"h":40},"arms":[{"asset":"daggers_arm0","x":-36.0,"y":-1.0,"w":30,"h":22},{"asset":"daggers_arm1","x":5.0,"y":1.0,"w":31,"h":22}],"tools":[{"asset":"daggers_tool0","x":-35.0,"y":8.0,"w":22,"h":42},{"asset":"daggers_tool1","x":11.0,"y":8.0,"w":23,"h":42}]},"longSword":{"body":{"asset":"longSword_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"longSword_arm0","x":-26.5,"y":-3.0,"w":19,"h":32},{"asset":"longSword_arm1","x":-8.5,"y":8.0,"w":27,"h":25}],"tools":[{"asset":"longSword_tool0","x":-119.5,"y":-52.0,"w":133,"h":91}]},"spear":{"body":{"asset":"spear_body","x":-20.5,"y":-20.0,"w":41,"h":40},"arms":[{"asset":"spear_arm0","x":-19.5,"y":-1.0,"w":21,"h":31},{"asset":"spear_arm1","x":-2.5,"y":7.0,"w":20,"h":30}],"tools":[{"asset":"spear_tool0","x":-29.5,"y":-29.0,"w":60,"h":133}]}};
 function hostlWeaponPoseKey(actor, holding) {
   const spec = String(actor?.skillWeaponChoice || "");
   const tierRaw = actor?.toolTiers ? Number(actor.toolTiers[holding]) || 0 : 0;
@@ -27748,7 +27784,7 @@ function drawTwoHandWeapon(weapon, color, swing, walkArm = 0, actor = player) {
     // then sweeps forward/up through a broad swish arc.
     restAngle=spec==="spear"?.02:2.08;
     swingAngle=swing*(spec==="spear"?-.35:-2.38);
-    if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(3,0,48,2.0,2.0-2.18*swing,true);ctx.stroke();ctx.restore();}
+    if(spec!=="spear"&&swing>.03){ctx.save();ctx.globalAlpha=.14+.22*swing;ctx.strokeStyle="#eef5e9";ctx.lineWidth=5+4*swing;ctx.lineCap="round";ctx.beginPath();ctx.arc(4,1,56,2.0,2.0-2.32*swing,true);ctx.stroke();ctx.restore();}
   }
   let rot=restAngle+swingAngle;
   if(weapon==="Axe"&&spec==="doubleAxe"){
@@ -28858,13 +28894,9 @@ function draw(menuMode = false) {
   }
   for (const g of viewGold) safeCanvasEntityDraw("gold", g, drawGoldChunk);
 
-  // A rider sits ABOVE the pet they are currently riding. Other animals still
-  // draw later, so the player remains underneath unrelated wildlife/pets.
+  // The rider still sits ABOVE the ridden pet, but among animals the bigger
+  // visible animal always draws later/on top of the smaller visible animal.
   if (!menuMode) safeCanvasDrawCall("ability fx", drawAbilityFx);
-  if(!menuMode&&player.riding&&!player.riding.dead) safeCanvasEntityDraw("ridden pet",player.riding,drawAnimal);
-  if (!menuMode || net.room) safeCanvasDrawCall("remote mounted pets", drawRemoteMountedPets);
-  if (!menuMode) safeCanvasDrawCall("player", drawPlayer);
-  if (!menuMode || net.room) safeCanvasDrawCall("remote players", drawRemotePlayers);
 
   // Animal trails are a ground effect: draw them BEFORE wildlife and pets.
   for (const p of particles) {
@@ -28874,9 +28906,10 @@ function draw(menuMode = false) {
     circ(p.x, p.y, p.size);
   }
   ctx.globalAlpha = 1;
-  for (const a of animals) if (!a.owned && renderInView(a.x, a.y, Math.max(135, (Number(a.r) || 18) * 3.5))) safeCanvasEntityDraw("wild animal", a, drawAnimal);
-  for (const p of player.pets) if (p!==player.riding&&renderInView(p.x, p.y, Math.max(135, (Number(p.r) || 18) * 3.5))) safeCanvasEntityDraw("pet", p, drawAnimal);
-  if (!menuMode || net.room) safeCanvasDrawCall("remote pets", drawRemotePets);
+  const drawAnimals=visibleAnimalsForDraw();
+  for(const item of drawAnimals) safeCanvasEntityDraw(item.kind,item.entity,drawAnimal);
+  if (!menuMode) safeCanvasDrawCall("player", drawPlayer);
+  if (!menuMode || net.room) safeCanvasDrawCall("remote players", drawRemotePlayers);
   for (const en of enemies) if (!en.dead && renderInView(en.x, en.y, 130)) safeCanvasEntityDraw("enemy", en, drawEnemy);
   for (const p of projectiles) if (inView(p.x, p.y, 30)) safeCanvasEntityDraw("projectile", p, drawProjectile);
   for (const b of petBlasts) {
