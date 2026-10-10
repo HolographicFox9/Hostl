@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "739";
+const CUBE_SHARED_RULES_VERSION = "740";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -918,10 +918,10 @@ function animalRadius(type, stage) {
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
-  const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,fennec:.92}[type];
+  const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,saber:1.10,clouded:1.02,fennec:.92}[type];
   if(!speciesHeight)return null;
   const stageScale={baby:1.78,adult:1.52,boss:1.43,superboss:1.40,bigmomma:1.38}[stage]||1.45;
-  const lengthMul={dog:1.62,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,fennec:1.73}[type]||1.55;
+  const lengthMul={dog:1.62,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
   const h=animalRadius(type,stage)*speciesHeight*stageScale;
   return{h,w:h*lengthMul};
 }
@@ -1005,37 +1005,6 @@ function animalSpawnFootprint(type,stage){
   return r*m*Math.max(fit.len,fit.body,fit.head);
 }
 
-const ANIMAL_RADIUS_HITBOX_PARTS = Object.freeze({
-  dog:       [[-0.62,0,0.39],[-0.36,0,0.57],[0.05,0,0.67],[0.50,0,0.53],[0.82,0,0.39],[1.08,0,0.28],[1.26,0,0.19]],
-  cat:       [[-0.54,0,0.32],[-0.30,0,0.46],[0.07,0,0.55],[0.44,0,0.43],[0.72,0,0.32],[0.94,0,0.23],[1.10,0,0.16]],
-  dragon:    [[-0.82,0,0.29],[-0.52,0,0.41],[-0.12,0,0.50],[0.34,0,0.45],[0.72,0,0.33],[0.98,0,0.23],[1.17,0,0.16]],
-  fox:       [[-0.61,0,0.33],[-0.34,0,0.47],[0.05,0,0.56],[0.45,0,0.44],[0.75,0,0.33],[0.98,0,0.23],[1.15,0,0.16]],
-  wolf:      [[-0.62,0,0.38],[-0.36,0,0.55],[0.05,0,0.63],[0.47,0,0.50],[0.78,0,0.37],[1.02,0,0.26],[1.19,0,0.17]],
-  bear:      [[-0.50,0,0.48],[-0.27,0,0.68],[0.07,0,0.78],[0.42,0,0.67],[0.68,0,0.50],[0.88,0,0.34],[1.02,0,0.22]],
-  rabbit:    [[-0.38,0,0.29],[-0.18,0,0.43],[0.08,0,0.52],[0.36,0,0.42],[0.57,0,0.30],[0.74,0,0.21],[0.87,0,0.14]],
-  owl:       [[-0.27,0,0.38],[-0.09,0,0.56],[0.13,0,0.64],[0.37,0,0.54],[0.55,0,0.39],[0.70,0,0.27],[0.82,0,0.18]],
-  snake:     [[-1.00,0,0.25],[-0.76,0,0.32],[-0.45,0,0.37],[-0.12,0,0.40],[0.22,0,0.38],[0.54,0,0.34],[0.82,0,0.29],[1.05,0,0.22],[1.22,0,0.15]],
-  deer:      [[-0.62,0,0.29],[-0.36,0,0.42],[0.04,0,0.50],[0.41,0,0.38],[0.68,0,0.27],[0.90,0,0.19],[1.05,0,0.13]],
-  boar:      [[-0.66,0,0.43],[-0.39,0,0.62],[0.04,0,0.73],[0.47,0,0.60],[0.78,0,0.43],[1.02,0,0.29],[1.20,0,0.19]],
-  saber:     [[-0.63,0,0.35],[-0.36,0,0.50],[0.05,0,0.59],[0.47,0,0.47],[0.77,0,0.34],[1.00,0,0.24],[1.17,0,0.16]],
-  clouded:   [[-0.58,0,0.33],[-0.33,0,0.47],[0.05,0,0.55],[0.43,0,0.43],[0.72,0,0.31],[0.94,0,0.22],[1.09,0,0.15]],
-  fennec:    [[-0.50,0,0.29],[-0.27,0,0.42],[0.06,0,0.51],[0.38,0,0.41],[0.61,0,0.29],[0.79,0,0.20],[0.92,0,0.13]],
-  queenbee:  [[-0.42,0,0.30],[-0.18,0,0.43],[0.10,0,0.48],[0.37,0,0.38],[0.57,0,0.25]],
-  workerbee: [[-0.38,0,0.27],[-0.16,0,0.39],[0.10,0,0.44],[0.34,0,0.34],[0.52,0,0.22]],
-  dronebee:  [[-0.40,0,0.29],[-0.17,0,0.41],[0.10,0,0.46],[0.35,0,0.36],[0.54,0,0.23]]
-});
-function animalHitboxMinRadius(a){
-  const r=Math.max(4,Number(a?.r)||18);
-  const stageMul=({baby:.11,adult:.13,boss:.12,superboss:.11,bigmomma:.10})[a?.stage]||.12;
-  return Math.max(2.0,r*stageMul);
-}
-function animalHeadHitboxScale(type){
-  return ({
-    dog:.70,cat:.66,dragon:.66,fox:.65,wolf:.63,bear:.64,rabbit:.60,owl:.66,snake:.58,
-    deer:.60,boar:.62,saber:.61,clouded:.61,fennec:.60,queenbee:.68,workerbee:.66,dronebee:.67
-  })[type]||.64;
-}
-
 const BEE_COPIED_TORSO_HEAD = Object.freeze({
   baby:{queenbee:[[-.145,1.235],[1.076,.913]],workerbee:[[-.126,1.071],[.933,.791]],dronebee:[[-.111,.941],[.820,.696]]},
   adult:{queenbee:[[-.123,1.235],[.917,1.051]],workerbee:[[-.107,1.071],[.795,.911]],dronebee:[[-.094,.941],[.699,.801]]},
@@ -1070,6 +1039,9 @@ function animalHitCircles(a) {
       wolf:[[-.36,.18],[-.18,.27],[.05,.32],[.28,.28],[.45,.23],[.57,.17]],
       bear:[[-.30,.21],[-.14,.32],[.07,.38],[.28,.34],[.43,.27],[.54,.20]],
       deer:[[-.28,.13],[-.09,.20],[.12,.24],[.33,.21],[.49,.16],[.61,.11]],
+      boar:[[-.31,.20],[-.14,.30],[.07,.34],[.28,.31],[.44,.25],[.55,.18]],
+      saber:[[-.34,.17],[-.17,.25],[.05,.30],[.27,.27],[.44,.22],[.55,.16]],
+      clouded:[[-.35,.16],[-.18,.24],[.04,.29],[.26,.25],[.43,.20],[.54,.15]],
       fennec:[[-.31,.14],[-.13,.21],[.07,.25],[.27,.21],[.41,.16],[.51,.11]]
     }[a.type];
 
@@ -1083,19 +1055,10 @@ function animalHitCircles(a) {
     });
   }
 
-  const r=a?.r||18;
-  let parts;
-  parts=ANIMAL_RADIUS_HITBOX_PARTS[a.type]||ANIMAL_RADIUS_HITBOX_PARTS.dog;
-
-  return parts.map(([f,side,rad],i)=>{
-    const fromEnd=parts.length-1-i;
-    const headish=fromEnd<=2;
-    const headDrop=fromEnd===0?.14:fromEnd===1?.10:fromEnd===2?.06:0;
-    const lenMul=headish?fit.head:fit.len;
-    const bodyMul=headish?fit.head:fit.body;
-    const localSide=(side+headDrop)*bodyMul;
-    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:r*rad};
-  });
+  // Unknown/future species fallback only. Every active species is covered above;
+  // never revive the old species-radius collision table here.
+  const r=Math.max(4,Number(a?.r)||18),generic=[[-.22,.30],[.08,.34],[.37,.27],[.61,.19]];
+  return generic.map(([f,rad])=>({x:a.x+ca*f*r,y:a.y+sa*f*r,r:r*rad}));
 }
 function animalPhysicalCirclesBase(a){
   // Movement collision uses the copied visible torso+head hitboxes only.
@@ -1197,13 +1160,16 @@ function petAttackContact(a,ref,target){
 }
 function animalTargetOverlap(a,ref,target){
   if(!a||!target)return 0;
-  const tr=ref?.kind==="player"?PLAYER_R*.82:Math.max(8,(target.r||16)*.82);
+  const source=animalPhysicalCircles(a);
+  const targets=(ref?.kind==="animal"||ref?.kind==="pet")
+    ? animalPhysicalCircles(target)
+    : [{x:target.x,y:target.y,r:ref?.kind==="player"?PLAYER_R*.82:Math.max(8,(target.r||16)*.82)}];
   let deepest=0;
-  for(const h of animalPhysicalCircles(a)){
-    const d=dist(h.x,h.y,target.x,target.y);
-    // +3 is only contact tolerance for network sampling. The target still moves
-    // by the animal's exact delta; there is no knockback/extra force.
-    deepest=Math.max(deepest,h.r+tr+3-d);
+  for(const h of source)for(const th of targets){
+    const d=dist(h.x,h.y,th.x,th.y);
+    // +3 is only contact tolerance for network sampling. Animal/pet targets use
+    // their copied torso+head geometry too, never a center-radius shortcut.
+    deepest=Math.max(deepest,h.r+th.r+3-d);
   }
   return Math.max(0,deepest);
 }
@@ -1754,7 +1720,7 @@ export class WorldRoom extends Room {
         }else if(solid.kind==="gold"){const g=this.state.gold.get(solid.id);if(!g||(!g.infinite&&g.goldLeft<=0))continue;const h=goldHit(g);pushCreatureFrom(h.x,h.y,h.r);}
         else if(solid.kind==="chest"){const c=this.state.chests.get(solid.id);if(!c||c.opened)continue;const h=chestHit(c);pushCreatureFrom(h.x,h.y,h.r);}
       }
-      // Creature-vs-wall collision uses the same torso-only circles as other solids.
+      // Creature-vs-wall collision uses the canonical torso+head copied circles as other solids.
       for(const[,w]of this.state.walls){
         if(isPlacedVehicleWall(w))continue;
         let best=null,bestOverlap=0;
@@ -3415,8 +3381,8 @@ export class WorldRoom extends Room {
       const dmg=petAbilityStats(a).damage||2;if(d<320){const stage=uploadedAnimalStageKey(a.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((target.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const aa=i/6*TAU,wx=target.x+Math.cos(aa)*ring,wy=target.y+Math.sin(aa)*ring,wid=this.addWall(wx,wy,wallR,4,"",{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:""});this.hostileWildWalls.set(wid,id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Stone",fxType:"earthRingBurst",x:a.x,y:a.y,targetX:target.x,targetY:target.y,r:a.r,stage:a.stage,range:ring+wallR,life:.8});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"SPIKE PRISON",color:"#a9a9a2"});
     }
     else if(a.type==="queenbee"){const st=petAbilityStats(a),dmg=st.damage||16,dot=st.dot||14,range=Math.max(130,(a.r||18)*2.6),hits=this.wildAbilityTargetsAround(a.x,a.y,range);for(const h of hits){this.damageTarget(h.ref,dmg*.42,"animal",id);this.applyAbilityFixedDot(h.ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"beeSwarm",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:1.2,color:"#ffe27c"});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ROYAL SWARM",color:"#ffe27c"});}
-    else if(a.type==="workerbee"){const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(d<185){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(95,Math.max(24,d-Math.max(8,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(dist(a.x,a.y,target.x,target.y)<=a.r+(target.r||PLAYER_R)+24){this.damageTarget(ref,dmg,"animal",id);this.applyAbilityFixedDot(ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.55,shockScale:.3});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"POISON CHARGE",color:"#90de68"});}
-    else if(a.type==="dronebee"){const dmg=petAbilityStats(a).damage||20;if(d<210){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(120,Math.max(40,d-Math.max(10,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(dist(a.x,a.y,target.x,target.y)<=a.r+(target.r||PLAYER_R)+26)this.damageTarget(ref,dmg,"animal",id);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Normal",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.6,shockScale:.42});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"RAM",color:"#f3f3e8"});}
+    else if(a.type==="workerbee"){const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(d<185){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(95,Math.max(24,d-Math.max(8,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,8)){this.damageTarget(ref,dmg,"animal",id);this.applyAbilityFixedDot(ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.55,shockScale:.3});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"POISON CHARGE",color:"#90de68"});}
+    else if(a.type==="dronebee"){const dmg=petAbilityStats(a).damage||20;if(d<210){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(120,Math.max(40,d-Math.max(10,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,10))this.damageTarget(ref,dmg,"animal",id);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Normal",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.6,shockScale:.42});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"RAM",color:"#f3f3e8"});}
     else if(a.type==="muskox"){if(d<145){this.damageTarget(ref,18,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,18);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"GROUND BRACE",color:"#9c805c"});}
     else if(a.type==="snowyowl"){if(d<210)this.damageTarget(ref,14,"animal",id);this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"WHITEOUT FAN",color:"#ecfbff"});}
     else if(a.type==="mountaingoat"){if(d<125){this.damageTarget(ref,18,"animal",id);this.pushWildAbilityTarget(ref,target,a.x,a.y,72);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"CLIFF KICK",color:"#b99c72"});}
@@ -4635,7 +4601,7 @@ export class WorldRoom extends Room {
       if(en.moonMarked){en.x=Number(en._moonAnchorX)||en.x;en.y=Number(en._moonAnchorY)||en.y;}else{this.resolveEnemyCreatureContacts(en);this.resolveStatic(en,en.r*.9);}
       // A non-riding guard is a separate body; never let it sit inside its cube.
       const gid=this.enemyPetByEnemy.get(id),guard=gid&&this.state.animals.get(gid);
-      if(guard&&en.ridingPetId!==gid){const min=en.r+Math.max(18,(guard.r||18)*.72)+12,d=dist(en.x,en.y,guard.x,guard.y);if(d<min&&d>.01){const a=angTo(en.x,en.y,guard.x,guard.y),push=min-d;guard.x+=Math.cos(a)*push;guard.y+=Math.sin(a)*push;this.resolveStatic(guard,(guard.r||18)*.68);}}
+      if(guard&&en.ridingPetId!==gid){let best=null,bestOverlap=0;for(const h of animalPhysicalCircles(guard)){const d=dist(en.x,en.y,h.x,h.y),overlap=(en.r||18)+h.r+12-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}if(best&&best.d>.01){const a=angTo(en.x,en.y,best.h.x,best.h.y);guard.x+=Math.cos(a)*best.overlap;guard.y+=Math.sin(a)*best.overlap;this.resolveStatic(guard,(guard.r||18)*.68);}}
     }
   }
 
