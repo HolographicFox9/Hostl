@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "743";
+const CUBE_SHARED_RULES_VERSION = "744";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -12685,7 +12685,7 @@ const hostlMusic = (() => {
     const ac=ctx(),out=ensureMaster(); if(!ac||!out)return;
     try{if(ac.state==="suspended")await ac.resume();unlocked=ac.state==="running";}catch(_){}
     if(!unlocked)return;
-    const now=ac.currentTime,target=nextMode==="home"?.085:.055;
+    const now=ac.currentTime,target=nextMode==="home"?.48:.36;
     try{out.gain.cancelScheduledValues(now);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),now);out.gain.exponentialRampToValueAtTime(target,now+.65);}catch(_){out.gain.value=target;}
     if(timer)clearInterval(timer);
     const g=generation;scheduler(g);timer=setInterval(()=>scheduler(g),240);
