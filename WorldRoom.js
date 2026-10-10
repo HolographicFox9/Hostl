@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "737";
+const CUBE_SHARED_RULES_VERSION = "738";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1036,9 +1036,27 @@ function animalHeadHitboxScale(type){
   })[type]||.64;
 }
 
+const BEE_COPIED_TORSO_HEAD = Object.freeze({
+  baby:{queenbee:[[-.145,1.235],[1.076,.913]],workerbee:[[-.126,1.071],[.933,.791]],dronebee:[[-.111,.941],[.820,.696]]},
+  adult:{queenbee:[[-.123,1.235],[.917,1.051]],workerbee:[[-.107,1.071],[.795,.911]],dronebee:[[-.094,.941],[.699,.801]]},
+  boss:{queenbee:[[-.169,1.245],[.860,1.045]],workerbee:[[-.146,1.080],[.746,.906]],dronebee:[[-.129,.949],[.655,.797]]},
+  superboss:{queenbee:[[-.100,1.270],[.945,1.071]],workerbee:[[-.087,1.102],[.820,.929]],dronebee:[[-.076,.968],[.721,.816]]},
+  bigmomma:{queenbee:[[-.050,1.193],[.931,1.005]],workerbee:[[-.044,1.034],[.808,.872]],dronebee:[[-.038,.909],[.710,.766]]}
+});
+function copiedBeeTorsoHeadCircles(a){
+  if(!a || !["queenbee","workerbee","dronebee"].includes(a.type)) return null;
+  const stage=(a.stage==="baby"||a.stage==="boss"||a.stage==="superboss"||a.stage==="bigmomma")?a.stage:"adult";
+  const pair=BEE_COPIED_TORSO_HEAD[stage]?.[a.type]; if(!pair)return null;
+  const r=Math.max(4,Number(a.r)||18),ang=Number(a.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang);
+  return pair.map(([forward,rad])=>({x:(Number(a.x)||0)+ca*forward*r,y:(Number(a.y)||0)+sa*forward*r,r:rad*r}));
+}
+
 function animalHitCircles(a) {
+  const beeCopy=copiedBeeTorsoHeadCircles(a); if(beeCopy)return beeCopy;
   const ang=a?.angle||0,ca=Math.cos(ang),sa=Math.sin(ang);
-  const fit=animalHitboxFit(a?.type,a?.stage);
+  const oldFit=animalHitboxFit(a?.type,a?.stage);
+  const fit=a?.type==="wolf"?oldFit:{len:Math.max(1,oldFit.len),body:Math.max(1,oldFit.body),head:Math.max(1,oldFit.head)};
+  const copyRadiusMul=a?.type==="wolf"?1:1.18;
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
 
   if(d){
@@ -1060,7 +1078,7 @@ function animalHitCircles(a) {
       const headish=i>=cfg.length-2;
       const noseTip=i===cfg.length-1;
       const forward=d.w*xf*(headish?fit.head:fit.len);
-      const rr=Math.max(animalHitboxMinRadius(a),d.h*rf*(headish?fit.head:fit.body));
+      const rr=Math.max(animalHitboxMinRadius(a),d.h*rf*(headish?fit.head:fit.body)*copyRadiusMul);
       const drop=noseTip?d.h*.05*fit.head:headish?d.h*.03*fit.head:0;
       return{x:a.x+ca*forward-sa*drop,y:a.y+sa*forward+ca*drop,r:rr};
     });
@@ -1077,7 +1095,7 @@ function animalHitCircles(a) {
     const lenMul=headish?fit.head:fit.len;
     const bodyMul=headish?fit.head:fit.body;
     const localSide=(side+headDrop)*bodyMul;
-    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:Math.max(animalHitboxMinRadius(a),r*rad*bodyMul)};
+    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:Math.max(animalHitboxMinRadius(a),r*rad*bodyMul*copyRadiusMul)};
   });
 }
 function animalPhysicalCirclesBase(a){
@@ -1102,25 +1120,18 @@ function animalProjectileTouch(a,x,y,radius=0){
 }
 function animalHeadCopyPartCount(a){
   if(!a)return 0;
-  const hits=animalHitCircles(a);
-  const total=hits.length;
+  const hits=animalHitCircles(a),total=hits.length;
   if(!total)return 0;
-  if(a.type==="snake")return Math.min(total,2);
-  if(total>=6)return 2;
-  if(total>=4)return 2;
-  return 1;
+  if(["queenbee","workerbee","dronebee"].includes(a.type))return 1;
+  return Math.min(total,2);
 }
 function animalTorsoHeadCopyPartCount(a){
   if(!a)return 0;
-  const hits=animalHitCircles(a);
-  const total=hits.length;
+  const hits=animalHitCircles(a),total=hits.length;
   if(!total)return 0;
-  if(a.type==="snake")return Math.min(total,5);
-  if(total>=8)return 5;
-  if(total>=6)return 4;
-  if(total>=5)return 4;
-  if(total>=4)return 3;
-  return total;
+  if(a.type==="snake")return total;
+  if(["queenbee","workerbee","dronebee"].includes(a.type))return total;
+  return total<=2?total:total-1;
 }
 function animalTorsoCircles(a){
   const hits=animalHitCircles(a);
