@@ -27832,6 +27832,19 @@ function hostlDrawSwimmingWeaponPose(actor, holding, swimPhase){
   for(const arm of pose.arms) hostlDrawPosePiece(arm,toolDx,toolDy,toolRot,0,7);
   hostlDrawPosePiece(pose.body,0,bodyBob);
 }
+function hostlDrawCompactWeaponPose(pose, attackT=0, walkAmt=0, options={}){
+  if(!pose||!pose.body)return false;
+  const q=Math.sin(clamp(Number(attackT)||0,0,1)*Math.PI);
+  const bob=(Number(walkAmt)||0)*0.85 + (options.bob||0);
+  const dx=(options.dx||0) + q*(options.attackDx==null?2.0:options.attackDx);
+  const dy=(options.dy||0) + bob + q*(options.attackDy==null?-1.2:options.attackDy);
+  const rot=(options.rot||0) + q*(options.attackRot==null?0.14:options.attackRot);
+  const body=pose.body;
+  const pivotX=body.x + body.w*0.5;
+  const pivotY=body.y + body.h*0.5;
+  hostlDrawPosePiece(body,dx,dy,rot,pivotX,pivotY);
+  return true;
+}
 function hostlDrawSwimmingPose(actor, holding, attackT=0){
   const swimPhase=game.time*4.1 + (actor?.x||0)*0.01 + (actor?.y||0)*0.008 + attackT*0.4;
   if(holding==="Bucket") return hostlDrawSwimmingIconPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
@@ -27841,6 +27854,10 @@ function hostlDrawSwimmingPose(actor, holding, attackT=0){
   if(holding==="Flute") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
   if(holding==="Wall"||holding==="Tower"||holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
   if(holding==="Saddle") return hostlDrawSwimmingIconPose(hostlDrawSaddleIcon,swimPhase);
+  const swimPoseKey=hostlWeaponPoseKey(actor,holding),swimPose=HOSTL_PLAYER_POSES[swimPoseKey];
+  if((holding==="Pickaxe"||holding==="TigerClaws"||holding==="BoxingGloves")&&swimPose&&swimPose.body){
+    return hostlDrawCompactWeaponPose(swimPose,attackT,Math.sin(swimPhase)*0.55,{bob:Math.cos(swimPhase*0.55)*0.5,attackRot:0.1,attackDx:1.2,attackDy:-0.8});
+  }
   if(holding==="Fist"||holding==="TigerClaws"||holding==="BoxingGloves"){
     const pose=HOSTL_PLAYER_POSES.player;
     hostlDrawSwimmingBaseArms(pose, swimPhase, false);
@@ -27947,7 +27964,10 @@ function hostlRenderModernPlayer(actor,opts={}){
     if(poseKey==="axeDouble"){hostlDrawDoubleAxe(pose,attackT,walkAmt);return;}
     hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt);return;
   }
-  // Pickaxe and other lines that did not receive new Sep art keep their old tool drawing.
+  if((holding==="Pickaxe"||holding==="TigerClaws"||holding==="BoxingGloves")&&pose&&pose.body){
+    hostlDrawCompactWeaponPose(pose,attackT,walkAmt,{attackRot:holding==="BoxingGloves"?0.18:0.14,attackDx:holding==="TigerClaws"?2.4:1.8,attackDy:holding==="BoxingGloves"?-1.6:-1.1});
+    return;
+  }
   // Bow has its own current-player pose above, so the old procedural arms are never used for it.
   const base=HOSTL_PLAYER_POSES.player;
   drawTwoHandWeapon(holding,HOSTL_LOCKED_PLAYER_COLOR,opts.swingEase||0,walkAmt*2.2,actor);
