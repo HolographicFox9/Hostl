@@ -25345,7 +25345,9 @@ const UPLOADED_BASIC_RESOURCE_ART = (() => {
   };
   for (const d of Object.values(defs)) {
     const img = new Image();
-    img.decoding = "async";
+    img.decoding = "sync";
+    try { img.loading = "eager"; } catch(_e) {}
+    try { img.fetchPriority = "high"; } catch(_e) {}
     img.src = d.src;
     d.img = img;
   }
@@ -25359,11 +25361,15 @@ function uploadedBasicResourceArtDef(r) {
 }
 function uploadedBasicResourceArtReady(r) {
   const d = uploadedBasicResourceArtDef(r);
-  return !!(d && d.img && d.img.complete && d.img.naturalWidth > 0);
+  if (!d || !d.img || !d.img.complete) return false;
+  // Some browsers report inline SVGs with width/height before naturalWidth is populated.
+  // Accept either natural dimensions or the authored costume dimensions so the uploaded art
+  // still replaces the old procedural drawings instead of getting stuck on the fallback art.
+  return !!((d.img.naturalWidth > 0 && d.img.naturalHeight > 0) || (d.w > 0 && d.h > 0));
 }
 function drawUploadedBasicResourceArt(r) {
   const d = uploadedBasicResourceArtDef(r);
-  if (!d || !d.img || !d.img.complete || !d.img.naturalWidth) return false;
+  if (!uploadedBasicResourceArtReady(r)) return false;
   // Scratch rotation centers are preserved, so the resource stays aligned to its existing hitbox/world position.
   ctx.drawImage(d.img, -d.cx, -d.cy, d.w, d.h);
   return true;
