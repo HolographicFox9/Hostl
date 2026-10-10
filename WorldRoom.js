@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "738";
+const CUBE_SHARED_RULES_VERSION = "739";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1054,9 +1054,8 @@ function copiedBeeTorsoHeadCircles(a){
 function animalHitCircles(a) {
   const beeCopy=copiedBeeTorsoHeadCircles(a); if(beeCopy)return beeCopy;
   const ang=a?.angle||0,ca=Math.cos(ang),sa=Math.sin(ang);
-  const oldFit=animalHitboxFit(a?.type,a?.stage);
-  const fit=a?.type==="wolf"?oldFit:{len:Math.max(1,oldFit.len),body:Math.max(1,oldFit.body),head:Math.max(1,oldFit.head)};
-  const copyRadiusMul=a?.type==="wolf"?1:1.18;
+  // 739: body/head copies keep the renderer's exact scale; no extra fit/enlargement.
+  const fit={len:1,body:1,head:1};
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
 
   if(d){
@@ -1078,7 +1077,7 @@ function animalHitCircles(a) {
       const headish=i>=cfg.length-2;
       const noseTip=i===cfg.length-1;
       const forward=d.w*xf*(headish?fit.head:fit.len);
-      const rr=Math.max(animalHitboxMinRadius(a),d.h*rf*(headish?fit.head:fit.body)*copyRadiusMul);
+      const rr=d.h*rf;
       const drop=noseTip?d.h*.05*fit.head:headish?d.h*.03*fit.head:0;
       return{x:a.x+ca*forward-sa*drop,y:a.y+sa*forward+ca*drop,r:rr};
     });
@@ -1095,7 +1094,7 @@ function animalHitCircles(a) {
     const lenMul=headish?fit.head:fit.len;
     const bodyMul=headish?fit.head:fit.body;
     const localSide=(side+headDrop)*bodyMul;
-    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:Math.max(animalHitboxMinRadius(a),r*rad*bodyMul*copyRadiusMul)};
+    return{x:a.x+ca*(f*r*lenMul)-sa*(localSide*r),y:a.y+sa*(f*r*lenMul)+ca*(localSide*r),r:r*rad};
   });
 }
 function animalPhysicalCirclesBase(a){

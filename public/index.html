@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "738";
+const CUBE_SHARED_RULES_VERSION = "739";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -17178,13 +17178,9 @@ function animalBodyHitboxes(a) {
 
   const ang = a.angle || 0;
   const ca = Math.cos(ang), sa = Math.sin(ang);
-  const oldFit = animalHitboxFit(a.type, a.stage);
-  // Wolf already matched the artwork well. Every other species stops using the old
-  // shrinking fit and expands to the visible torso/head footprint instead.
-  const fit = a.type === "wolf" ? oldFit : {
-    len:Math.max(1,oldFit.len), body:Math.max(1,oldFit.body), head:Math.max(1,oldFit.head)
-  };
-  const copyRadiusMul = a.type === "wolf" ? 1 : 1.18;
+  // 739: a copied body part keeps the exact scale used by the renderer.
+  // No species/stage fit multiplier and no post-copy enlargement.
+  const fit = {len:1, body:1, head:1};
   const dims = uploadedAnimalVisibleDimensions(a.type, a.stage);
 
   if (dims) {
@@ -17208,7 +17204,7 @@ function animalBodyHitboxes(a) {
       const headish = i >= cfg.length - 2;
       const noseTip = i === cfg.length - 1;
       const forward = dims.w * xFrac * (headish ? fit.head : fit.len);
-      const rr = Math.max(animalHitboxMinRadius(a), dims.h * rFrac * (headish ? fit.head : fit.body) * copyRadiusMul);
+      const rr = dims.h * rFrac;
       const headDrop = noseTip ? dims.h * 0.05 * fit.head :
                        headish ? dims.h * 0.03 * fit.head : 0;
       return {
@@ -17236,7 +17232,7 @@ function animalBodyHitboxes(a) {
     return {
       x: a.x + ca * (forward * r * lenMul) - sa * (localSide * r),
       y: a.y + sa * (forward * r * lenMul) + ca * (localSide * r),
-      r: Math.max(animalHitboxMinRadius(a), r * rad * bodyMul * copyRadiusMul)
+      r: r * rad
     };
   });
 }
