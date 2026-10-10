@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "749";
+const CUBE_SHARED_RULES_VERSION = "756";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -27732,24 +27732,24 @@ for (const k of ['pickaxeWood','pickaxeStone','pickaxeIron','pickMottack','railr
   const B=(asset)=>({asset,x:-20,y:-20,w:40,h:40});
   const A=(asset,x,y,w,h)=>({asset,x,y,w,h});
   const T=(asset,x,y,w,h)=>({asset,x,y,w,h});
-  HOSTL_PLAYER_POSES['pickaxeWood']={body:B('pickaxeWood_body'),arms:[A('pickaxeWood_arm0',-44,-3,18,32),A('pickaxeWood_arm1',22,4,18,32)],tools:[T('pickaxeWood_tool0',-52,-14,71,60)]};
-  HOSTL_PLAYER_POSES['pickaxeStone']={body:B('pickaxeStone_body'),arms:[A('pickaxeStone_arm0',-50,-3,18,32),A('pickaxeStone_arm1',25,4,17,32)],tools:[T('pickaxeStone_tool0',-53,-12,74,61)]};
-  HOSTL_PLAYER_POSES['pickaxeIron']={body:B('pickaxeIron_body'),arms:[A('pickaxeIron_arm0',-51,-3,19,32),A('pickaxeIron_arm1',26,4,18,32)],tools:[T('pickaxeIron_tool0',-52,-18,81,63)]};
-  HOSTL_PLAYER_POSES['pickMottack']={body:B('pickMottack_body'),arms:[A('pickMottack_arm0',-56,-3,18,32),A('pickMottack_arm1',34,4,18,32)],tools:[T('pickMottack_tool0',-50,-7,80,51)]};
-  HOSTL_PLAYER_POSES['railroadPick']={body:B('railroadPick_body'),arms:[A('railroadPick_arm0',-64,-3,19,32),A('railroadPick_arm1',38,4,18,32)],tools:[T('railroadPick_tool0',-85,-47,123,95)]};
-  HOSTL_PLAYER_POSES['cutterMottack']={body:B('cutterMottack_body'),arms:[A('cutterMottack_arm0',-61,-3,18,32),A('cutterMottack_arm1',46,4,17,32)],tools:[T('cutterMottack_tool0',-55,-22,86,63)]};
-  HOSTL_PLAYER_POSES['tigerClawsWood']={body:B('tigerClawsWood_body'),arms:[A('tigerClawsWood_arm0',-45,-3,16,48),A('tigerClawsWood_arm1',29,-2,17,48)],tools:[]};
-  HOSTL_PLAYER_POSES['tigerClawsStone']={body:B('tigerClawsStone_body'),arms:[A('tigerClawsStone_arm0',-45,-3,16,48),A('tigerClawsStone_arm1',29,-2,17,48)],tools:[]};
-  HOSTL_PLAYER_POSES['tigerClawsIron']={body:B('tigerClawsIron_body'),arms:[A('tigerClawsIron_arm0',-45,-3,16,48),A('tigerClawsIron_arm1',29,-2,17,48)],tools:[]};
-  HOSTL_PLAYER_POSES['saberClaws']={body:B('saberClaws_body'),arms:[A('saberClaws_arm0',-45,-3,20,55),A('saberClaws_arm1',26,-2,20,53)],tools:[]};
-  HOSTL_PLAYER_POSES['farmerClaws']={body:B('farmerClaws_body'),arms:[A('farmerClaws_arm0',-45,-3,16,48),A('farmerClaws_arm1',29,-2,17,48)],tools:[]};
-  HOSTL_PLAYER_POSES['wolfClaws']={body:B('wolfClaws_body'),arms:[A('wolfClaws_arm0',-45,-3,17,40),A('wolfClaws_arm1',29,-2,17,38)],tools:[]};
-  HOSTL_PLAYER_POSES['boxingGlovesWood']={body:B('boxingGlovesWood_body'),arms:[A('boxingGlovesWood_arm0',-53,-3,23,36),A('boxingGlovesWood_arm1',28,-3,23,36)],tools:[]};
-  HOSTL_PLAYER_POSES['boxingGlovesStone']={body:B('boxingGlovesStone_body'),arms:[A('boxingGlovesStone_arm0',-48,-3,23,36),A('boxingGlovesStone_arm1',26,-3,23,36)],tools:[]};
-  HOSTL_PLAYER_POSES['boxingGlovesIron']={body:B('boxingGlovesIron_body'),arms:[A('boxingGlovesIron_arm0',-48,-3,23,36),A('boxingGlovesIron_arm1',27,-3,23,36)],tools:[]};
-  HOSTL_PLAYER_POSES['spikedGloves']={body:B('spikedGloves_body'),arms:[A('spikedGloves_arm0',-56,-3,23,42),A('spikedGloves_arm1',32,-3,23,42)],tools:[]};
-  HOSTL_PLAYER_POSES['knockerGloves']={body:B('knockerGloves_body'),arms:[A('knockerGloves_arm0',-56,-3,23,37),A('knockerGloves_arm1',34,-3,23,37)],tools:[]};
-  HOSTL_PLAYER_POSES['heavyGloves']={body:B('heavyGloves_body'),arms:[A('heavyGloves_arm0',-51,-3,23,36),A('heavyGloves_arm1',29,-3,22,36)],tools:[]};
+  HOSTL_PLAYER_POSES['pickaxeWood']={body:B('pickaxeWood_body'),arms:[A('pickaxeWood_arm0',-26,-3,18,32),A('pickaxeWood_arm1',1,4,18,32)],tools:[T('pickaxeWood_tool0',-52,-14,71,60)]};
+  HOSTL_PLAYER_POSES['pickaxeStone']={body:B('pickaxeStone_body'),arms:[A('pickaxeStone_arm0',-26,-3,18,32),A('pickaxeStone_arm1',1,4,17,32)],tools:[T('pickaxeStone_tool0',-53,-12,74,61)]};
+  HOSTL_PLAYER_POSES['pickaxeIron']={body:B('pickaxeIron_body'),arms:[A('pickaxeIron_arm0',-26,-3,19,32),A('pickaxeIron_arm1',1,4,18,32)],tools:[T('pickaxeIron_tool0',-52,-18,81,63)]};
+  HOSTL_PLAYER_POSES['pickMottack']={body:B('pickMottack_body'),arms:[A('pickMottack_arm0',-26,-3,18,32),A('pickMottack_arm1',0,4,18,32)],tools:[T('pickMottack_tool0',-50,-6,80,51)]};
+  HOSTL_PLAYER_POSES['railroadPick']={body:B('railroadPick_body'),arms:[A('railroadPick_arm0',-26,-3,19,32),A('railroadPick_arm1',1,4,18,32)],tools:[T('railroadPick_tool0',-85,-47,123,95)]};
+  HOSTL_PLAYER_POSES['cutterMottack']={body:B('cutterMottack_body'),arms:[A('cutterMottack_arm0',-26,-3,18,32),A('cutterMottack_arm1',1,4,17,32)],tools:[T('cutterMottack_tool0',-55,-22,86,63)]};
+  HOSTL_PLAYER_POSES['tigerClawsWood']={body:B('tigerClawsWood_body'),arms:[A('tigerClawsWood_arm0',-27,-3,16,48),A('tigerClawsWood_arm1',11,-2,17,48)],tools:[]};
+  HOSTL_PLAYER_POSES['tigerClawsStone']={body:B('tigerClawsStone_body'),arms:[A('tigerClawsStone_arm0',-27,-3,16,48),A('tigerClawsStone_arm1',11,-2,17,48)],tools:[]};
+  HOSTL_PLAYER_POSES['tigerClawsIron']={body:B('tigerClawsIron_body'),arms:[A('tigerClawsIron_arm0',-27,-3,16,48),A('tigerClawsIron_arm1',11,-2,17,48)],tools:[]};
+  HOSTL_PLAYER_POSES['saberClaws']={body:B('saberClaws_body'),arms:[A('saberClaws_arm0',-27,-3,20,55),A('saberClaws_arm1',8,-2,20,53)],tools:[]};
+  HOSTL_PLAYER_POSES['farmerClaws']={body:B('farmerClaws_body'),arms:[A('farmerClaws_arm0',-27,-3,16,48),A('farmerClaws_arm1',11,-2,17,48)],tools:[]};
+  HOSTL_PLAYER_POSES['wolfClaws']={body:B('wolfClaws_body'),arms:[A('wolfClaws_arm0',-27,-3,17,40),A('wolfClaws_arm1',11,-2,17,38)],tools:[]};
+  HOSTL_PLAYER_POSES['boxingGlovesWood']={body:B('boxingGlovesWood_body'),arms:[A('boxingGlovesWood_arm0',-32,-3,23,36),A('boxingGlovesWood_arm1',8,-3,23,36)],tools:[]};
+  HOSTL_PLAYER_POSES['boxingGlovesStone']={body:B('boxingGlovesStone_body'),arms:[A('boxingGlovesStone_arm0',-31,-3,23,36),A('boxingGlovesStone_arm1',9,-3,23,36)],tools:[]};
+  HOSTL_PLAYER_POSES['boxingGlovesIron']={body:B('boxingGlovesIron_body'),arms:[A('boxingGlovesIron_arm0',-31,-3,23,36),A('boxingGlovesIron_arm1',10,-3,23,36)],tools:[]};
+  HOSTL_PLAYER_POSES['spikedGloves']={body:B('spikedGloves_body'),arms:[A('spikedGloves_arm0',-31,-3,23,42),A('spikedGloves_arm1',8,-3,23,42)],tools:[]};
+  HOSTL_PLAYER_POSES['knockerGloves']={body:B('knockerGloves_body'),arms:[A('knockerGloves_arm0',-31,-3,23,37),A('knockerGloves_arm1',10,-3,23,37)],tools:[]};
+  HOSTL_PLAYER_POSES['heavyGloves']={body:B('heavyGloves_body'),arms:[A('heavyGloves_arm0',-31,-3,23,36),A('heavyGloves_arm1',9,-3,22,36)],tools:[]};
 })();
 
 function hostlWeaponPoseKey(actor, holding) {
