@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "740";
+const CUBE_SHARED_RULES_VERSION = "741";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -8671,7 +8671,7 @@ const PET_TYPES = {
            sizeMul: 1.55, flee: false, style: "wave",
            coats: ["#8a6040","#6b4423","#a07850","#5c3a1e","#c4a882"] },
   rabbit:{ name: "Rabbit", emoji: "🐇", elem: "Plant", color: "#e8e0d4", abilityCd: 11,
-           desc: "Forward plant blast + damage ring — heals the whole team", baseSpeed: 108, friendly: true,
+           desc: "Forward plant blast + damage ring — heals itself every time the skill deals damage", baseSpeed: 108, friendly: true,
            sizeMul: 0.85, flee: true, style: "blast",
            coats: ["#e8e0d4","#f5f0e8","#d4c8b8","#c9b8a0","#fff8f0"] },
   owl:   { name: "Horned Owl", emoji: "🦉", elem: "Wind", color: "#c4a882", abilityCd: 13,
@@ -8683,7 +8683,7 @@ const PET_TYPES = {
            sizeMul: 1.1, flee: false, style: "venom",
            coats: ["#5cb85c","#3a8a40","#7ec850","#2d6a30"] },
   deer:  { name: "Deer", emoji: "🦌", elem: "Light", color: "#c9a06a", abilityCd: 15,
-           desc: "Light ring — heavy damage and team healing", baseSpeed: 85, friendly: true,
+           desc: "Light ring — heavy damage and heals itself for each enemy damaged", baseSpeed: 85, friendly: true,
            sizeMul: 1.2, flee: true, style: "beacon",
            coats: ["#c9a06a","#a07850","#e8d5b7","#8b6914"] },
   boar:  { name: "Boar", emoji: "🐗", elem: "Earth", color: "#6b4423", abilityCd: 16,
@@ -9283,36 +9283,51 @@ function animalTorsoHeadCopyPartCount(a){
   // Keep the full torso and head, dropping only the rearmost tail-ish circle.
   return total<=2?total:total-1;
 }
+function expandCopiedAnimalCrossSection(a,h){
+  // Two smaller side circles approximate the copied torso/head cross-section.
+  // Together they reach the SAME side-to-side width as the source part, while
+  // avoiding the oversized front/back bulge of one giant round hitbox.
+  const ang=Number(a?.angle)||0, sa=Math.sin(ang), ca=Math.cos(ang);
+  const sourceR=Math.max(1,Number(h?.r)||1);
+  const rr=sourceR*.75, side=sourceR*.25;
+  return [
+    {x:h.x-sa*side,y:h.y+ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y},
+    {x:h.x+sa*side,y:h.y-ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y}
+  ];
+}
+function expandCopiedAnimalParts(a,parts){
+  const out=[];
+  for(const h of parts||[]) out.push(...expandCopiedAnimalCrossSection(a,h));
+  return out;
+}
 function animalTorsoHitboxes(a){
   const hits=animalBodyHitboxes(a);
   if(!hits.length) return [];
   const keep=animalTorsoHeadCopyPartCount(a), headCount=animalHeadCopyPartCount(a);
   const start=Math.max(0,hits.length-keep);
   const end=Math.max(start,hits.length-headCount);
-  return hits.slice(start,end).map(h=>({x:h.x,y:h.y,r:h.r}));
+  return expandCopiedAnimalParts(a,hits.slice(start,end));
 }
 function animalTorsoHeadHitboxes(a){
   const hits=animalBodyHitboxes(a);
   if(!hits.length) return [];
   const keep=animalTorsoHeadCopyPartCount(a);
-  return hits.slice(Math.max(0,hits.length-keep)).map(h=>({x:h.x,y:h.y,r:h.r}));
+  return expandCopiedAnimalParts(a,hits.slice(Math.max(0,hits.length-keep)));
+}
+function animalVisibleHeadBaseHitboxes(a){
+  if(!a)return[];
+  const hits=animalBodyHitboxes(a);
+  if(!hits.length)return[];
+  const count=animalHeadCopyPartCount(a);
+  return hits.slice(Math.max(0,hits.length-count)).map(h=>({x:h.x,y:h.y,r:h.r}));
 }
 function animalVisibleHeadHitboxes(a) {
-  // The head collision is copied from the same visible head pieces.
-  // No shrinking, no hidden skull circles, and no offset.
+  // The solid head is the centered, side-covered copy of the actual head parts.
   if (!a) return [];
-  const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
-  const r=Math.max(4,Number(a.r)||18);
-  const hits=animalBodyHitboxes(a);
-  if (hits.length) {
-    const count=animalHeadCopyPartCount(a);
-    return hits.slice(Math.max(0,hits.length-count)).map(h=>({x:h.x,y:h.y,r:h.r}));
-  }
-  return [{
-    x:(Number(a.x)||0)+ca*r*.92,
-    y:(Number(a.y)||0)+sa*r*.92,
-    r:Math.max(3,r*.34)
-  }];
+  const base=animalVisibleHeadBaseHitboxes(a);
+  if(base.length)return expandCopiedAnimalParts(a,base);
+  const ang=Number(a.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang),r=Math.max(4,Number(a.r)||18);
+  return expandCopiedAnimalParts(a,[{x:(Number(a.x)||0)+ca*r*.92,y:(Number(a.y)||0)+sa*r*.92,r:Math.max(3,r*.34)}]);
 }
 function animalSolidHeadHitboxes(a) {
   return animalVisibleHeadHitboxes(a);
@@ -9320,7 +9335,7 @@ function animalSolidHeadHitboxes(a) {
 function animalHeadHitbox(a) {
   // Attack/bite range is a separate small contact zone directly in front of
   // the real solid head copy. It does not replace or resize the head hitbox.
-  const heads=animalVisibleHeadHitboxes(a);
+  const heads=animalVisibleHeadBaseHitboxes(a);
   const ang=Number(a?.angle)||0, ca=Math.cos(ang), sa=Math.sin(ang);
   if(heads.length){
     let front=heads[0],frontEdge=-Infinity;
@@ -17175,14 +17190,13 @@ function animalBodyHitboxes(a) {
 
     return cfg.map(([xFrac, rFrac], i) => {
       const headish = i >= cfg.length - 2;
-      const noseTip = i === cfg.length - 1;
       const forward = dims.w * xFrac * (headish ? fit.head : fit.len);
       const rr = dims.h * rFrac;
-      const headDrop = noseTip ? dims.h * 0.05 * fit.head :
-                       headish ? dims.h * 0.03 * fit.head : 0;
+      // Keep the copied part centered on the visible body/head. The old code
+      // pushed head circles to only one side, leaving the opposite cheek exposed.
       return {
-        x: a.x + ca * forward - sa * headDrop,
-        y: a.y + sa * forward + ca * headDrop,
+        x: a.x + ca * forward,
+        y: a.y + sa * forward,
         r: rr
       };
     });
@@ -20511,14 +20525,16 @@ function updatePetBlasts(dt) {
       b.x=x0+(x1-x0)*best.t;b.y=y0+(y1-y0)*best.t;
       if(best.type==="enemy"){
         const en=best.obj;if(b.sourcePet&&!b.sourcePet.dead)en.revengeTarget=b.sourcePet;
-        damageEnemy(en,b.dmg,false,(b.sourcePet&&!b.sourcePet.dead)?b.sourcePet:player);
+        if(b.sourcePet&&!b.sourcePet.dead)damagePetAbilityTargetOffline(b.sourcePet,en,false,b.dmg);
+        else damageEnemy(en,b.dmg,false,player);
         if(b.stun)applyOfflineAbilityStun(en,b.stun);
         if(b.kind==="tornado"){applyOfflineTornadoTrap(en,2.2,b.x,b.y);abilityFx.push({type:"tornadoTrap",x:en.x,y:en.y,life:2.2,maxLife:2.2,r:Math.max(30,(en.r||18)+18),phase:0});}
         if(b.dotTime&&b.sourcePet)applyOfflinePoison(en,false,b.sourcePet,b.dmg);
         if(b.knock){const a=Math.atan2(b.vy,b.vx);en.x+=Math.cos(a)*b.knock;en.y+=Math.sin(a)*b.knock;resolveEnemyWorld(en);}
       }else if(best.type==="wild"){
-        const wa=best.obj,dealt=animalDamageTaken(wa.type,wa.stage,b.dmg);wa.hp-=dealt;wa.flash=.12;
-        if(b.sourcePet&&!b.sourcePet.dead)wildlifeHitByPet(wa,b.sourcePet,dealt);else{markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else wa.enraged=true;}
+        const wa=best.obj;
+        if(b.sourcePet&&!b.sourcePet.dead)damagePetAbilityTargetOffline(b.sourcePet,wa,true,b.dmg);
+        else{const dealt=animalDamageTaken(wa.type,wa.stage,b.dmg);wa.hp-=dealt;wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else wa.enraged=true;}
         if(b.stun)applyOfflineAbilityStun(wa,b.stun);
         if(b.kind==="tornado"){applyOfflineTornadoTrap(wa,2.2,b.x,b.y);abilityFx.push({type:"tornadoTrap",x:wa.x,y:wa.y,life:2.2,maxLife:2.2,r:Math.max(30,(wa.r||18)+18),phase:0});}
         if(b.dotTime&&b.sourcePet)applyOfflinePoison(wa,true,b.sourcePet,b.dmg);
@@ -21400,6 +21416,16 @@ function makeWalrusSpikePrisonOffline(source,target,spikeDmg){
     abilityFx.push({type:"stone",x,y,life:4,maxLife:4,r:wallR});
   }
 }
+function petSkillHealFromDamageOffline(pet,dealt){
+  if(!pet||pet.dead||!pet.owned||!(pet.type==="rabbit"||pet.type==="deer"))return 0;
+  const rawHeal=Math.max(0,Number(dealt)||0)*.50;
+  if(rawHeal<=0)return 0;
+  const before=Math.max(0,Number(pet.hp)||0);
+  pet.hp=clamp(before+rawHeal,0,pet.maxHp);
+  const healed=Math.max(0,pet.hp-before);
+  if(healed>0.05)floatText(pet.x,pet.y-(pet.r||18)-10,`+${Math.round(healed)}`,pet.type==="rabbit"?"#8eea9b":"#ffe98a");
+  return healed;
+}
 function damagePetAbilityTargetOffline(pet,target,isAnimal,rawDamage){
   if(!target||target.dead)return 0;
   const raw=Math.max(0,Number(rawDamage)||0);if(raw<=0)return 0;
@@ -21410,10 +21436,12 @@ function damagePetAbilityTargetOffline(pet,target,isAnimal,rawDamage){
     floatText(target.x,target.y-(target.r||18)-8,Math.round(dealt),"#ffd98a");
     if(target.hp<=0&&!target.dead){setKilledBy(target,pet);target.dead=true;game.kills++;awardPetXpContributors(target,pet);spark(target.x,target.y,PET_TYPES[target.type]?.color||"#fff",9,95);}
     if(pet?.owned)petArmorHealFromDamage(pet,dealt);
+    petSkillHealFromDamageOffline(pet,dealt);
     return dealt;
   }
   const before=Math.max(0,Number(target.hp)||0);damageEnemy(target,raw,false,pet);const dealt=Math.max(0,before-Math.max(0,Number(target.hp)||0));
   if(pet?.owned)petArmorHealFromDamage(pet,dealt);
+  petSkillHealFromDamageOffline(pet,dealt);
   floatText(target.x,target.y-(target.r||18)-8,Math.round(dealt||raw),"#ffd98a");
   return dealt||raw;
 }
@@ -21597,7 +21625,7 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
   }else if(info.elem==="Plant"){
     const a=petAbilityAimAngleOffline(pet,560),blast=stats.blast||5,ring=stats.ring||7,range=petAbilityRangeFor(pet,120,2.65),projScale=petProjectileStageSize(pet.stage);
     petBlasts.push({x:px+Math.cos(a)*(pet.r+6),y:py+Math.sin(a)*(pet.r+6),vx:Math.cos(a)*430,vy:Math.sin(a)*430,life:1.25,r:8*projScale,dmg:blast,kind:"leaf",color:"#5cb85c",sourcePet:pet});
-    petAbilityAreaOffline(pet,px,py,range,ring,{});petDamageResourcesAround(pet,px,py,range,true);healOfflinePetTeam(blast*.5,"#8eea9b");
+    petAbilityAreaOffline(pet,px,py,range,ring,{});petDamageResourcesAround(pet,px,py,range,true);
     abilityFx.push({type:"plantRing",x:px,y:py,life:7,maxLife:7,r:range,baseR:range,petR:pet.r,anchorPet:pet,persistentRing:true});sfx.eat();
   }else if(info.elem==="Wind"){
     const a=petAbilityAimAngleOffline(pet,650),dmg=stats.damage||10,stun=stats.stun||2,projScale=petProjectileStageSize(pet.stage);
@@ -21608,8 +21636,8 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
     petBlasts.push({x:px+Math.cos(a)*(pet.r+7),y:py+Math.sin(a)*(pet.r+7),vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.3,r:9*projScale,dmg,kind:"poison",color:"#65cc65",sourcePet:pet,dotTime:6.5});
     abilityFx.push({type:"poisonMuzzle",x:px,y:py,life:.5,maxLife:.5,angle:a,r:pet.r+15});
   }else if(info.elem==="Light"){
-    const range=petAbilityRangeFor(pet,155,3.15),dmg=stats.damage||16,heal=dmg*.5;
-    petAbilityAreaOffline(pet,px,py,range,dmg,{});petDamageResourcesAround(pet,px,py,range,true);healOfflinePetTeam(heal,"#ffe98a");
+    const range=petAbilityRangeFor(pet,155,3.15),dmg=stats.damage||16;
+    petAbilityAreaOffline(pet,px,py,range,dmg,{});petDamageResourcesAround(pet,px,py,range,true);
     abilityFx.push({type:"lightRingBurst",x:px,y:py,life:7,maxLife:7,r:range,baseR:range,petR:pet.r,anchorPet:pet,persistentRing:true});
   }else if(info.elem==="Earth"){
     const range=petAbilityRangeFor(pet,145,2.95),dmg=stats.damage||20;
