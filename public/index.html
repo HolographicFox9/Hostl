@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "746";
+const CUBE_SHARED_RULES_VERSION = "747";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -12625,7 +12625,8 @@ const hostlMusic = (() => {
     [["B",2],["Fs",3],["D",3]], [["A",2],["E",3],["B",3]]
   ];
   const GAME_HARP=[["D",4],["A",4],["E",5],["D",5],["B",4],["Fs",5],["A",4],["E",5]];
-  const GAME_FLUTE=[0,["A",5],0,["Fs",5], ["D",5],0,["E",5],0, 0,["B",5],0,["A",5], ["Fs",5],0,["E",5],0];
+  // Flute stays on stable chord tones for each bar so the airy lead never clashes with the pad.
+  const GAME_FLUTE=[0,["A",5],0,["Fs",5], ["D",5],0,["G",5],0, 0,["B",5],0,["Fs",5], ["E",5],0,["B",5],0];
   const GAME_BELLS=[["D",6],0,["A",5],0, ["G",6],0,["D",6],0, ["B",5],0,["Fs",6],0, ["A",5],0,["E",6],0];
 
   function ctx(){
@@ -12660,8 +12661,10 @@ const hostlMusic = (() => {
     notes.forEach((n,i)=>tone(hz(n[0],n[1]),start,dur,vol,type,.18,.7,(i-1)*2,(i-1)*.18));
   }
   function fluteTone(freq,start,dur,vol=.022,pan=0){
-    tone(freq,start,dur,vol,"sine",.11,.42,-3,pan);
-    tone(freq*2,start,dur*.82,vol*.12,"sine",.15,.36,4,pan*.65);
+    // Keep both flute partials exactly tuned. Tiny opposite detunes sounded
+    // pleasant on some notes but created audible beating on sustained phrases.
+    tone(freq,start,dur,vol,"sine",.11,.42,0,pan);
+    tone(freq*2,start,dur*.82,vol*.085,"sine",.15,.36,0,pan*.65);
   }
   function glassBell(freq,start,dur=.9,vol=.014,pan=0){
     tone(freq,start,dur,vol,"sine",.006,.62,0,pan);
