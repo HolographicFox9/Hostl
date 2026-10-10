@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "742";
+const CUBE_SHARED_RULES_VERSION = "743";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -1097,6 +1097,7 @@ function expandCopiedAnimalCrossSection(a,h){
   const ang=Number(a?.angle)||0,sa=Math.sin(ang),ca=Math.cos(ang),type=String(a?.type||""),stage=String(a?.stage||"");
   let sizeMul=1;
   if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.93;
+  if(stage==="bigmomma"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.94;
   if(["queenbee","workerbee","dronebee"].includes(type))sizeMul*=1.07;
   const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.74,side=sourceR*.26;
   return[

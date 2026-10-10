@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "742";
+const CUBE_SHARED_RULES_VERSION = "743";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -9290,6 +9290,7 @@ function expandCopiedAnimalCrossSection(a,h){
   const type=String(a?.type||""), stage=String(a?.stage||"");
   let sizeMul=1;
   if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type)) sizeMul*=0.93;
+  if(stage==="bigmomma"&&!["queenbee","workerbee","dronebee"].includes(type)) sizeMul*=0.94;
   if(["queenbee","workerbee","dronebee"].includes(type)) sizeMul*=1.07;
   const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul;
   const rr=sourceR*.74, side=sourceR*.26;
@@ -12598,6 +12599,111 @@ function impactNoise({dur=0.07, vol=0.05, low=180, high=2200, q=0.7, crack=0.0, 
     src.start(t0);
   } catch (e) {}
 }
+
+// ---------- looping music ----------
+// Procedural WebAudio music stays inside the browser game: no extra runtime audio files.
+// Home = catchy/relaxed/adventurous. Gameplay = quieter atmospheric exploration.
+const hostlMusic = (() => {
+  let mode="", timer=0, nextBeat=0, beatIndex=0, unlocked=false, master=null, generation=0;
+  const NOTE={C:261.63,Cs:277.18,D:293.66,Ds:311.13,E:329.63,F:349.23,Fs:369.99,G:392.00,Gs:415.30,A:440.00,As:466.16,B:493.88};
+  const hz=(name,oct=4)=>NOTE[name]*Math.pow(2,oct-4);
+  const HOME_CHORDS=[
+    [["D",3],["Fs",3],["A",3]], [["A",2],["Cs",3],["E",3]],
+    [["B",2],["D",3],["Fs",3]], [["G",2],["B",2],["D",3]],
+    [["D",3],["Fs",3],["A",3]], [["A",2],["Cs",3],["E",3]],
+    [["G",2],["B",2],["D",3]], [["A",2],["Cs",3],["E",3]]
+  ];
+  // One 8-bar melody. 0 = rest. Repeats cleanly and is deliberately simple enough to remember.
+  const HOME_MELODY=[
+    ["D",5],["Fs",5],["A",5],["Fs",5], ["E",5],["Cs",5],["A",4],["Cs",5],
+    ["B",4],["D",5],["Fs",5],["A",5], ["G",5],["Fs",5],["D",5],["B",4],
+    ["D",5],["Fs",5],["A",5],["B",5], ["A",5],["E",5],["Cs",5],["E",5],
+    ["G",5],["D",5],["B",4],["D",5], ["A",5],["E",5],["Cs",5],0
+  ];
+  const GAME_CHORDS=[
+    [["D",2],["A",2],["E",3]], [["G",2],["D",3],["A",3]],
+    [["B",2],["Fs",3],["D",3]], [["A",2],["E",3],["B",3]]
+  ];
+  const GAME_PLUCK=[["D",4],["A",4],["E",5],["Fs",4],["B",4],["D",5],["A",4],["E",5]];
+
+  function ctx(){
+    try{
+      if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+      return actx;
+    }catch(_){return null;}
+  }
+  function ensureMaster(){
+    const ac=ctx(); if(!ac)return null;
+    if(!master){master=ac.createGain();master.gain.value=.0001;master.connect(ac.destination);}
+    return master;
+  }
+  function tone(freq,start,dur,vol=.03,type="sine",attack=.03,release=.35,detune=0,pan=0){
+    const ac=ctx(),out=ensureMaster(); if(!ac||!out||!Number.isFinite(freq))return;
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,start);o.detune.value=detune;
+    let dest=g;
+    if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));g.connect(p);p.connect(out);}else g.connect(out);
+    g.gain.setValueAtTime(.0001,start);
+    g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),start+Math.min(attack,dur*.25));
+    g.gain.setValueAtTime(Math.max(.0002,vol*.72),Math.max(start+attack,start+dur-release));
+    g.gain.exponentialRampToValueAtTime(.0001,start+dur);
+    o.connect(g);o.start(start);o.stop(start+dur+.03);
+  }
+  function chord(notes,start,dur,vol,type="sine"){
+    notes.forEach((n,i)=>tone(hz(n[0],n[1]),start,dur,vol,type,.18,.7,(i-1)*2,(i-1)*.18));
+  }
+  function scheduleHome(ac,idx,t,beatDur){
+    const bar=Math.floor(idx/4)%8,beat=idx%4;
+    if(beat===0)chord(HOME_CHORDS[bar],t,beatDur*3.9,.020,"sine");
+    const m=HOME_MELODY[idx%HOME_MELODY.length];
+    if(m){tone(hz(m[0],m[1]),t,beatDur*.72,.032,"triangle",.018,.22,0,beat%2?.22:-.22);}
+    // gentle lower pluck makes it feel adventurous without becoming busy
+    if(beat===0||beat===2){const root=HOME_CHORDS[bar][0];tone(hz(root[0],root[1]+1),t,beatDur*.42,.018,"triangle",.012,.17,-4,0);}
+  }
+  function scheduleGame(ac,idx,t,beatDur){
+    const bar=Math.floor(idx/4)%4,beat=idx%4;
+    if(beat===0){
+      chord(GAME_CHORDS[bar],t,beatDur*7.6,.012,"sine");
+      // quiet octave air layer
+      const root=GAME_CHORDS[bar][0];tone(hz(root[0],root[1]+2),t,beatDur*6.8,.0045,"sine",.8,1.6,3,.15);
+    }
+    if(beat===0||beat===2){const n=GAME_PLUCK[(bar*2+(beat===2?1:0))%GAME_PLUCK.length];tone(hz(n[0],n[1]),t+.05,beatDur*.9,.013,"triangle",.04,.45,-3,beat===2?.28:-.28);}
+  }
+  function currentBeatDuration(){return 60/(mode==="home"?96:68);}
+  function scheduler(myGen){
+    const ac=ctx(); if(!ac||myGen!==generation||!mode)return;
+    const beatDur=currentBeatDuration();
+    if(!nextBeat||nextBeat<ac.currentTime-.5)nextBeat=ac.currentTime+.06;
+    while(nextBeat<ac.currentTime+.65){
+      if(mode==="home")scheduleHome(ac,beatIndex,nextBeat,beatDur); else scheduleGame(ac,beatIndex,nextBeat,beatDur);
+      nextBeat+=beatDur;beatIndex++;
+    }
+  }
+  async function start(nextMode){
+    if(nextMode!=="home"&&nextMode!=="game")return;
+    mode=nextMode;generation++;beatIndex=0;nextBeat=0;
+    const ac=ctx(),out=ensureMaster(); if(!ac||!out)return;
+    try{if(ac.state==="suspended")await ac.resume();unlocked=ac.state==="running";}catch(_){}
+    if(!unlocked)return;
+    const now=ac.currentTime,target=nextMode==="home"?.085:.055;
+    try{out.gain.cancelScheduledValues(now);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),now);out.gain.exponentialRampToValueAtTime(target,now+.65);}catch(_){out.gain.value=target;}
+    if(timer)clearInterval(timer);
+    const g=generation;scheduler(g);timer=setInterval(()=>scheduler(g),240);
+  }
+  function stop(fade=.45){
+    generation++;mode="";if(timer){clearInterval(timer);timer=0;}
+    const ac=ctx();if(ac&&master){const now=ac.currentTime;try{master.gain.cancelScheduledValues(now);master.gain.setValueAtTime(Math.max(.0001,master.gain.value),now);master.gain.exponentialRampToValueAtTime(.0001,now+fade);}catch(_){}}
+  }
+  function sync(){return start(game.started?"game":"home");}
+  function unlock(){unlocked=true;return sync();}
+  return {startHome:()=>start("home"),startGame:()=>start("game"),stop,sync,unlock};
+})();
+// Browsers require a user gesture before music can begin. The first pointer/key
+// interaction unlocks audio and starts whichever loop matches the current screen.
+document.addEventListener("pointerdown",()=>hostlMusic.unlock(),{once:true,capture:true});
+document.addEventListener("keydown",()=>hostlMusic.unlock(),{once:true,capture:true});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)hostlMusic.stop(.18);else hostlMusic.sync();});
+
 const sfx = {
   hit: () => beep(180, 0.08, "square", 0.05),
   chop: () => beep(340, 0.06, "triangle", 0.04),
@@ -30404,6 +30510,7 @@ function enterGameplayUi() {
   // switch directly from Home to gameplay in one state change—no second loading page.
   game.started = true;
   game.over = false;
+  hostlMusic.startGame();
   document.body.classList.add("hostl-game-active");
   const home = document.getElementById("home");
   if (home) {
@@ -30489,6 +30596,7 @@ el("playBtn").addEventListener("click", async () => {
       console.error("HOSTL Play start failed", fallbackErr);
       game.started=false;
       game.over=false;
+      hostlMusic.startHome();
       document.body.classList.remove("hostl-game-active");
       const home=document.getElementById("home");if(home){home.style.display="flex";home.style.visibility="visible";home.style.pointerEvents="auto";}
       const hud=document.getElementById("hud");if(hud)hud.style.display="none";
@@ -30541,6 +30649,7 @@ el("homeBtn").addEventListener("click", () => {
   }
   game.started = false;
   game.over = false;
+  hostlMusic.startHome();
   game.survivalTime = 0;
   el("finalTime").childNodes[0].nodeValue = "0:00";
   mouse.down = false;
