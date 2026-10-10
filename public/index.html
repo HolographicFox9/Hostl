@@ -6469,7 +6469,7 @@ resize(true);
 // ---------- constants ----------
 const WORLD_W = 84000, WORLD_H = 70000;
 const PLAYER_R = 18;
-const CUBE_SHARED_RULES_VERSION = "744";
+const CUBE_SHARED_RULES_VERSION = "745";
 const TOOL_BASE = {
   Fist:    { dmg: 1.0, gather: 0.06, resourcePower: 0.08, range: 42, swing: 0.20, cadence: 0.50, cost: null, woodWall: 1.0, stoneWall: 0.45 },
   Axe:     { dmg: 5.5, gather: 2.4, resourcePower: 0.95, range: 50, swing: 0.50, cadence: 0.58, cost: { wood: 7 }, gatherFor: "tree", woodWall: 9.0, stoneWall: 2.0 },
@@ -12604,7 +12604,7 @@ function impactNoise({dur=0.07, vol=0.05, low=180, high=2200, q=0.7, crack=0.0, 
 // Procedural WebAudio music stays inside the browser game: no extra runtime audio files.
 // Home = catchy/relaxed/adventurous. Gameplay = quieter atmospheric exploration.
 const hostlMusic = (() => {
-  let mode="", timer=0, nextBeat=0, beatIndex=0, unlocked=false, master=null, generation=0;
+  let mode="", timer=0, nextBeat=0, beatIndex=0, unlocked=false, master=null, compressor=null, generation=0;
   const NOTE={C:261.63,Cs:277.18,D:293.66,Ds:311.13,E:329.63,F:349.23,Fs:369.99,G:392.00,Gs:415.30,A:440.00,As:466.16,B:493.88};
   const hz=(name,oct=4)=>NOTE[name]*Math.pow(2,oct-4);
   const HOME_CHORDS=[
@@ -12634,7 +12634,12 @@ const hostlMusic = (() => {
   }
   function ensureMaster(){
     const ac=ctx(); if(!ac)return null;
-    if(!master){master=ac.createGain();master.gain.value=.0001;master.connect(ac.destination);}
+    if(!master){
+      master=ac.createGain();master.gain.value=.0001;
+      compressor=ac.createDynamicsCompressor();
+      compressor.threshold.value=-18;compressor.knee.value=18;compressor.ratio.value=4.5;compressor.attack.value=.008;compressor.release.value=.22;
+      master.connect(compressor);compressor.connect(ac.destination);
+    }
     return master;
   }
   function tone(freq,start,dur,vol=.03,type="sine",attack=.03,release=.35,detune=0,pan=0){
@@ -12652,22 +12657,69 @@ const hostlMusic = (() => {
   function chord(notes,start,dur,vol,type="sine"){
     notes.forEach((n,i)=>tone(hz(n[0],n[1]),start,dur,vol,type,.18,.7,(i-1)*2,(i-1)*.18));
   }
+  function noiseHit(start,dur=.08,vol=.018,low=1200,high=8000,pan=0){
+    const ac=ctx(),out=ensureMaster();if(!ac||!out)return;
+    const frames=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,frames,ac.sampleRate),data=buf.getChannelData(0);
+    for(let i=0;i<frames;i++){const e=Math.pow(1-i/frames,2.5);data[i]=(Math.random()*2-1)*e;}
+    const src=ac.createBufferSource(),hp=ac.createBiquadFilter(),lp=ac.createBiquadFilter(),g=ac.createGain();
+    hp.type="highpass";hp.frequency.value=low;lp.type="lowpass";lp.frequency.value=high;
+    src.buffer=buf;src.connect(hp);hp.connect(lp);lp.connect(g);
+    if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));g.connect(p);p.connect(out);}else g.connect(out);
+    g.gain.setValueAtTime(Math.max(.0001,vol),start);g.gain.exponentialRampToValueAtTime(.0001,start+dur);
+    src.start(start);src.stop(start+dur+.02);
+  }
+  function kick(start,vol=.035){
+    const ac=ctx(),out=ensureMaster();if(!ac||!out)return;
+    const o=ac.createOscillator(),g=ac.createGain();o.type="sine";
+    o.frequency.setValueAtTime(105,start);o.frequency.exponentialRampToValueAtTime(47,start+.16);
+    g.gain.setValueAtTime(Math.max(.0001,vol),start);g.gain.exponentialRampToValueAtTime(.0001,start+.22);
+    o.connect(g);g.connect(out);o.start(start);o.stop(start+.24);
+  }
   function scheduleHome(ac,idx,t,beatDur){
     const bar=Math.floor(idx/4)%8,beat=idx%4;
-    if(beat===0)chord(HOME_CHORDS[bar],t,beatDur*3.9,.020,"sine");
+    const harmony=HOME_CHORDS[bar];
+    // Warm pad + brighter string-like layer.
+    if(beat===0){
+      chord(harmony,t,beatDur*3.9,.030,"sine");
+      chord(harmony.map(n=>[n[0],n[1]+1]),t+.015,beatDur*3.7,.010,"sawtooth");
+      const root=harmony[0];
+      tone(hz(root[0],root[1]-1),t,beatDur*1.8,.050,"triangle",.025,.35,-5,-.06); // bass
+      kick(t,.046);
+    }
+    if(beat===2){
+      const root=harmony[0];tone(hz(root[0],root[1]-1),t,beatDur*.95,.040,"triangle",.018,.25,2,.05);
+      kick(t,.032);
+    }
     const m=HOME_MELODY[idx%HOME_MELODY.length];
-    if(m){tone(hz(m[0],m[1]),t,beatDur*.72,.032,"triangle",.018,.22,0,beat%2?.22:-.22);}
-    // gentle lower pluck makes it feel adventurous without becoming busy
-    if(beat===0||beat===2){const root=HOME_CHORDS[bar][0];tone(hz(root[0],root[1]+1),t,beatDur*.42,.018,"triangle",.012,.17,-4,0);}
+    if(m){
+      tone(hz(m[0],m[1]),t,beatDur*.74,.050,"triangle",.012,.20,0,beat%2?.24:-.24); // lead
+      tone(hz(m[0],m[1]+1),t+.025,beatDur*.44,.012,"sine",.008,.14,5,beat%2?-.32:.32); // bell shimmer
+    }
+    // Adventure pluck / pseudo-guitar.
+    if(beat===0||beat===2){const root=harmony[0];tone(hz(root[0],root[1]+1),t+.03,beatDur*.46,.030,"triangle",.008,.15,-4,beat===0?-.18:.18);}
+    // Soft percussion: shaker every beat, clap-like noise on 2/4.
+    noiseHit(t+.02,beatDur*.15,beat%2?.022:.014,2500,9000,beat%2?.35:-.35);
+    if(beat===1||beat===3)noiseHit(t+.04,beatDur*.20,.025,600,4200,beat===1?-.12:.12);
   }
   function scheduleGame(ac,idx,t,beatDur){
-    const bar=Math.floor(idx/4)%4,beat=idx%4;
+    const bar=Math.floor(idx/4)%4,beat=idx%4,harmony=GAME_CHORDS[bar];
     if(beat===0){
-      chord(GAME_CHORDS[bar],t,beatDur*7.6,.012,"sine");
-      // quiet octave air layer
-      const root=GAME_CHORDS[bar][0];tone(hz(root[0],root[1]+2),t,beatDur*6.8,.0045,"sine",.8,1.6,3,.15);
+      // Wide ambient pad plus a very soft string/synth layer.
+      chord(harmony,t,beatDur*7.6,.022,"sine");
+      chord(harmony.map(n=>[n[0],n[1]+1]),t+.05,beatDur*7.1,.0065,"sawtooth");
+      const root=harmony[0];
+      tone(hz(root[0],root[1]-1),t,beatDur*3.2,.036,"triangle",.22,.8,-7,-.10); // bass drone
+      tone(hz(root[0],root[1]+2),t+.08,beatDur*6.8,.008,"sine",.8,1.6,3,.18); // air
+      kick(t,.022);
     }
-    if(beat===0||beat===2){const n=GAME_PLUCK[(bar*2+(beat===2?1:0))%GAME_PLUCK.length];tone(hz(n[0],n[1]),t+.05,beatDur*.9,.013,"triangle",.04,.45,-3,beat===2?.28:-.28);}
+    if(beat===0||beat===2){
+      const n=GAME_PLUCK[(bar*2+(beat===2?1:0))%GAME_PLUCK.length];
+      tone(hz(n[0],n[1]),t+.05,beatDur*.95,.024,"triangle",.025,.42,-3,beat===2?.30:-.30); // pluck
+      tone(hz(n[0],n[1]+1),t+.12,beatDur*.52,.0075,"sine",.012,.22,4,beat===2?-.24:.24); // chime
+    }
+    // Sparse atmospheric rhythm so exploration still breathes.
+    noiseHit(t+.03,beatDur*.13,beat%2?.010:.006,3000,9000,beat%2?.28:-.28);
+    if(beat===3)noiseHit(t+.08,beatDur*.25,.012,700,3500,.08);
   }
   function currentBeatDuration(){return 60/(mode==="home"?96:68);}
   function scheduler(myGen){
@@ -12685,7 +12737,7 @@ const hostlMusic = (() => {
     const ac=ctx(),out=ensureMaster(); if(!ac||!out)return;
     try{if(ac.state==="suspended")await ac.resume();unlocked=ac.state==="running";}catch(_){}
     if(!unlocked)return;
-    const now=ac.currentTime,target=nextMode==="home"?.48:.36;
+    const now=ac.currentTime,target=nextMode==="home"?.92:.72;
     try{out.gain.cancelScheduledValues(now);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),now);out.gain.exponentialRampToValueAtTime(target,now+.65);}catch(_){out.gain.value=target;}
     if(timer)clearInterval(timer);
     const g=generation;scheduler(g);timer=setInterval(()=>scheduler(g),240);
