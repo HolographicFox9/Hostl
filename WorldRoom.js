@@ -1302,7 +1302,7 @@ const BIOME_PROFILES={
   desert:{id:"desert",name:"Desert",species:["fennec","snake","dragon","boar"]},
   mountains:{id:"mountains",name:"Mountains",species:["dog","wolf","saber","queenbee","workerbee","dronebee"]},
   ocean:{id:"ocean",name:"Ocean",species:[]},
-  galaxytropic:{id:"galaxytropic",name:"Galaxaytropic",species:[]}
+  galaxytropic:{id:"galaxytropic",name:"Galaxy Tropics",species:[]}
 };
 const BIOME_RESOURCE_INFO=Object.freeze({
   forestHerb:{biome:"forest",material:"wildHerb",name:"Wild Herb",color:"#8dcf68",category:"soft",hp:3},
@@ -1325,7 +1325,7 @@ const BIOME_RESOURCE_INFO=Object.freeze({
   oceanAnemone:{biome:"ocean",material:"seaFruit",name:"Sea Fruit",color:"#ef8fae",category:"soft",hp:5},
   oceanBlueSeaweed:{biome:"ocean",material:"blueSeaweed",name:"Blue Seaweed",color:"#59c7de",category:"soft",hp:4},
   oceanGreenSeaweed:{biome:"ocean",material:"greenSeaweed",name:"Green Seaweed",color:"#54c878",category:"soft",hp:4},
-  galaxyCelestFruit:{biome:"galaxytropic",material:"celestFruit",name:"Celest Fruit",color:"#d9a6ff",category:"soft",hp:5}
+  galaxyCelestFruit:{biome:"galaxytropic",material:"celestFruit",name:"Celestial Flower",color:"#d9a6ff",category:"flower",hp:5}
 });
 function islandDistance(x,y){return Math.hypot(x-ISLAND_CX,y-ISLAND_CY);}
 function islandAngleDelta(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;else if(d<-Math.PI)d+=TAU;return d;}
@@ -2207,10 +2207,10 @@ export class WorldRoom extends Room {
     const add=(type,count,hp,solidBase,minScale,maxScale)=>{for(let i=0;i<count;i++)for(let tries=0;tries<65;tries++){const pos=randomOceanFloorPoint(OCEAN_DIVE_START+35,1900);if(!pos)continue;const scale=rand(minScale,maxScale),solid=Math.max(4,solidBase*scale);let blocked=false;for(const q of this.nearbySolids(pos.x,pos.y,72)){if(q.kind!=="resource")continue;const rr=this.state.resources.get(q.id);if(!rr||!rr.alive)continue;const oceanThing=rr.type==="oceanRock"||BIOME_RESOURCE_INFO[rr.type]?.biome==="ocean";if(oceanThing&&dist(pos.x,pos.y,rr.x,rr.y)<solid+(Number(rr.solidR)||7)+18){blocked=true;break;}}if(blocked)continue;this.addResource(type,pos.x,pos.y,hp,solid,0,scale,rand(-.5,.5));break;}};
     add("oceanRock",1450,4,10,.48,2.65);add("oceanUrchin",190,4,6.5,.88,1.35);add("oceanAnemone",180,5,5.5,.94,1.45);add("oceanBlueSeaweed",300,4,6,1.35,2.25);add("oceanGreenSeaweed",360,4,6,1.45,2.45);
   }
-  placeGalaxaytropicFeatures(){
+  placeGalaxyTropicsFeatures(){
     const spec=outerIslandById("galaxaytropic");if(!spec)return;
     const place=(type,count,hp,minScale,maxScale)=>{for(let i=0;i<count;i++)for(let tries=0;tries<110;tries++){const scale=rand(minScale,maxScale),solid=type==="tree"?8.8*scale:type==="rock"?26.5*scale:type==="bush"?10.8*scale:11*scale,canopy=type==="tree"?46*scale:type==="bush"?24*scale:0,pos=randomPointOnOuterIsland(spec,Math.max(90,solid+55));if(!this.canPlaceOuterIsland(spec,pos.x,pos.y,solid))continue;this.addResource(type,pos.x,pos.y,hp,solid,canopy,scale,type==="galaxyCelestFruit"?rand(-.35,.35):0);break;}};
-    place("tree",250,9,1.15,2.1);place("rock",210,4,.85,1.95);place("bush",185,8,1.0,1.65);place("galaxyCelestFruit",72,5,1.05,1.55);
+    place("tree",250,9,1.15,2.1);place("rock",210,4,.85,1.95);place("bush",185,8,1.0,1.65);place("galaxyCelestFruit",18,5,1.05,1.55);
   }
 
   generateWorld(){
@@ -2222,7 +2222,7 @@ export class WorldRoom extends Room {
     for(let ri=0;ri<nonDesert.length;ri++){const riverBiome=nonDesert[ri]||"forest",start=randomPointInBiome(riverBiome,720),baseAngle=rand(-Math.PI,Math.PI);let cx=start.x,cy=start.y;for(let seg=0;seg<6;seg++){const ang=baseAngle+Math.sin(seg*.9+ri)*.18,rx=rand(300,390),ry=rand(52,72);if(seg){cx+=Math.cos(ang)*rx*.86;cy+=Math.sin(ang)*rx*.86;}const cp=islandConstrainedPoint(cx,cy,rx+180);cx=cp.x;cy=cp.y;if(worldBiomeAt(cx,cy)==="desert"||!this.canPlace(cx,cy,ry+38,0)||!waterPlacementClear(this.state.resources,cx,cy,rx,ry,34))continue;this.addResource("river",cx,cy,1,rx,ry,1,ang);}}
     this.placeBiomeFeatures();
     this.placeUnderwaterFeatures();
-    this.placeGalaxaytropicFeatures();
+    this.placeGalaxyTropicsFeatures();
     this.scatter("tree",1450,9,240);this.scatter("rock",860,4,240);this.scatter("log",540,2.4,180);this.scatter("bush",980,8,180);
     for(let i=0;i<10;i++)for(let t=0;t<70;t++){const pos=randomLandPoint(500);if(dist(pos.x,pos.y,WORLD_W/2,WORLD_H/2)<500||!this.canPlace(pos.x,pos.y,48,0))continue;this.addGold(pos.x,pos.y,"huge",48,40);break;}
     for(let i=0;i<82;i++)for(let t=0;t<55;t++){const pos=randomLandPoint(170);if(!this.canPlace(pos.x,pos.y,16,0))continue;this.addGold(pos.x,pos.y,"small",16,6);break;}
@@ -2886,16 +2886,16 @@ export class WorldRoom extends Room {
     }
     else if(food==="greenSeaweed"){
       if((inv.greenSeaweed||0)<1)return;inv.greenSeaweed--;
-      if(validMount){mount.hp=Math.min(mount.maxHp,mount.hp+30);this.broadcastEntityHealth("pet",p.ridingPetId,mount);send("Green Seaweed — powerful healing for your mounted pet");}
-      else{p.health=Math.min(p.maxHealth,p.health+30);send("Green Seaweed — +30 HP");}
+      if(validMount){mount.hp=Math.min(mount.maxHp,mount.hp+70);this.broadcastEntityHealth("pet",p.ridingPetId,mount);send("Green Seaweed — massive healing for your mounted pet");}
+      else{p.health=Math.min(p.maxHealth,p.health+70);send("Green Seaweed — +70 HP");}
     }
     else if(food==="blueSeaweed"){
       if((inv.blueSeaweed||0)<1)return;inv.blueSeaweed--;p._blueSeaweedUntil=Math.max(Number(p._blueSeaweedUntil)||0,this.state.worldTime+BLUE_SEAWEED_DURATION);send(`Blue Seaweed — deep-ocean protection and full movement for ${BLUE_SEAWEED_DURATION}s`,{duration:BLUE_SEAWEED_DURATION});
     }
     else if(food==="celestFruit"){
       if((inv.celestFruit||0)<1)return;inv.celestFruit--;
-      if(Math.random()<.5){p.ridingPetId="";this.damageTarget({kind:"player",id:client.sessionId},999999,"world","");send("Celest Fruit backfired — it killed you!",{killed:true,duration:0});}
-      else{p._blueSeaweedUntil=Math.max(Number(p._blueSeaweedUntil)||0,this.state.worldTime+CELEST_FRUIT_DURATION);send("Celest Fruit succeeded — underwater protection for 5 minutes!",{duration:CELEST_FRUIT_DURATION});}
+      if(Math.random()<.5){p.ridingPetId="";this.damageTarget({kind:"player",id:client.sessionId},999999,"world","");send("Celestial Flower backfired — it killed you!",{killed:true,duration:0});}
+      else{p._blueSeaweedUntil=Math.max(Number(p._blueSeaweedUntil)||0,this.state.worldTime+CELEST_FRUIT_DURATION);send("Celestial Flower succeeded — underwater protection for 5 minutes!",{duration:CELEST_FRUIT_DURATION});}
     }
     else if(food==="honey"){
       if((inv.honey||0)<1)return;inv.honey--;
@@ -3751,8 +3751,23 @@ export class WorldRoom extends Room {
     // uses the nearest living player because online can have several players,
     // but the movement speeds, ranges, flee rules, bite contact and ability
     // timing intentionally match the offline rules.
-    for(const[id,a]of this.state.animals){const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
-      if(!a||a.hp<=0)continue;
+    for(const[id,a]of this.state.animals){
+      if(!a)continue;
+      // Hard death invariant: a zero-HP wild animal can never stay in the
+      // authoritative world and keep fighting. Normal damage paths delete on
+      // the killing hit; this catches any delayed/status/corrupt edge case.
+      if((Number(a.hp)||0)<=0){
+        a.hp=0;a.dead=true;a.enraged=false;a.combat=0;a.sleeping=false;
+        this.broadcastEntityHealth("animal",id,a);
+        this.state.animals.delete(id);
+        this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.clearWildMate(id);
+        for(const[petId,focus]of Array.from(this.petFocusTargets.entries())){
+          if(focus&&focus.kind==="animal"&&focus.id===id){this.petFocusTargets.delete(petId);this.petHuntState.delete(petId);this.petFollowState.delete(petId);this.petChaseState.delete(petId);}
+        }
+        continue;
+      }
+      if(a.dead){this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.clearWildMate(id);continue;}
+      const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
       const forcedActive=this.enemyOwnerByPet.has(id)||this.animalAggro.has(id)||this.wildMateTargets.has(id)||a.tameFailedAggro||a.desperateAggro||(a.recentHit||0)>0;
       if(!forcedActive&&!this.hasNearbyPlayerOrPet(a.x,a.y,1250))continue;
       if(this.keepWildInHomeBiome(id,a,dt))continue;
