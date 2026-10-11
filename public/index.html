@@ -6547,7 +6547,7 @@ const BUILD_TIER_META={
     {name:"Iron Scuba Suit",cost:{stone:18,gold:9},desc:"A much larger tank with near-normal underwater movement."},
     {name:"Gem Scuba Suit",cost:{stone:20,gold:13},desc:"Final scuba suit. Ruby is fastest, Emerald makes oxygen last longest, Diamond gives a larger tank and better protection while suffocating."}],
   BattleBot:[
-    {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A durable melee combat robot that follows you closely and attacks nearby enemies."},
+    {name:"Battle Bot",cost:{wood:10,stone:20,gold:8},desc:"A melee combat robot that follows you closely and only attacks targets you personally attack."},
     {name:"Reinforced Battle Bot",cost:{stone:24,gold:10},desc:"More health and stronger melee attacks while keeping pace with you."},
     {name:"Iron Battle Bot",cost:{stone:28,gold:14},desc:"Choose its permanent combat style: stronger Melee or faster-attacking Ranger."},
     {name:"Elemental Battle Bot",cost:{stone:24,gold:18},desc:"Final Battle Bot. Keep your Melee/Ranger style and add Water, Fire, Lightning, Plant, Void, or Light."}],
@@ -8760,7 +8760,7 @@ const ANIMAL_BALANCE = {
   boar:   { hpMul:1.62, damageTaken:0.70, attack:9.0 },
   saber:  { hpMul:1.00, babyHpMul:1.78, damageTaken:0.98, attack:12.0 },
   clouded:{ hpMul:0.98, babyHpMul:1.52, damageTaken:0.96, attack:11.1 },
-  queenbee:{ hpMul:1.28, damageTaken:0.92, attack:10.5 },
+  queenbee:{ hpMul:3.20, damageTaken:0.45, attack:10.5 },
   workerbee:{ hpMul:1.02, damageTaken:0.98, attack:9.2 },
   dronebee:{ hpMul:0.94, damageTaken:1.02, attack:10.8 },
 };
@@ -8831,6 +8831,7 @@ function animalDamageTaken(type, stage, rawDamage) {
   const speciesStage = stage === "bigmomma" ? (BIG_MOMMA_DEF_MUL[type] ?? 1) : 1;
   return Math.max(0.1, raw * b.damageTaken * stageMul * speciesStage);
 }
+function queenBeeBiteDot(stage){return ({baby:8,adult:14,boss:22,superboss:32,bigmomma:48})[String(stage||"adult")]||14;}
 function dogWallStats(stage, level=1) {
   const lv = Math.max(1, Number(level) || 1);
   const table = {
@@ -8875,7 +8876,7 @@ const PET_ABILITY_DAMAGE_TABLE = {
   },
   fennec:{baby:{damage:15,per:0},adult:{damage:20,per:0},boss:{damage:25,per:0},superboss:{damage:40,per:0},bigmomma:{damage:50,per:0}},
 
-queenbee:{baby:{damage:8,dot:8,per:0},adult:{damage:16,dot:14,per:0},boss:{damage:22,dot:20,per:0},superboss:{damage:30,dot:28,per:0},bigmomma:{damage:42,dot:40,per:0}},
+queenbee:{baby:{damage:8,dot:14,per:0},adult:{damage:16,dot:24,per:0},boss:{damage:22,dot:36,per:0},superboss:{damage:30,dot:50,per:0},bigmomma:{damage:42,dot:70,per:0}},
 workerbee:{baby:{damage:8,dot:6,per:0},adult:{damage:14,dot:10,per:0},boss:{damage:20,dot:14,per:0},superboss:{damage:26,dot:18,per:0},bigmomma:{damage:34,dot:24,per:0}},
 dronebee:{baby:{damage:12,per:0},adult:{damage:20,per:0},boss:{damage:28,per:0},superboss:{damage:38,per:0},bigmomma:{damage:50,per:0}},
   deer: {
@@ -9060,6 +9061,7 @@ function isBossTier(stage) {
   return stage === "boss" || stage === "superboss" || stage === "bigmomma";
 }
 function stageDisplayName(stageOrAnimal, maybeGender) {
+  if(stageOrAnimal&&typeof stageOrAnimal==="object"&&stageOrAnimal.larvaPet)return "Larva";
   const stage = typeof stageOrAnimal === "string" ? stageOrAnimal : (stageOrAnimal?.stage || "");
   const gender = maybeGender || (stageOrAnimal && typeof stageOrAnimal === "object" ? stageOrAnimal.gender : "");
   if (stage === "superboss") return "Super Boss";
@@ -9439,6 +9441,9 @@ function expToNext(stage, level) {
   if (stage === "superboss") return 420 + level * 45;
   return 9999;
 }
+function wildStageMinLevel(stage){return stage==="adult"?4:stage==="boss"?8:stage==="superboss"?12:stage==="bigmomma"?16:1;}
+function petStageMinLevel(stage,larvaOrigin=false){if(larvaOrigin)return stage==="adult"?8:stage==="boss"?12:stage==="superboss"?16:stage==="baby"?4:1;return stage==="adult"?4:stage==="boss"?8:stage==="superboss"?12:1;}
+function petNextStageAtLevel(p){if(!p||p.larvaPet)return"";const lv=Math.max(1,Math.floor(Number(p.level)||1)),larva=!!p.larvaOrigin;if(p.stage==="baby"&&lv>=(larva?8:4))return"adult";if(p.stage==="adult"&&lv>=(larva?12:8))return"boss";if(p.stage==="boss"&&lv>=(larva?16:12))return"superboss";return"";}
 
 function givePetExp(p, amount) {
   if (!p || p.dead) return;
@@ -9448,30 +9453,27 @@ function givePetExp(p, amount) {
     p.maxHp = upgradedPetMaxHp(p.type,"superboss"); p.hp = Math.min(p.hp||p.maxHp,p.maxHp);
     p.speed = upgradedPetSpeed(p.type,"superboss");
   }
+  p.level=Math.max(p.larvaPet?1:petStageMinLevel(p.stage,!!p.larvaOrigin),Math.floor(Number(p.level)||1));
   amount = Math.max(0, Number(amount) || 0) * runPetXpMul();
   if (amount <= 0) return;
   p._xpBarShownAt = performance.now();
-  p.exp = (p.exp || 0) + amount;
+  p.exp = Math.max(0,Number(p.exp)||0) + amount;
   let safety=0;
   while(safety++<24){
     const need=expToNext(p.stage,p.level||1);
     if(p.exp<need)break;
     p.exp-=need; p.level=(p.level||1)+1;
-    let grew=false;
-    if(p.stage==="baby"&&p.level>=4){p.stage="adult";grew=true;}
-    else if(p.stage==="adult"&&p.level>=5){p.stage="boss";grew=true;}
-    else if(p.stage==="boss"&&p.level>=6){p.stage="superboss";grew=true;}
-    if(grew){
-      p.r=animalRadius(p.type,p.stage); p.maxHp=upgradedPetMaxHp(p.type,p.stage); p.hp=p.maxHp;
-      p.speed=upgradedPetSpeed(p.type,p.stage); p.level=1;
-      const label=p.stage==="adult"?"ADULT!":p.stage==="boss"?"BOSS!":"SUPER BOSS!";
-      const color=p.stage==="adult"?"#7be08a":p.stage==="boss"?"#f2c94c":"#ffe66d";
-      banner(`${petDisplayName(p)} became ${stageDisplayName(p.stage, p.gender)}!`);
-      spark(p.x,p.y,color,p.stage==="superboss"?26:18,p.stage==="superboss"?175:140);
-      floatText(p.x,p.y-p.r-18,label,color);
-    }else{
-      floatText(p.x,p.y-p.r-12,"Lv "+p.level,p.stage==="superboss"?"#ffe66d":"#a0e0ff");
+    if(p.larvaPet&&p.level>=4){
+      p.larvaPet=false;p.stage="baby";if(/ Larva$/i.test(String(p.petName||"")))p.petName=String(PET_TYPES[p.type]?.name||p.type).slice(0,14);p.r=animalRadius(p.type,"baby");p.maxHp=upgradedPetMaxHp(p.type,"baby");p.hp=p.maxHp;p.speed=upgradedPetSpeed(p.type,"baby");
+      banner(`${petDisplayName(p)} became a Baby at Lv ${p.level}!`);spark(p.x,p.y,"#ffe66d",18,135);floatText(p.x,p.y-p.r-18,`BABY · LV ${p.level}`,"#ffe66d");continue;
     }
+    const next=petNextStageAtLevel(p);
+    if(next){
+      p.stage=next;p.r=animalRadius(p.type,next);p.maxHp=upgradedPetMaxHp(p.type,next);p.hp=p.maxHp;p.speed=upgradedPetSpeed(p.type,next);
+      const label=next==="adult"?"ADULT!":next==="boss"?"BOSS!":"SUPER BOSS!";
+      const color=next==="adult"?"#7be08a":next==="boss"?"#f2c94c":"#ffe66d";
+      banner(`${petDisplayName(p)} became ${stageDisplayName(next,p.gender)} at Lv ${p.level}!`);spark(p.x,p.y,color,next==="superboss"?26:18,next==="superboss"?175:140);floatText(p.x,p.y-p.r-18,`${label} · LV ${p.level}`,color);
+    }else floatText(p.x,p.y-p.r-12,"Lv "+p.level,p.stage==="superboss"?"#ffe66d":"#a0e0ff");
   }
   syncPetCards();
 }
@@ -10766,6 +10768,7 @@ function updateNetAnimalVisual(v, s, id, owned = false) {
     v.stoneFruitStacks = Math.max(0, Math.floor(Number(s.stoneFruitStacks) || 0));
     v.armorTier = Math.max(-1, Math.floor(Number(s.armorTier)));
     v.armorGem = String(s.armorGem || "");
+    v.larvaPet=!!s.larvaPet;v.larvaOrigin=!!s.larvaOrigin;
   }
   v.sleeping = !!s.sleeping;
   if (fresh || !Number.isFinite(v.tailPhase)) v.tailPhase = Number(s.tailPhase) || 0;
@@ -10856,17 +10859,18 @@ function updateNetworkAnimalInterpolation(dt) {
 
     // Keep animation phase continuous locally. This is what removes the visible
     // head/tail "phase jumping" from server snapshots.
-    const measuredRatio = Math.max(0, Math.min(1.5, Math.hypot(a._renderVX, a._renderVY) / Math.max(1, a.speed || 1)));
+    const measuredRatio = Math.max(0, Math.min(2.35, Math.hypot(a._renderVX, a._renderVY) / Math.max(1, a.speed || 1)));
     const oldAnimRatio = Number(a._netAnimMoveRatio) || 0;
     const animFollow = 1 - Math.exp(-4.2 * dt);
     a._netAnimMoveRatio = oldAnimRatio + (measuredRatio - oldAnimRatio) * animFollow;
+    const animalCadenceRatio = Math.min(1, Math.max(0, a._netAnimMoveRatio));
     a._netAnimPhase = (Number(a._netAnimPhase) || Number(a.tailPhase) || 0) +
-      dt * (0.82 + a._netAnimMoveRatio * 2.45);
+      dt * (0.82 + animalCadenceRatio * 2.45);
 
     // Tail timing gets its own slower-smoothed rate. Network velocity can jump
     // between patches; letting those jumps directly change tail frequency is
     // what caused the high-speed twitch.
-    const tailTargetRate = 0.76 + a._netAnimMoveRatio * 2.30;
+    const tailTargetRate = 0.76 + animalCadenceRatio * 2.30;
     let tailRate = Number.isFinite(a._netTailRate) ? a._netTailRate : tailTargetRate;
     const tailRateFollow = 1 - Math.exp(-2.35 * dt);
     let tailRateStep = (tailTargetRate - tailRate) * tailRateFollow;
@@ -10901,10 +10905,13 @@ function updateNetworkPetInterpolation(dt) {
       const rvx = Number(player._actualMoveVX) || 0, rvy = Number(player._actualMoveVY) || 0;
       p._renderVX = rvx; p._renderVY = rvy;
       const renderSpeed = Math.hypot(rvx, rvy);
-      const measuredRatio = Math.max(0, Math.min(1.5, renderSpeed / Math.max(1, p.speed || 1)));
+      const measuredRatio = Math.max(0, Math.min(2.35, renderSpeed / Math.max(1, p.speed || 1)));
       p._netAnimMoveRatio = (Number(p._netAnimMoveRatio)||0) + (measuredRatio-(Number(p._netAnimMoveRatio)||0))*(1-Math.exp(-4.2*dt));
-      p._netAnimPhase = (Number(p._netAnimPhase)||Number(p.tailPhase)||0) + dt*(0.82+p._netAnimMoveRatio*2.45);
-      p._netTailPhase = (Number.isFinite(p._netTailPhase)?p._netTailPhase:(Number(p.tailPhase)||0)) + dt*(0.76+p._netAnimMoveRatio*2.30);
+      // High-speed pets take wider strides instead of spinning the head/tail phase
+      // faster and faster. This prevents the animation from visually glitching.
+      const rideCadenceRatio = Math.min(1, Math.max(0, p._netAnimMoveRatio));
+      p._netAnimPhase = (Number(p._netAnimPhase)||Number(p.tailPhase)||0) + dt*(0.82+rideCadenceRatio*2.45);
+      p._netTailPhase = (Number.isFinite(p._netTailPhase)?p._netTailPhase:(Number(p.tailPhase)||0)) + dt*(0.76+rideCadenceRatio*2.30);
       p.tailPhase = p._netTailPhase;
       p._visualMoveSpeed = renderSpeed;
       if (renderSpeed > 0.3) p._visualMoveAt = renderFrameNowMs;
@@ -10976,14 +10983,17 @@ function updateNetworkPetInterpolation(dt) {
 
     // Local continuous pet animation instead of server snapshot phase.
     const renderSpeed = Math.hypot(p._renderVX, p._renderVY);
-    const measuredRatio = Math.max(0, Math.min(1.5, renderSpeed / Math.max(1, p.speed || 1)));
+    const measuredRatio = Math.max(0, Math.min(2.35, renderSpeed / Math.max(1, p.speed || 1)));
     const oldAnimRatio = Number(p._netAnimMoveRatio) || 0;
     const animFollow = 1 - Math.exp(-4.4 * dt);
     p._netAnimMoveRatio = oldAnimRatio + (measuredRatio - oldAnimRatio) * animFollow;
+    // Keep stride amplitude responsive above normal speed, but cap cadence.
+    // Extra speed now becomes a bigger side-to-side head/tail sweep, not a flicker.
+    const petCadenceRatio = Math.min(1, Math.max(0, p._netAnimMoveRatio));
     p._netAnimPhase = (Number(p._netAnimPhase) || Number(p.tailPhase) || 0) +
-      dt * (0.84 + p._netAnimMoveRatio * 2.50);
+      dt * (0.84 + petCadenceRatio * 2.50);
 
-    const tailTargetRate = 0.78 + p._netAnimMoveRatio * 2.35;
+    const tailTargetRate = 0.78 + petCadenceRatio * 2.35;
     let tailRate = Number.isFinite(p._netTailRate) ? p._netTailRate : tailTargetRate;
     const tailRateFollow = 1 - Math.exp(-2.45 * dt);
     let tailRateStep = (tailTargetRate - tailRate) * tailRateFollow;
@@ -11703,7 +11713,15 @@ async function connectMultiplayer(options={}) {
     room.onMessage("hiveEnterResult", (data={})=>{
       if(!data?.success){banner("You must be beside a hive to enter.",true);return;}
       const hive=resources.find(r=>String(r?.netId||r?.id||"")===String(data.hiveId||""))||nearestEnterableHive(160);
-      startHiveInterior(hive||{x:player.x,y:player.y,netId:data.hiveId},{hiveId:String(data.hiveId||"")});
+      startHiveInterior(hive||{x:player.x,y:player.y,netId:data.hiveId},{hiveId:String(data.hiveId||""),entryKey:String(data.entryKey||"")});
+    });
+    room.onMessage("hiveExitResult", (data={})=>{
+      // Server-authoritative exit: always snap to the position beside the same
+      // hive session instead of letting an old world snapshot put us elsewhere.
+      if(Number.isFinite(Number(data.x)))player.x=Number(data.x);
+      if(Number.isFinite(Number(data.y)))player.y=Number(data.y);
+      if(Number.isFinite(Number(data.angle)))player.angle=Number(data.angle);
+      player.swimming=false;
     });
     room.onMessage("hiveTameResult", (data={})=>{
       const h=game.hiveInterior;if(!h?.active)return;const larvaId=String(data.larvaId||h.tamePendingLarvaId||""),larva=(h.larvae||[]).find(v=>v.id===larvaId)||hiveNearestLarva(9999);h.tamePendingLarvaId="";
@@ -11803,6 +11821,7 @@ async function connectMultiplayer(options={}) {
       else if (kind === "resource") obj = net.resourceVisuals.get(id);
       else if (kind === "chest") obj = net.chestVisuals.get(id);
       else if (kind === "wall") obj = net.wallVisuals.get(id);
+      else if (kind === "tower") obj = net.towerVisuals.get(id);
       if (obj) {
         applyAuthoritativeEntityHealthVisual(obj, hp, maxHp, !!data.dead, 1800);
         if (kind === "resource" && hp <= 0) obj.alive = false;
@@ -11859,7 +11878,7 @@ async function connectMultiplayer(options={}) {
         player.y = clamp(player.y + dy * pushBlend, PLAYER_R, WORLD_H - PLAYER_R);
       }
     });
-    room.onMessage("petGrew", d => banner(`${PET_TYPES[d.type]?.name||"Pet"} became ${stageDisplayName(d.stage)}!`));
+    room.onMessage("petGrew", d => banner(`${PET_TYPES[d.type]?.name||"Pet"} became ${stageDisplayName(d.stage)}${Number(d.level)>0?` at Lv ${Math.floor(Number(d.level))}`:""}!`));
     room.onMessage("familyOlderSiblings", d => {
       const ids = [String(d?.brotherId||""), String(d?.sisterId||"")].filter(Boolean);
       const names = ids.map(id => net.petVisuals.get(id)).filter(Boolean).map(p => petDisplayName(p));
@@ -12339,48 +12358,45 @@ function nearestEnterableHive(maxDist=118){
   }
   return best;
 }
-const HIVE_INTERIOR_W=2400,HIVE_INTERIOR_H=1700;
+const HIVE_BASE_W=2400,HIVE_BASE_H=1700,HIVE_SCALE=1.50;
+const HIVE_INTERIOR_W=Math.round(HIVE_BASE_W*HIVE_SCALE),HIVE_INTERIOR_H=Math.round(HIVE_BASE_H*HIVE_SCALE);
+const hiveScaleRect=v=>({ ...v,x:v.x*HIVE_SCALE,y:v.y*HIVE_SCALE,w:v.w*HIVE_SCALE,h:v.h*HIVE_SCALE });
+const hiveScalePoint=v=>({ ...v,x:v.x*HIVE_SCALE,y:v.y*HIVE_SCALE });
 const HIVE_EXIT_PORTALS=[
   {key:"northWest",side:"top",x:590,y:18,w:180,h:72,dx:0,dy:-1,label:"Hive opening"},
   {key:"northEast",side:"top",x:1640,y:18,w:180,h:72,dx:0,dy:-1,label:"Hive opening"},
-  {key:"southWest",side:"bottom",x:410,y:HIVE_INTERIOR_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
-  {key:"southEast",side:"bottom",x:1810,y:HIVE_INTERIOR_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
+  {key:"southWest",side:"bottom",x:410,y:HIVE_BASE_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
+  {key:"southEast",side:"bottom",x:1810,y:HIVE_BASE_H-90,w:190,h:72,dx:0,dy:1,label:"Hive opening"},
   {key:"west",side:"left",x:18,y:735,w:72,h:210,dx:-1,dy:0,label:"Hive opening"},
-  {key:"east",side:"right",x:HIVE_INTERIOR_W-90,y:735,w:72,h:210,dx:1,dy:0,label:"Hive opening"}
-];
+  {key:"east",side:"right",x:HIVE_BASE_W-90,y:735,w:72,h:210,dx:1,dy:0,label:"Hive opening"}
+].map(hiveScaleRect);
 const HIVE_LARVA_SPAWNS=[
   {id:"larva1",x:460,y:420},{id:"larva2",x:1900,y:420},
   {id:"larva3",x:620,y:840},{id:"larva4",x:1740,y:840},
   {id:"larva5",x:460,y:1120},{id:"larva6",x:1900,y:1260},
   {id:"larva7",x:1100,y:1400},{id:"larva8",x:1420,y:280}
-];
-// The hive is a branching interior biome, not a one-path minigame. These walls
-// form rooms, loops and alternate corridors while keeping several exterior openings.
+].map(hiveScalePoint);
+// The larger hive keeps the branching loops but stretches them into cave-like
+// chambers. Walls are still cheap rectangles for collision and render as many
+// individual honeycomb cells.
 const HIVE_MAZE_WALLS=[
-  // outer shell with six doorway gaps
   {x:0,y:0,w:560,h:34},{x:790,y:0,w:820,h:34},{x:1840,y:0,w:560,h:34},
-  {x:0,y:HIVE_INTERIOR_H-34,w:380,h:34},{x:630,y:HIVE_INTERIOR_H-34,w:1140,h:34},{x:2030,y:HIVE_INTERIOR_H-34,w:370,h:34},
+  {x:0,y:HIVE_BASE_H-34,w:380,h:34},{x:630,y:HIVE_BASE_H-34,w:1140,h:34},{x:2030,y:HIVE_BASE_H-34,w:370,h:34},
   {x:0,y:0,w:34,h:700},{x:0,y:980,w:34,h:720},
-  {x:HIVE_INTERIOR_W-34,y:0,w:34,h:700},{x:HIVE_INTERIOR_W-34,y:980,w:34,h:720},
-  // upper-left chambers / loop
+  {x:HIVE_BASE_W-34,y:0,w:34,h:700},{x:HIVE_BASE_W-34,y:980,w:34,h:720},
   {x:250,y:210,w:560,h:34},{x:250,y:210,w:34,h:370},{x:250,y:546,w:330,h:34},
   {x:548,y:390,w:34,h:360},{x:548,y:716,w:430,h:34},{x:944,y:450,w:34,h:300},
-  // upper-right chambers / loop
   {x:1280,y:190,w:760,h:34},{x:1280,y:190,w:34,h:300},{x:1280,y:456,w:330,h:34},
   {x:1576,y:456,w:34,h:280},{x:1576,y:702,w:560,h:34},{x:2102,y:360,w:34,h:376},
-  // central broken walls leave multiple crossings
   {x:840,y:315,w:34,h:235},{x:840,y:315,w:250,h:34},{x:1056,y:315,w:34,h:165},
   {x:1110,y:610,w:300,h:34},{x:1110,y:610,w:34,h:285},{x:1376,y:610,w:34,h:285},
-  // lower-left loops
   {x:210,y:980,w:470,h:34},{x:646,y:980,w:34,h:300},{x:340,y:1246,w:340,h:34},
   {x:340,y:1246,w:34,h:240},{x:340,y:1452,w:500,h:34},{x:806,y:1180,w:34,h:306},
-  // lower-right loops
   {x:1500,y:1000,w:690,h:34},{x:1500,y:1000,w:34,h:250},{x:1500,y:1216,w:340,h:34},
   {x:1806,y:1216,w:34,h:280},{x:1806,y:1462,w:390,h:34},{x:2162,y:1120,w:34,h:376},
-  // short islands that make the middle feel organic rather than a hallway
   {x:790,y:900,w:300,h:34},{x:980,y:1080,w:34,h:260},{x:980,y:1306,w:300,h:34},
   {x:1280,y:930,w:280,h:34},{x:1280,y:930,w:34,h:220},{x:1160,y:1116,w:154,h:34}
-];
+].map(hiveScaleRect);
 function hiveCircleRectHit(x,y,r,rect){const qx=clamp(x,rect.x,rect.x+rect.w),qy=clamp(y,rect.y,rect.y+rect.h),dx=x-qx,dy=y-qy;return dx*dx+dy*dy<r*r;}
 function hiveBeeHitboxes(b){
   if(!b)return[];const hits=animalTorsoHeadHitboxes(b);return hits.length?hits:[{x:Number(b.x)||0,y:Number(b.y)||0,r:Math.max(7,(Number(b.r)||16)*.72)}];
@@ -12418,15 +12434,16 @@ function hiveSpawnInsidePortal(portal){
   const cx=portal.x+portal.w*.5,cy=portal.y+portal.h*.5,margin=72;
   return{x:clamp(cx-portal.dx*margin,58,HIVE_INTERIOR_W-58),y:clamp(cy-portal.dy*margin,58,HIVE_INTERIOR_H-58),angle:Math.atan2(-portal.dy,-portal.dx)};
 }
+function hivePetAllowed(p){return !!(p&&!p.dead&&(p.larvaPet||String(p.stage||"")==="baby"));}
 function makeHiveBee(i){
   const types=["workerbee","workerbee","dronebee","workerbee","workerbee","dronebee","workerbee","queenbee"],type=types[i%types.length],stage=type==="queenbee"?"adult":(i%5===0?"baby":"adult"),r=animalRadius(type,stage),maxHp=Math.max(12,Math.round(typeHp(type,stage)*.72));
   const cols=5,row=Math.floor(i/cols),col=i%cols;
-  return{type,stage,x:390+col*390+(row%2)*70,y:270+row*310,angle:(i*.73)%TAU,r,hp:maxHp,maxHp,speed:animalSpeed(type,stage,false),coat:(PET_TYPES[type]?.coats||[PET_TYPES[type]?.color||"#f2c94c"])[0],spots:[],spotCol:"#392b18",sleeping:stage==="baby"&&i%2===0,owned:false,dead:false,flash:0,attackAnim:0,wander:(i*.51)%TAU,wanderT:1+(i%4)*.4,atkCd:0,aggro:false,flee:false};
+  return{type,stage,x:(390+col*390+(row%2)*70)*HIVE_SCALE,y:(270+row*310)*HIVE_SCALE,angle:(i*.73)%TAU,r,hp:maxHp,maxHp,speed:animalSpeed(type,stage,false),coat:(PET_TYPES[type]?.coats||[PET_TYPES[type]?.color||"#f2c94c"])[0],spots:[],spotCol:"#392b18",sleeping:stage==="baby"&&i%2===0,owned:false,dead:false,flash:0,attackAnim:0,wander:(i*.51)%TAU,wanderT:1+(i%4)*.4,atkCd:0,aggro:false,flee:false};
 }
 function startHiveInterior(hive,data={}){
   if(game.hiveInterior?.active)return;
-  const c=offlineResourceCenter(hive||{}),hiveId=String(data.hiveId||hive?.netId||hive?.id||""),portal=hiveEntryPortalForApproach(hive),spawn=hiveSpawnInsidePortal(portal);
-  game.hiveInterior={active:true,hiveId,worldX:player.x,worldY:player.y,hiveWorldX:c.x||player.x,hiveWorldY:c.y||player.y,entryKey:portal.key,x:spawn.x,y:spawn.y,angle:spawn.angle,camX:0,camY:0,larvae:HIVE_LARVA_SPAWNS.map(v=>({...v,tamed:false,tamePending:false,petType:""})),tamePendingLarvaId:"",aggro:false,bees:Array.from({length:20},(_,i)=>makeHiveBee(i)),hitCd:0,enteredAt:performance.now(),petFollowers:(player.pets||[]).filter(p=>p&&!p.dead).map((p,i)=>({ref:p,x:spawn.x-42-(i%3)*30,y:spawn.y+34+Math.floor(i/3)*34,angle:spawn.angle}))};
+  const c=offlineResourceCenter(hive||{}),hiveId=String(data.hiveId||hive?.netId||hive?.id||""),portal=String(data.entryKey||"")?hivePortalByKey(String(data.entryKey)):hiveEntryPortalForApproach(hive),spawn=hiveSpawnInsidePortal(portal);
+  game.hiveInterior={active:true,hiveId,worldX:player.x,worldY:player.y,hiveWorldX:c.x||player.x,hiveWorldY:c.y||player.y,entryKey:portal.key,x:spawn.x,y:spawn.y,angle:spawn.angle,camX:0,camY:0,larvae:HIVE_LARVA_SPAWNS.map(v=>({...v,tamed:false,tamePending:false,petType:""})),tamePendingLarvaId:"",aggro:false,bees:Array.from({length:20},(_,i)=>makeHiveBee(i)),hitCd:0,enteredAt:performance.now(),petFollowers:(player.pets||[]).filter(hivePetAllowed).map((p,i)=>({ref:p,x:spawn.x-42-(i%3)*30,y:spawn.y+34+Math.floor(i/3)*34,angle:spawn.angle}))};
   player._preHiveVehicle=player.vehicleType||"";player.vehicleType="";player.riding=null;player.swimming=false;
   mouse.down=false;mouse.rdown=false;keys.clear();
   banner("Entered GIANT HIVE biome");
@@ -12439,8 +12456,8 @@ function hiveWorldExitPoint(h,portal){
 }
 function leaveHiveInterior(portalOrKey=null){
   const h=game.hiveInterior;if(!h?.active)return;const portal=typeof portalOrKey==="string"?hivePortalByKey(portalOrKey):(portalOrKey||hiveExitAt(h.x,h.y,80)||hivePortalByKey(h.entryKey)),out=hiveWorldExitPoint(h,portal);
-  game.hiveInterior=null;player.x=out.x;player.y=out.y;player.angle=out.angle;player.swimming=false;
-  for(const p of player.pets||[]){if(!p||p.dead)continue;p.x=player.x+rand(-32,32);p.y=player.y+rand(-32,32);}
+  const insidePets=new Set((h.petFollowers||[]).map(v=>v?.ref).filter(Boolean));game.hiveInterior=null;player.x=out.x;player.y=out.y;player.angle=out.angle;player.swimming=false;
+  for(const p of player.pets||[]){if(!p||p.dead||!insidePets.has(p))continue;p.x=player.x+rand(-32,32);p.y=player.y+rand(-32,32);}
   if(net.room){try{net.room.send("hiveExit",{hiveId:h.hiveId,exitKey:portal.key});}catch(_){}}
   updateVehicleEnterButton();banner("Left GIANT HIVE biome");
 }
@@ -12457,8 +12474,8 @@ function hiveNearestLarva(maxDist=74){
 function hiveNearLarva(){return hiveNearestLarva(74);}
 function hiveNearExit(){const h=game.hiveInterior;return h?.active?(hiveExitAt(h.x,h.y,62)||null):null;}
 function addOfflineHiveLarvaPet(type){
-  const info=PET_TYPES[type];if(!info)return;const stage="baby",rr=animalRadius(type,stage),maxHp=upgradedPetMaxHp(type,stage),coat=(info.coats||[info.color])[0]||info.color;
-  const pet={type,stage,x:player.x,y:player.y,angle:0,r:rr,hp:maxHp,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:`${info.name} Larva`,gender:canonicalAnimalGender(type,Math.random()<.5?"Female":"Male"),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0};
+  const info=PET_TYPES[type];if(!info)return;const stage="baby",fullR=animalRadius(type,stage),rr=Math.max(10,fullR*.58),fullHp=upgradedPetMaxHp(type,stage),maxHp=Math.max(8,Math.round(fullHp*.55)),coat=(info.coats||[info.color])[0]||info.color;
+  const pet={type,stage,x:player.x,y:player.y,angle:0,r:rr,hp:maxHp,maxHp,speed:upgradedPetSpeed(type,stage)*.92,coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:`${info.name} Larva`,gender:canonicalAnimalGender(type,"Female"),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0,larvaPet:true,larvaOrigin:true};
   player.pets.push(pet);achievementTamedSpecies(type);if(!meta.speciesCards)meta.speciesCards={};meta.speciesCards[type]=(meta.speciesCards[type]||0)+TAME_SPECIES_CARD_REWARD;saveMeta();syncPetCards();
   const h=game.hiveInterior;if(h?.active)h.petFollowers.push({ref:pet,x:h.x-48,y:h.y+34,angle:h.angle});
 }
@@ -12467,10 +12484,10 @@ function tryTameHiveLarva(){
   if(player.pets.filter(p=>p&&!p.dead&&!p.bredChild).length>=4){banner("Max 4 regular pets!",true);return true;}
   larva.tamePending=true;h.tamePendingLarvaId=larva.id;tameHeartStart({x:larva.x,y:larva.y,r:18,type:"workerbee",stage:"baby"},"hiveLarva");if(sfx.tameTry)sfx.tameTry();banner("Trying to tame the larva… 50% tame chance · successful larvae are 50/50 Worker or Queen");
   if(net.room){try{net.room.send("hiveTameLarva",{hiveId:h.hiveId,larvaId:larva.id});}catch(_){larva.tamePending=false;h.tamePendingLarvaId="";}return true;}
-  setTimeout(()=>{if(!game.hiveInterior?.active)return;const cur=game.hiveInterior,target=(cur.larvae||[]).find(v=>v.id===larva.id);cur.tamePendingLarvaId="";if(!target)return;target.tamePending=false;if(Math.random()<.5){const type=Math.random()<.5?"workerbee":"queenbee";target.tamed=true;target.petType=type;cur.aggro=true;for(const b of cur.bees)if(b&&!b.dead)b.aggro=true;tameHeartResolve(true,{x:target.x,y:target.y,r:18});addOfflineHiveLarvaPet(type);banner(`Larva tamed — ${PET_TYPES[type]?.name||"Bee"}. The hive bees are angry!`);}else{tameHeartResolve(false,{x:target.x,y:target.y,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}updateVehicleEnterButton();},650);return true;
+  setTimeout(()=>{if(!game.hiveInterior?.active)return;const cur=game.hiveInterior,target=(cur.larvae||[]).find(v=>v.id===larva.id);cur.tamePendingLarvaId="";if(!target)return;target.tamePending=false;if(Math.random()<.5){const type=Math.random()<.5?"workerbee":"queenbee";target.tamed=true;target.petType=type;cur.aggro=true;for(const b of cur.bees)if(b&&!b.dead)b.aggro=true;tameHeartResolve(true,{x:target.x,y:target.y,r:18});addOfflineHiveLarvaPet(type);banner(`Larva tamed — ${PET_TYPES[type]?.name||"Bee"} Larva. It must reach Lv 4 to become a Baby!`);}else{tameHeartResolve(false,{x:target.x,y:target.y,r:18});banner("The larva resisted. It is still asleep — you can try again.",true);}updateVehicleEnterButton();},650);return true;
 }
 function hiveBeeDamagePlayer(b,dmg){
-  if(net.room){try{net.room.send("hiveDamage",{amount:dmg});}catch(_){}}else hitPlayer(dmg,b);
+  if(net.room){try{net.room.send("hiveDamage",{amount:dmg,beeType:b?.type||"",stage:b?.stage||"adult"});}catch(_){}}else{hitPlayer(dmg,b);if(b?.type==="queenbee")applyOfflineFixedDot(player,false,b,queenBeeBiteDot(b.stage),5,"#69c84f",true);}
   game.shake=Math.max(game.shake||0,3);player.hurtFlash=Math.max(Number(player.hurtFlash)||0,.12);
 }
 function hiveInteriorAttack(toolName=null,toolData=null){
@@ -12483,9 +12500,23 @@ function hiveInteriorAttack(toolName=null,toolData=null){
   return true;
 }
 function updateHiveFollowers(h,dt){
-  const currentRefs=new Set((h.petFollowers||[]).map(v=>v?.ref).filter(Boolean));for(const p of player.pets||[])if(p&&!p.dead&&!currentRefs.has(p)){h.petFollowers.push({ref:p,x:h.x-48,y:h.y+34,angle:h.angle});currentRefs.add(p);}
-  const live=(h.petFollowers||[]).filter(v=>v?.ref&&!v.ref.dead);h.petFollowers=live;
-  for(let i=0;i<live.length;i++){const f=live[i],row=Math.floor(i/3),side=(i%3)-1,back=56+row*44,tx=h.x-Math.cos(h.angle)*back+Math.cos(h.angle+Math.PI/2)*side*42,ty=h.y-Math.sin(h.angle)*back+Math.sin(h.angle+Math.PI/2)*side*42,dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy),fr=Math.max(9,(f.ref.r||16)*.55);if(d>3){const sp=Math.min(d,Math.max(100,Number(f.ref.speed)||120)*1.4*dt);f.angle=Math.atan2(dy,dx);f.x+=dx/Math.max(1,d)*sp;f.y+=dy/Math.max(1,d)*sp;hiveResolveWalls(f,fr);}else f.angle=h.angle;for(const b of h.bees||[]){if(!b||b.dead)continue;hiveResolveCircleAgainstBee(f,fr,b);}hiveResolveWalls(f,fr);}
+  const currentRefs=new Set((h.petFollowers||[]).map(v=>v?.ref).filter(Boolean));
+  for(const p of player.pets||[])if(hivePetAllowed(p)&&!currentRefs.has(p)){const a=h.angle+Math.PI+rand(-.65,.65),r=100+rand(0,34);h.petFollowers.push({ref:p,x:h.x+Math.cos(a)*r,y:h.y+Math.sin(a)*r,angle:a,_hivePhase:rand(0,TAU)});currentRefs.add(p);}
+  const live=(h.petFollowers||[]).filter(v=>hivePetAllowed(v?.ref));h.petFollowers=live;
+  // Baby/Larva pets follow loosely inside the hive instead of being glued into a
+  // tight formation on top of the player. Their preferred spots drift slowly
+  // around the player and keep a real personal-space ring.
+  for(let i=0;i<live.length;i++){
+    const f=live[i],fr=Math.max(9,(f.ref.r||16)*.55),phase=(Number(f._hivePhase)||0)+game.time*.34+i*.71,ring=112+Math.floor(i/4)*54+(i%2)*14;
+    const arc=h.angle+Math.PI+(i%4-1.5)*.52+Math.sin(phase)*.18,tx=h.x+Math.cos(arc)*ring,ty=h.y+Math.sin(arc)*ring;
+    let dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy);
+    if(d>24){const moveSpeed=Math.max(105,Number(f.ref.speed)||120)*(d>180?1.75:1.18),sp=Math.min(d-18,moveSpeed*dt);f.angle=Math.atan2(dy,dx);f.x+=dx/Math.max(1,d)*sp;f.y+=dy/Math.max(1,d)*sp;}
+    const pd=dist(f.x,f.y,h.x,h.y),minPlayer=PLAYER_R+fr+34;if(pd<minPlayer){const a=pd>.01?angTo(h.x,h.y,f.x,f.y):arc;f.x=h.x+Math.cos(a)*minPlayer;f.y=h.y+Math.sin(a)*minPlayer;f.angle=a;}
+    hiveResolveWalls(f,fr);for(const b of h.bees||[]){if(!b||b.dead)continue;hiveResolveCircleAgainstBee(f,fr,b);}hiveResolveWalls(f,fr);
+  }
+  // Followers also separate from one another so two babies cannot pin each
+  // other against the player or a honeycomb wall.
+  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],b=live[j],ar=Math.max(9,(a.ref.r||16)*.55),br=Math.max(9,(b.ref.r||16)*.55),dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=ar+br+16;if(d>=min)continue;const q=d>.01?Math.atan2(dy,dx):(i+j+1)*1.37,push=(min-Math.max(.01,d))*.5;a.x-=Math.cos(q)*push;a.y-=Math.sin(q)*push;b.x+=Math.cos(q)*push;b.y+=Math.sin(q)*push;hiveResolveWalls(a,ar);hiveResolveWalls(b,br);}
 }
 function updateHiveInterior(dt){
   const h=game.hiveInterior;if(!h?.active)return;
@@ -12494,38 +12525,48 @@ function updateHiveInterior(dt){
   if(!player.vehicleType){if(mobileMode)h.angle=mobileFacingAngle;else h.angle=angTo(h.x,h.y,mouse.sx+(h.camX||0),mouse.sy+(h.camY||0));}
   const mv=currentMoveVector(),ml=Math.hypot(mv.x,mv.y);if(ml>.05){lastMovementInputAt=performance.now();let speed=148*starterMoveMul()*hydrationMoveMul()*stoneFruitMoveMul()*(((Number(player._honeyRushUntil)||0)>game.time)?(Number(player._honeyHasteMul)||1.2):1);if(player.heldSpecial==="Wall")speed*=.64;const nx=mv.x/ml,ny=mv.y/ml,oldX=h.x,oldY=h.y;h.x+=nx*speed*dt;h.y+=ny*speed*dt;const portal=hiveExitAt(h.x,h.y,22);if(portal&&(h.x<42||h.x>HIVE_INTERIOR_W-42||h.y<42||h.y>HIVE_INTERIOR_H-42)){leaveHiveInterior(portal);return;}hiveResolveWalls(h,PLAYER_R*.72);hiveResolvePlayerBeeHitboxes(h);player._actualMoveVX=(h.x-oldX)/Math.max(.001,dt);player._actualMoveVY=(h.y-oldY)/Math.max(.001,dt);player._actualMoving=Math.hypot(player._actualMoveVX,player._actualMoveVY)>2.5;}else{player._actualMoveVX=0;player._actualMoveVY=0;player._actualMoving=false;}
   h.hitCd=Math.max(0,(h.hitCd||0)-dt);
-  for(const b of h.bees){if(!b||b.dead)continue;b.atkCd=Math.max(0,(b.atkCd||0)-dt);b.flash=Math.max(0,(b.flash||0)-dt);b.attackAnim=Math.max(0,(b.attackAnim||0)-dt);const hpRatio=b.hp/Math.max(1,b.maxHp);if(b.type==="dronebee"&&hpRatio<.28)b.flee=true;if(b.aggro&&!b.flee){const a=Math.atan2(h.y-b.y,h.x-b.x);b.angle=a;b.x+=Math.cos(a)*Math.max(52,(b.speed||60)*.62)*dt;b.y+=Math.sin(a)*Math.max(52,(b.speed||60)*.62)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));if(animalHeadTouchesTarget(b,{x:h.x,y:h.y,r:PLAYER_R})&&b.atkCd<=0){b.atkCd=b.type==="queenbee"?.85:.72;b.attackAnim=.24;const dmg=b.type==="queenbee"?11:b.type==="dronebee"?8:6;hiveBeeDamagePlayer(b,dmg);}}else if(b.flee){const a=Math.atan2(b.y-h.y,b.x-h.x);b.angle=a;b.x+=Math.cos(a)*Math.max(72,(b.speed||60)*.78)*dt;b.y+=Math.sin(a)*Math.max(72,(b.speed||60)*.78)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}else{b.wanderT-=dt;if(b.wanderT<=0){b.wander=rand(0,TAU);b.wanderT=rand(1.2,3.4);}b.angle=b.wander;b.x+=Math.cos(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;b.y+=Math.sin(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}}
+  for(const b of h.bees){if(!b||b.dead)continue;b.atkCd=Math.max(0,(b.atkCd||0)-dt);b.flash=Math.max(0,(b.flash||0)-dt);b.attackAnim=Math.max(0,(b.attackAnim||0)-dt);const hpRatio=b.hp/Math.max(1,b.maxHp);if(b.type==="dronebee"&&hpRatio<.28)b.flee=true;if(b.aggro&&!b.flee){const a=Math.atan2(h.y-b.y,h.x-b.x),rageMul=h.aggro?2.15:1.05;b.angle=a;b.x+=Math.cos(a)*Math.max(h.aggro?155:78,(b.speed||60)*rageMul)*dt;b.y+=Math.sin(a)*Math.max(h.aggro?155:78,(b.speed||60)*rageMul)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));if(animalHeadTouchesTarget(b,{x:h.x,y:h.y,r:PLAYER_R})&&b.atkCd<=0){b.atkCd=b.type==="queenbee"?.85:.72;b.attackAnim=.24;const dmg=b.type==="queenbee"?11:b.type==="dronebee"?8:6;hiveBeeDamagePlayer(b,dmg);}}else if(b.flee){const a=Math.atan2(b.y-h.y,b.x-h.x);b.angle=a;b.x+=Math.cos(a)*Math.max(h.aggro?175:86,(b.speed||60)*(h.aggro?2.25:.92))*dt;b.y+=Math.sin(a)*Math.max(h.aggro?175:86,(b.speed||60)*(h.aggro?2.25:.92))*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}else{b.wanderT-=dt;if(b.wanderT<=0){b.wander=rand(0,TAU);b.wanderT=rand(1.2,3.4);}b.angle=b.wander;b.x+=Math.cos(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;b.y+=Math.sin(b.angle)*Math.max(18,(b.speed||60)*.25)*dt;hiveResolveWalls(b,Math.max(10,(b.r||16)*.5));}}
   hiveSeparateBees(h.bees);hiveResolvePlayerBeeHitboxes(h);
   updateHiveFollowers(h,dt);
   if(!player.dead&&!game.over){if(mouse.down||keys.has("f"))hiveInteriorAttack(player.tool||"Fist",TOOLS[player.tool||"Fist"]||TOOLS.Fist);}
   if(player.dead||game.over){game.hiveInterior=null;return;}updateAbilityFx(dt);updateFx(dt);updateVehicleEnterButton();
 }
 function drawHiveHoneycombFloor(){
-  ctx.fillStyle="#dcae25";ctx.fillRect(0,0,HIVE_INTERIOR_W,HIVE_INTERIOR_H);ctx.strokeStyle="rgba(107,69,10,.22)";ctx.lineWidth=2;
+  ctx.fillStyle="#5b3d15";ctx.fillRect(0,0,HIVE_INTERIOR_W,HIVE_INTERIOR_H);ctx.strokeStyle="rgba(192,139,39,.18)";ctx.lineWidth=2;
   const startX=Math.floor((game.hiveInterior?.camX||0)/64)*64-80,startY=Math.floor((game.hiveInterior?.camY||0)/56)*56-80,endX=startX+W+190,endY=startY+H+190;
   for(let y=startY;y<endY;y+=56)for(let x=startX+(Math.floor(y/56)&1)*32;x<endX;x+=64){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+24*Math.cos(a),py=y+24*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();}
 }
 function drawHiveWall(w){
   // Collision stays simple and fast, while the visible wax wall is built from
   // raised hex cells so the hive walls read as segmented honeycomb.
-  ctx.save();ctx.beginPath();ctx.rect(w.x,w.y,w.w,w.h);ctx.clip();ctx.fillStyle="#9a6110";ctx.fillRect(w.x,w.y,w.w,w.h);
+  ctx.save();ctx.beginPath();ctx.rect(w.x,w.y,w.w,w.h);ctx.clip();ctx.fillStyle="#4d3210";ctx.fillRect(w.x,w.y,w.w,w.h);
   const rr=18,stepX=rr*1.52,stepY=rr*1.32,startX=w.x-rr,startY=w.y-rr;
   for(let y=startY,row=0;y<=w.y+w.h+rr;y+=stepY,row++)for(let x=startX+(row&1)*stepX*.5;x<=w.x+w.w+rr;x+=stepX){
-    ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+rr*Math.cos(a),py=y+rr*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fillStyle=(row&1)?"#e0a01b":"#e8ad24";ctx.fill();ctx.strokeStyle="rgba(103,57,5,.62)";ctx.lineWidth=2;ctx.stroke();
-    ctx.beginPath();for(let i=0;i<3;i++){const a=Math.PI/3*i+Math.PI,px=x+(rr-4)*Math.cos(a),py=y+(rr-4)*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.strokeStyle="rgba(255,221,91,.20)";ctx.lineWidth=1.3;ctx.stroke();
+    ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i,px=x+rr*Math.cos(a),py=y+rr*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fillStyle=(row&1)?"#8b5d18":"#9b691d";ctx.fill();ctx.strokeStyle="rgba(38,24,7,.82)";ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();for(let i=0;i<3;i++){const a=Math.PI/3*i+Math.PI,px=x+(rr-4)*Math.cos(a),py=y+(rr-4)*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.strokeStyle="rgba(236,188,72,.12)";ctx.lineWidth=1.3;ctx.stroke();
   }
   ctx.restore();
 }
 function drawHivePortal(p){ctx.save();ctx.fillStyle="rgba(70,47,14,.48)";ctx.fillRect(p.x,p.y,p.w,p.h);ctx.strokeStyle="rgba(255,232,129,.75)";ctx.lineWidth=3;ctx.strokeRect(p.x+3,p.y+3,p.w-6,p.h-6);ctx.fillStyle="#fff0a8";ctx.font="700 13px sans-serif";ctx.textAlign="center";ctx.fillText("OUT",p.x+p.w*.5,p.y+p.h*.5+5);ctx.restore();}
+function drawHiveInteriorHealthBars(h,sx=0,sy=0){
+  const ox=-(h.camX||0)+sx,oy=-(h.camY||0)+sy;
+  // Player HP is always shown inside the dangerous hive, even at full health, so
+  // the player can decide whether to eat, retreat, or keep fighting.
+  drawTopHealthBar(h.x+ox,h.y+oy-48,62,8,clamp(player.health/Math.max(1,player.maxHealth),0,1),"#f2836a",`HP ${Math.ceil(player.health)}/${Math.ceil(player.maxHealth)}`);
+  for(const f of h.petFollowers||[]){if(!f?.ref||f.ref.dead)continue;const hp=Math.max(0,Number(f.ref.hp)||0),max=Math.max(1,Number(f.ref.maxHp)||1);drawTopHealthBar(f.x+ox,f.y+oy-Math.max(30,(f.ref.r||16)+18),52,7,clamp(hp/max,0,1),"#6fd58a",petDisplayName(f.ref));}
+  for(const b of h.bees||[]){if(!b||b.dead||!(b.maxHp>0)||b.hp>=b.maxHp-.01)continue;drawTopHealthBar(b.x+ox,b.y+oy-Math.max(28,(b.r||16)+16),46,6,clamp(b.hp/Math.max(1,b.maxHp),0,1),"#e4b84d",PET_TYPES[b.type]?.name||"Bee");}
+}
 function drawHiveInterior(){
   const h=game.hiveInterior;if(!h?.active)return;ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);let sx=0,sy=0;if(game.shake>0){sx=rand(-game.shake,game.shake);sy=rand(-game.shake,game.shake);game.shake*=.85;if(game.shake<.3)game.shake=0;}
-  ctx.save();ctx.translate(-(h.camX||0)+sx,-(h.camY||0)+sy);drawHiveHoneycombFloor();for(const w of HIVE_MAZE_WALLS)drawHiveWall(w);for(const p of HIVE_EXIT_PORTALS)drawHivePortal(p);
+  ctx.save();ctx.translate(-(h.camX||0)+sx,-(h.camY||0)+sy);drawHiveHoneycombFloor();const cx=h.camX||0,cy=h.camY||0;for(const w of HIVE_MAZE_WALLS){if(w.x+w.w<cx-120||w.x>cx+W+120||w.y+w.h<cy-120||w.y>cy+H+120)continue;drawHiveWall(w);}for(const p of HIVE_EXIT_PORTALS)drawHivePortal(p);
   for(const larva of h.larvae||[]){if(!larva||larva.tamed)continue;ctx.save();ctx.translate(larva.x,larva.y);ctx.fillStyle=larva.tamePending?"#fff0a2":"#f7dc75";ctx.beginPath();ctx.ellipse(0,0,27,17,-.1,0,TAU);ctx.fill();ctx.strokeStyle="#8f6212";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#7d5b1b";ctx.font="bold 16px sans-serif";ctx.fillText("Z",24,-14);ctx.font="bold 12px sans-serif";ctx.fillText("z",37,-26);ctx.restore();}
   for(const b of h.bees){if(!b||b.dead)continue;safeCanvasDrawCall("hive bee",()=>drawAnimal(b));}
   for(const f of h.petFollowers||[]){if(!f?.ref||f.ref.dead)continue;const v={...f.ref,x:f.x,y:f.y,angle:f.angle,owned:true};safeCanvasDrawCall("hive pet",()=>drawAnimal(v));}
   const ox=player.x,oy=player.y,oa=player.angle,os=player.swimming,or=player.riding,ov=player.vehicleType;player.x=h.x;player.y=h.y;player.angle=h.angle;player.swimming=false;player.riding=null;player.vehicleType="";safeCanvasDrawCall("hive player",drawPlayer);player.x=ox;player.y=oy;player.angle=oa;player.swimming=os;player.riding=or;player.vehicleType=ov;
   safeCanvasDrawCall("tame heart",drawTameHeartOverlay);safeCanvasDrawCall("hive effects",drawFx);ctx.restore();
-  ctx.fillStyle="rgba(65,41,5,.78)";ctx.fillRect(14,14,Math.min(420,W-28),42);ctx.fillStyle="#fff1a8";ctx.font="800 14px sans-serif";ctx.fillText("GIANT HIVE · interior biome",28,40);
+  const lightX=h.x-(h.camX||0)+sx,lightY=h.y-(h.camY||0)+sy,shade=ctx.createRadialGradient(lightX,lightY,90,lightX,lightY,Math.max(W,H)*.74);shade.addColorStop(0,"rgba(8,6,3,.06)");shade.addColorStop(.48,"rgba(8,6,3,.20)");shade.addColorStop(1,"rgba(3,3,3,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,W,H);
+  drawHiveInteriorHealthBars(h,sx,sy);
+  ctx.fillStyle="rgba(40,27,7,.86)";ctx.fillRect(14,14,Math.min(420,W-28),42);ctx.fillStyle="#fff1a8";ctx.font="800 14px sans-serif";ctx.fillText("GIANT HIVE · interior biome",28,40);
 }
 function updateVehicleEnterButton(){
   if(!vehicleEnterBtn)return;const h=game.hiveInterior;
@@ -13413,6 +13454,15 @@ function smoothCreatureVisual(a, key, target, dt, rate=4.2){
   return next;
 }
 
+// Fast-creature animation rule: speed above the normal gait widens the stride
+// instead of endlessly increasing animation frequency. This keeps the separated
+// head/tail pieces readable at sprint/catch-up speeds and prevents phase flicker.
+function creatureMotionRatios(rawRatio,maxStride=2.35){
+  const raw=Math.max(0,Math.min(maxStride,Number(rawRatio)||0));
+  const extra=Math.max(0,raw-1);
+  return{cadence:Math.min(1,raw),stride:Math.min(maxStride+0.35,raw+extra*0.45)};
+}
+
 function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
   if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight || !box) return false;
 
@@ -13491,12 +13541,15 @@ function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed(type, stageKey, !!a.owned) || 1);
-  const measuredMoveRatio = Math.max(0, Math.min(1.8, actualMoveSpeed / normalMoveSpeed));
+  const measuredMoveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
   const rawMoveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.8, a._netAnimMoveRatio))
-    : measuredMoveRatio;
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
+    : Math.max(0, Math.min(2.35, measuredMoveRatio));
+  const cuteMotionProfile = creatureMotionRatios(rawMoveRatio);
+  const cadenceRatio = cuteMotionProfile.cadence;
+  const strideRatio = cuteMotionProfile.stride;
 
-  const targetCuteMotion = a.sleeping ? 0.06 : Math.max(0.20, Math.min(0.82, rawMoveRatio * 0.70 + 0.08));
+  const targetCuteMotion = a.sleeping ? 0.06 : Math.max(0.20, Math.min(1.42, strideRatio * 0.72 + 0.08));
   const prevCuteMotion = Number(a._cuteMotion) || 0;
   const response = 1 - Math.exp(-visualDt * (targetCuteMotion > prevCuteMotion ? 7.2 : 4.8));
   const moveRatio = prevCuteMotion + (targetCuteMotion - prevCuteMotion) * response;
@@ -13511,15 +13564,15 @@ function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
     ? a._netAnimPhase * 0.46 + 0.25
     : (a.sleeping
       ? motionTime * 2.0 + (a.x || 0) * 0.01
-      : motionTime * (2.4 + moveRatio * 1.0) + (a.x || 0) * 0.008);
+      : motionTime * (2.4 + cadenceRatio * 1.0) + (a.x || 0) * 0.008);
   const mainBob = Math.sin(bobPhase) * r *
     (a.sleeping ? 0.012 : (0.008 + moveRatio * 0.012));
 
   const sleepTailTuck = a.sleeping ? (type === "cat" ? 0.18 : type === "fox" ? 0.14 : type === "dog" ? 0.12 : 0.10) : 0;
   const sleepTailShift = a.sleeping ? r * (type === "cat" ? 0.14 : type === "fox" ? 0.12 : 0.10) : 0;
 
-  const livelyMove = a.sleeping ? 0 : Math.max(0, Math.min(1.8, rawMoveRatio));
-  const tailFrequency = (a.sleeping ? 0.72 : 1.18) + rawMoveRatio * 3.55;
+  const livelyMove = a.sleeping ? 0 : strideRatio;
+  const tailFrequency = (a.sleeping ? 0.72 : 1.18) + cadenceRatio * 3.55;
   const stablePhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
     : motionTime * tailFrequency + (a.tailPhase || 0);
@@ -13531,7 +13584,7 @@ function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
   const targetTailDy = a.sleeping ? 0 : tailLift * r * (0.006 + moveRatio * 0.014 + livelyMove * 0.002);
   const tailDy = smoothCreatureVisual(a,"_cuteTailDy",targetTailDy,visualDt,4.4);
 
-  const headFrequency = (a.sleeping ? 0.56 : 0.92) + rawMoveRatio * 1.75;
+  const headFrequency = (a.sleeping ? 0.56 : 0.92) + cadenceRatio * 1.75;
   const headPhase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase * 0.76 + 0.8
     : motionTime * headFrequency + (a.x || 0) * 0.009 + (a.tailPhase || 0) * 0.30;
@@ -13956,36 +14009,37 @@ function drawReassembledDeerPartsSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 180;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("deer", stage, !!a.owned) || 1);
-  const measuredMoveRatio = Math.max(0, Math.min(1.25, actualMoveSpeed / normalMoveSpeed));
+  const measuredMoveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
   const moveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.25, a._netAnimMoveRatio))
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
     : measuredMoveRatio;
+  const deerMotionProfile=creatureMotionRatios(moveRatio),cadenceRatio=deerMotionProfile.cadence,strideRatio=deerMotionProfile.stride;
   const lastDeerVisualAt = Number(a._deerVisualAt) || nowMs;
   const deerVisualDt = Math.max(0, Math.min(0.05, (nowMs-lastDeerVisualAt)/1000));
   a._deerVisualAt = nowMs;
   const deerMotionT = nowMs * 0.001;
   const deerPhase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase
-    : deerMotionT * (1.22 + moveRatio * 3.05) + (a.tailPhase || 0);
+    : deerMotionT * (1.22 + cadenceRatio * 3.05) + (a.tailPhase || 0);
   const deerTailPhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
     : deerPhase;
 
   const bodyBob = Math.sin(deerPhase * 0.42 + 0.25) *
-    r * (a.sleeping ? 0.002 : (0.004 + moveRatio * 0.007));
+    r * (a.sleeping ? 0.002 : (0.004 + strideRatio * 0.007));
   const tailAngle = smoothCreatureVisual(a,"_deerTailAngle",
-    Math.sin(deerTailPhase) * (a.sleeping ? 0.035 : (0.095 + moveRatio * 0.20)),
+    Math.sin(deerTailPhase) * (a.sleeping ? 0.035 : (0.095 + strideRatio * 0.20)),
     deerVisualDt,a.sleeping?2.0:4.1);
   const tailLift = smoothCreatureVisual(a,"_deerTailLift",
-    Math.cos(deerTailPhase * 0.76 + 0.4) * r * (a.sleeping ? 0.0015 : (0.004 + moveRatio * 0.008)),
+    Math.cos(deerTailPhase * 0.76 + 0.4) * r * (a.sleeping ? 0.0015 : (0.004 + strideRatio * 0.008)),
     deerVisualDt,4.0);
   // Deer look-around: rotate the full head/antler piece around the neck.
   // Keep this separate from the gait so it reads as an actual left/right turn,
   // not a side-to-side wobble or vertical bob.
-  const headTurnPhase = deerMotionT * (a.sleeping ? 0.34 : (0.56 + moveRatio * 0.34))
+  const headTurnPhase = deerMotionT * (a.sleeping ? 0.34 : (0.56 + cadenceRatio * 0.34))
     + 0.8 + (a.tailPhase || 0) * 0.10;
   const headAngle = smoothCreatureVisual(a,"_deerHeadAngle",
-    Math.sin(headTurnPhase) * (a.sleeping ? 0.020 : (0.17 + moveRatio * 0.11)),
+    Math.sin(headTurnPhase) * (a.sleeping ? 0.020 : (0.17 + strideRatio * 0.11)),
     deerVisualDt,a.sleeping?1.8:3.4);
   const headBob = 0;
   // The separated pieces are reference-aligned at their zero-motion pose.
@@ -14164,21 +14218,22 @@ function drawSeparatedDeerBabySkin(a) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 180;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("deer", "baby", !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.25, actualMoveSpeed / normalMoveSpeed));
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const deerBabyMotionProfile=creatureMotionRatios(moveRatio),cadenceRatio=deerBabyMotionProfile.cadence,strideRatio=deerBabyMotionProfile.stride;
   const lastDeerBabyVisualAt = Number(a._deerBabyVisualAt) || nowMs;
   const deerBabyVisualDt = Math.max(0, Math.min(0.05, (nowMs-lastDeerBabyVisualAt)/1000));
   a._deerBabyVisualAt = nowMs;
   const deerMotionT = nowMs * 0.001;
   const deerBabyTailPhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
-    : deerMotionT * (1.10 + moveRatio * 2.35) + (a.tailPhase || 0);
+    : deerMotionT * (1.10 + cadenceRatio * 2.35) + (a.tailPhase || 0);
   const deerTailAngle = smoothCreatureVisual(a,"_deerBabyTailAngle",
-    Math.sin(deerBabyTailPhase) * (a.sleeping ? 0.030 : (0.065 + moveRatio * 0.125)),
+    Math.sin(deerBabyTailPhase) * (a.sleeping ? 0.030 : (0.065 + strideRatio * 0.125)),
     deerBabyVisualDt,a.sleeping?2.0:3.8);
-  const deerHeadTurnPhase = deerMotionT * (0.50 + moveRatio * 0.18)
+  const deerHeadTurnPhase = deerMotionT * (0.50 + cadenceRatio * 0.18)
     + 0.8 + (a.tailPhase || 0) * 0.10;
   const deerHeadAngle = smoothCreatureVisual(a,"_deerBabyHeadAngle",
-    Math.sin(deerHeadTurnPhase) * (0.14 + moveRatio * 0.05),deerBabyVisualDt,3.1);
+    Math.sin(deerHeadTurnPhase) * (0.14 + strideRatio * 0.05),deerBabyVisualDt,3.1);
   const deerHeadBob = 0;
 
   // Draw the three truly separate connected components back into the exact
@@ -14634,17 +14689,22 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualSpeed = recentlyMoved ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed(a.type, a.stage, !!a.owned) || 1);
-  const rawRatio = Math.max(0, Math.min(1.7, actualSpeed / normalSpeed));
+  const rawRatio = Math.max(0, Math.min(2.35, actualSpeed / normalSpeed));
+  const viperMotionProfile = creatureMotionRatios(rawRatio);
+  const cadenceRatio = viperMotionProfile.cadence;
+  const strideRatio = viperMotionProfile.stride;
   const targetMotion = rawRatio > 0.025 ? Math.min(1, rawRatio) : 0;
 
   const follow = 1 - Math.exp(-visualDt * (targetMotion > (a._viperMotion || 0) ? 5.8 : 3.6));
   a._viperMotion = (a._viperMotion || 0) + (targetMotion - (a._viperMotion || 0)) * follow;
-  a._viperPhase = (a._viperPhase || 0) + visualDt * (1.15 + rawRatio * 2.25);
+  // Keep the slither cadence stable at high speed. Extra speed makes the body
+  // sweep farther side-to-side instead of making the animation phase flicker.
+  a._viperPhase = (a._viperPhase || 0) + visualDt * (1.15 + cadenceRatio * 2.25);
 
   const motion = Math.max(0, Math.min(1, a._viperMotion || 0));
   const phase = a._viperPhase || 0;
   const stageSlitherMul = stage === "superboss" ? 1.12 : 1;
-  const amplitude = bodyH * 0.24 * motion * stageSlitherMul;
+  const amplitude = bodyH * 0.24 * motion * stageSlitherMul * (0.78 + strideRatio * 0.30);
   // A slower steering wave makes the whole Viper visibly slither right, then left.
   // The head and tail land on opposite sides of this sweep, like a real S-turn.
   const turnWave = Math.sin(phase * 0.78);
@@ -14656,8 +14716,8 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
 
   for (let i = 0; i < slices; i++) {
     const t = (i + 0.5) / slices;
-    const primary = Math.sin(phase - t * Math.PI * 2.02);
-    const secondary = Math.sin(phase * 0.50 - t * Math.PI * 1.02) * 0.08;
+    const primary = Math.sin(phase + t * Math.PI * 2.02);
+    const secondary = Math.sin(phase * 0.50 + t * Math.PI * 1.02) * 0.08;
     const tailBias = 1.03 - t * 0.16;
     // Rear/tail moves opposite the head/neck side. Blend through the middle
     // so the body still looks like one continuous snake instead of a hinge.
@@ -14681,8 +14741,8 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
 
   const neckT = 1;
   const neckY = (
-    Math.sin(phase - neckT * Math.PI * 2.02) +
-    Math.sin(phase * 0.50 - neckT * Math.PI * 1.02) * 0.08
+    Math.sin(phase + neckT * Math.PI * 2.02) +
+    Math.sin(phase * 0.50 + neckT * Math.PI * 1.02) * 0.08
   ) * amplitude * 0.84;
 
   // Turn the actual head left/right with the same steering wave as the body.
@@ -14701,8 +14761,8 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
 
   const neckAheadT = 0.985;
   const neckAheadY = (
-    Math.sin(phase - neckAheadT * Math.PI * 2.02) +
-    Math.sin(phase * 0.50 - neckAheadT * Math.PI * 1.02) * 0.08
+    Math.sin(phase + neckAheadT * Math.PI * 2.02) +
+    Math.sin(phase * 0.50 + neckAheadT * Math.PI * 1.02) * 0.08
   ) * amplitude * 0.84;
   const neckSlopeRot = Math.atan2(neckY - neckAheadY, Math.max(1, bodyW * 0.015)) * 0.34;
 
@@ -14772,19 +14832,21 @@ function drawUploadedViperSkin(a, img, cfg, stage) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualSpeed = recentlyMoved ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed(a.type, a.stage, !!a.owned) || 1);
-  const rawRatio = Math.max(0, Math.min(1.7, actualSpeed / normalSpeed));
+  const rawRatio = Math.max(0, Math.min(2.35, actualSpeed / normalSpeed));
+  const viperMotionProfile = creatureMotionRatios(rawRatio);
+  const cadenceRatio = viperMotionProfile.cadence;
+  const strideRatio = viperMotionProfile.stride;
   const targetMotion = rawRatio > 0.025 ? Math.min(1, rawRatio) : 0;
 
   // Smoothly ease into and out of the slither.
   const follow = 1 - Math.exp(-visualDt * (targetMotion > (a._viperMotion || 0) ? 5.8 : 3.6));
   a._viperMotion = (a._viperMotion || 0) + (targetMotion - (a._viperMotion || 0)) * follow;
 
-  // Speed changes HOW FAST the wave travels, not how wide the snake bends.
-  // Once moving, the bend width stays controlled and nearly constant.
-  a._viperPhase = (a._viperPhase || 0) + visualDt * (1.95 + rawRatio * 4.10);
+  // Faster snakes bend farther instead of cycling the wave faster and flickering.
+  a._viperPhase = (a._viperPhase || 0) + visualDt * (1.95 + cadenceRatio * 4.10);
   const motion = Math.max(0, Math.min(1, a._viperMotion || 0));
   const phase = a._viperPhase || 0;
-  const amplitude = drawH * 0.255 * motion;
+  const amplitude = drawH * 0.255 * motion * (0.78 + strideRatio * 0.30);
 
   const left = -drawW * 0.5;
   const top = -drawH * 0.5;
@@ -14805,8 +14867,8 @@ function drawUploadedViperSkin(a, img, cfg, stage) {
     const t = (i + 0.5) / slices; // tail -> neck
 
     // Strong single traveling S-wave.
-    const primary = Math.sin(phase - t * Math.PI * 2.02);
-    const secondary = Math.sin(phase * 0.50 - t * Math.PI * 1.02) * 0.08;
+    const primary = Math.sin(phase + t * Math.PI * 2.02);
+    const secondary = Math.sin(phase * 0.50 + t * Math.PI * 1.02) * 0.08;
     const tailBias = 1.03 - t * 0.16;
     const dy = (primary + secondary) * amplitude * tailBias;
 
@@ -14825,8 +14887,8 @@ function drawUploadedViperSkin(a, img, cfg, stage) {
   // Separate head motion. It follows the neck wave, but has its own wobble/steering.
   const neckT = 1;
   const neckY = (
-    Math.sin(phase - neckT * Math.PI * 2.02) +
-    Math.sin(phase * 0.50 - neckT * Math.PI * 1.02) * 0.08
+    Math.sin(phase + neckT * Math.PI * 2.02) +
+    Math.sin(phase * 0.50 + neckT * Math.PI * 1.02) * 0.08
   ) * amplitude * 0.84;
 
   // The head stays physically locked to the neck wave every frame.
@@ -14850,8 +14912,8 @@ function drawUploadedViperSkin(a, img, cfg, stage) {
   // follows the direction of the slither before adding its own steering turn.
   const neckAheadT = 0.985;
   const neckAheadY = (
-    Math.sin(phase - neckAheadT * Math.PI * 2.02) +
-    Math.sin(phase * 0.50 - neckAheadT * Math.PI * 1.02) * 0.08
+    Math.sin(phase + neckAheadT * Math.PI * 2.02) +
+    Math.sin(phase * 0.50 + neckAheadT * Math.PI * 1.02) * 0.08
   ) * amplitude * 0.84;
   const neckSlopeRot = Math.atan2(neckY - neckAheadY, Math.max(1, drawW * 0.015)) * 0.34;
 
@@ -14905,33 +14967,36 @@ function drawReassembledFennecPartsSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 180;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("fennec", stage, !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.35, actualMoveSpeed / normalMoveSpeed));
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
   const lastVisualAt = Number(a._fennecVisualAt) || nowMs;
   const visualDt = Math.max(0, Math.min(0.05, (nowMs - lastVisualAt) / 1000));
   a._fennecVisualAt = nowMs;
   const phase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase
-    : nowMs * 0.001 * (1.22 + moveRatio * 3.15) + (a.tailPhase || 0);
+    : nowMs * 0.001 * (1.22 + cadenceRatio * 3.15) + (a.tailPhase || 0);
   const tailPhase = (net.room && Number.isFinite(a._netTailPhase)) ? a._netTailPhase : phase;
 
   const bodyBob = smoothCreatureVisual(a, "_fennecBodyBob",
-    Math.sin(phase * 0.50 + 0.2) * r * (a.sleeping ? 0.002 : (0.004 + moveRatio * 0.007)),
+    Math.sin(phase * 0.50 + 0.2) * r * (a.sleeping ? 0.002 : (0.004 + strideRatio * 0.007)),
     visualDt, 3.8);
   const tailAngle = smoothCreatureVisual(a, "_fennecTailAngle",
     a.sleeping
       ? 0.40 + Math.sin(tailPhase * 0.58 + 0.5) * 0.03
-      : Math.sin(tailPhase) * (0.090 + moveRatio * 0.17),
+      : Math.sin(tailPhase) * (0.090 + strideRatio * 0.17),
     visualDt, a.sleeping ? 2.4 : 4.6);
   const tailLift = smoothCreatureVisual(a, "_fennecTailLift",
-    Math.cos(tailPhase * 0.72 + 0.5) * r * (a.sleeping ? 0.0015 : (0.004 + moveRatio * 0.007)),
+    Math.cos(tailPhase * 0.72 + 0.5) * r * (a.sleeping ? 0.0015 : (0.004 + strideRatio * 0.007)),
     visualDt, 3.8);
   const headAngle = smoothCreatureVisual(a, "_fennecHeadAngle",
     a.sleeping
       ? -0.02 + Math.sin(phase * 0.44 + 0.6) * 0.016
-      : Math.sin(phase * 0.58 + 0.7) * (0.045 + moveRatio * 0.09),
+      : Math.sin(phase * 0.58 + 0.7) * (0.045 + strideRatio * 0.09),
     visualDt, a.sleeping ? 2.0 : 3.6);
   const headBob = smoothCreatureVisual(a, "_fennecHeadBob",
-    Math.cos(phase * 0.68 + 0.3) * r * (a.sleeping ? 0.0015 : (0.005 + moveRatio * 0.008)),
+    Math.cos(phase * 0.68 + 0.3) * r * (a.sleeping ? 0.0015 : (0.005 + strideRatio * 0.008)),
     visualDt, 3.9);
   const headPush = a.sleeping ? -r * 0.05 : 0;
 
@@ -15010,20 +15075,23 @@ function drawReassembledRabbitPartsSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 180;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("rabbit", stage, !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.4, actualMoveSpeed / normalMoveSpeed));
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
   const lastRabbitVisualAt = Number(a._rabbitVisualAt) || nowMs;
   const rabbitVisualDt = Math.max(0, Math.min(0.05, (nowMs-lastRabbitVisualAt)/1000));
   a._rabbitVisualAt = nowMs;
   const phase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase
-    : nowMs * 0.001 * (1.18 + moveRatio * 3.10) + (a.tailPhase || 0);
+    : nowMs * 0.001 * (1.18 + cadenceRatio * 3.10) + (a.tailPhase || 0);
   const tailPhase = (net.room && Number.isFinite(a._netTailPhase)) ? a._netTailPhase : phase;
   const tailAngle = smoothCreatureVisual(a,"_rabbitTailAngle",
-    Math.sin(tailPhase) * (a.sleeping ? 0.020 : (0.080 + moveRatio * 0.16)),rabbitVisualDt,4.4);
+    Math.sin(tailPhase) * (a.sleeping ? 0.020 : (0.080 + strideRatio * 0.16)),rabbitVisualDt,4.4);
   const headAngle = smoothCreatureVisual(a,"_rabbitHeadAngle",
-    Math.sin(phase * 0.62 + 0.6) * (a.sleeping ? 0.014 : (0.050 + moveRatio * 0.090)),rabbitVisualDt,3.8);
+    Math.sin(phase * 0.62 + 0.6) * (a.sleeping ? 0.014 : (0.050 + strideRatio * 0.090)),rabbitVisualDt,3.8);
   const headBob = smoothCreatureVisual(a,"_rabbitHeadBob",
-    Math.cos(phase * 0.68 + 0.3) * r * (a.sleeping ? 0.0015 : (0.006 + moveRatio * 0.010)),rabbitVisualDt,3.8);
+    Math.cos(phase * 0.68 + 0.3) * r * (a.sleeping ? 0.0015 : (0.006 + strideRatio * 0.010)),rabbitVisualDt,3.8);
 
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.15)";
@@ -15175,31 +15243,34 @@ function drawReassembledWolfPartsSkin(a, stage, sleeping) {
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("wolf", stage, !!a.owned) || 1);
   const moveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.8, a._netAnimMoveRatio))
-    : Math.max(0, Math.min(1.8, actualMoveSpeed / normalMoveSpeed));
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
+    : Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
 
   const motionTime = nowMs * 0.001;
   const tailPhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
-    : motionTime * ((a.sleeping ? 0.56 : 1.45) + moveRatio * 3.8) + (a.tailPhase || 0);
+    : motionTime * ((a.sleeping ? 0.56 : 1.45) + cadenceRatio * 3.8) + (a.tailPhase || 0);
   const headPhase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase * 0.82 + 0.33
-    : motionTime * ((a.sleeping ? 0.48 : 1.02) + moveRatio * 1.9) + (a.tailPhase || 0) * 0.19;
+    : motionTime * ((a.sleeping ? 0.48 : 1.02) + cadenceRatio * 1.9) + (a.tailPhase || 0) * 0.19;
 
-  const targetTailAngle = a.sleeping ? 0 : Math.sin(tailPhase) * (0.05 + moveRatio * 0.18);
+  const targetTailAngle = a.sleeping ? 0 : Math.sin(tailPhase) * (0.05 + strideRatio * 0.18);
   const tailAngle = smoothCreatureVisual(a, "_wolfTailAngle", targetTailAngle, visualDt, a.sleeping ? 2.0 : 4.2);
-  const targetHeadAngle = a.sleeping ? 0 : Math.sin(headPhase) * (0.04 + moveRatio * 0.10);
+  const targetHeadAngle = a.sleeping ? 0 : Math.sin(headPhase) * (0.04 + strideRatio * 0.10);
   const headAngle = smoothCreatureVisual(a, "_wolfHeadAngle", targetHeadAngle, visualDt, a.sleeping ? 1.9 : 3.9);
   const targetHeadBob = a.sleeping
     ? Math.sin(motionTime * 1.25 + (a.x || 0) * 0.006) * r * 0.008
-    : Math.cos(headPhase * 0.88 + 0.35) * r * (0.006 + moveRatio * 0.011);
+    : Math.cos(headPhase * 0.88 + 0.35) * r * (0.006 + strideRatio * 0.011);
   const headBob = smoothCreatureVisual(a, "_wolfHeadBob", targetHeadBob, visualDt, 3.8);
   const attackT = Math.max(0, Math.min(1, Number(a.attackAnim) || 0));
   const bite = a.sleeping ? 0 : Math.sin(attackT * Math.PI);
   const attackPush = bite * r * 0.10;
   const bodyBob = a.sleeping
     ? Math.sin(motionTime * 1.18 + (a.x || 0) * 0.008) * r * 0.006
-    : Math.sin(headPhase * 0.54 + 0.2) * r * (0.003 + moveRatio * 0.006);
+    : Math.sin(headPhase * 0.54 + 0.2) * r * (0.003 + strideRatio * 0.006);
 
   function partBox(part, newX, extraY) {
     const dx = left + newX * scale;
@@ -15296,31 +15367,34 @@ function drawReassembledBoarPartsSkin(a, stage, sleeping) {
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed("boar", stage, !!a.owned) || 1);
   const moveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.8, a._netAnimMoveRatio))
-    : Math.max(0, Math.min(1.8, actualMoveSpeed / normalMoveSpeed));
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
+    : Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
 
   const motionTime = nowMs * 0.001;
   const tailPhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
-    : motionTime * ((a.sleeping ? 0.52 : 1.35) + moveRatio * 3.9) + (a.tailPhase || 0);
+    : motionTime * ((a.sleeping ? 0.52 : 1.35) + cadenceRatio * 3.9) + (a.tailPhase || 0);
   const headPhase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase * 0.78 + 0.45
-    : motionTime * ((a.sleeping ? 0.42 : 0.92) + moveRatio * 1.85) + (a.tailPhase || 0) * 0.18;
+    : motionTime * ((a.sleeping ? 0.42 : 0.92) + cadenceRatio * 1.85) + (a.tailPhase || 0) * 0.18;
 
-  const targetTailAngle = a.sleeping ? 0 : Math.sin(tailPhase) * (0.055 + moveRatio * 0.19);
+  const targetTailAngle = a.sleeping ? 0 : Math.sin(tailPhase) * (0.055 + strideRatio * 0.19);
   const tailAngle = smoothCreatureVisual(a, "_boarTailAngle", targetTailAngle, visualDt, a.sleeping ? 2.0 : 4.4);
-  const targetHeadAngle = a.sleeping ? 0 : Math.sin(headPhase) * (0.045 + moveRatio * 0.105);
+  const targetHeadAngle = a.sleeping ? 0 : Math.sin(headPhase) * (0.045 + strideRatio * 0.105);
   const headAngle = smoothCreatureVisual(a, "_boarHeadAngle", targetHeadAngle, visualDt, a.sleeping ? 1.8 : 3.8);
   const targetHeadBob = a.sleeping
     ? Math.sin(motionTime * 1.35 + (a.x || 0) * 0.006) * r * 0.008
-    : Math.cos(headPhase * 0.86 + 0.4) * r * (0.006 + moveRatio * 0.012);
+    : Math.cos(headPhase * 0.86 + 0.4) * r * (0.006 + strideRatio * 0.012);
   const headBob = smoothCreatureVisual(a, "_boarHeadBob", targetHeadBob, visualDt, 3.7);
   const attackT = Math.max(0, Math.min(1, Number(a.attackAnim) || 0));
   const bite = a.sleeping ? 0 : Math.sin(attackT * Math.PI);
   const attackPush = bite * r * 0.10;
   const bodyBob = a.sleeping
     ? Math.sin(motionTime * 1.25 + (a.x || 0) * 0.008) * r * 0.006
-    : Math.sin(headPhase * 0.54 + 0.2) * r * (0.003 + moveRatio * 0.006);
+    : Math.sin(headPhase * 0.54 + 0.2) * r * (0.003 + strideRatio * 0.006);
 
   function partGeom(part) {
     const [x0,x1,shift] = part;
@@ -15469,24 +15543,27 @@ function drawReassembledSaberPartsSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualMoveSpeed = (!sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed("saber", stage, !!a.owned) || 1);
-  const measuredMoveRatio = Math.max(0, Math.min(1.7, actualMoveSpeed / normalSpeed));
+  const measuredMoveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalSpeed));
   const moveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.7, a._netAnimMoveRatio))
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
     : measuredMoveRatio;
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
   const phase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase
-    : nowMs * 0.001 * (2.0 + moveRatio * 5.2) + (a.tailPhase || 0);
+    : nowMs * 0.001 * (2.0 + cadenceRatio * 5.2) + (a.tailPhase || 0);
 
   const attackT = Math.max(0, Math.min(1, Number(a.attackAnim) || 0));
   const attackPulse = sleeping ? 0 : Math.sin(attackT * Math.PI);
-  const tailAngle = sleeping ? 0 : Math.sin(phase * 1.20) * (0.025 + moveRatio * 0.115);
-  const headWalkAngle = sleeping ? 0 : Math.sin(phase * 0.72 + 0.65) * (0.020 + moveRatio * 0.075);
+  const tailAngle = sleeping ? 0 : Math.sin(phase * 1.20) * (0.025 + strideRatio * 0.115);
+  const headWalkAngle = sleeping ? 0 : Math.sin(phase * 0.72 + 0.65) * (0.020 + strideRatio * 0.075);
   const headAngle = headWalkAngle - attackPulse * 0.105;
-  const headBob = sleeping ? 0 : Math.sin(phase * 0.92 + 0.2) * drawH * (0.004 + moveRatio * 0.018);
+  const headBob = sleeping ? 0 : Math.sin(phase * 0.92 + 0.2) * drawH * (0.004 + strideRatio * 0.018);
   const headLunge = sleeping ? 0 : attackPulse * r * 0.22;
   const wholeBob = sleeping
     ? Math.sin(game.time * 1.75 + (a.x || 0) * 0.004) * r * 0.008
-    : Math.sin(phase * 0.55) * drawH * 0.006 * moveRatio;
+    : Math.sin(phase * 0.55) * drawH * 0.006 * strideRatio;
 
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.15)";
@@ -15568,11 +15645,13 @@ function drawStaticSaberReferenceSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualMoveSpeed = (!sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed("saber", stage, !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.7, actualMoveSpeed / normalSpeed));
-  const phase = nowMs * 0.001 * (2.0 + moveRatio * 5.2) + (a.tailPhase || 0);
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence, strideRatio = motionProfile.stride;
+  const phase = nowMs * 0.001 * (2.0 + cadenceRatio * 5.2) + (a.tailPhase || 0);
   const bodyBob = sleeping
     ? Math.sin(game.time * 1.75 + (a.x || 0) * 0.004) * r * 0.008
-    : Math.sin(phase * 0.55) * drawH * 0.006 * moveRatio;
+    : Math.sin(phase * 0.55) * drawH * 0.006 * strideRatio;
 
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.15)";
@@ -15660,13 +15739,16 @@ function drawReassembledOwlPartsSkin(a, stage, sleeping) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 170;
   const actualMoveSpeed = recentlyMoved ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed("owl", stage, !!a.owned) || 1);
-  const measuredMoveRatio = Math.max(0, Math.min(1.8, actualMoveSpeed / normalSpeed));
+  const measuredMoveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalSpeed));
   const moveRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.8, a._netAnimMoveRatio))
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
     : measuredMoveRatio;
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
   const phase = (net.room && Number.isFinite(a._netAnimPhase))
     ? a._netAnimPhase * 1.18
-    : nowMs * 0.001 * (2.8 + moveRatio * 4.8) + (a.tailPhase || 0);
+    : nowMs * 0.001 * (2.8 + cadenceRatio * 4.8) + (a.tailPhase || 0);
 
   const attackT = Math.max(0, Math.min(1, Number(a.attackAnim) || 0));
   const attackPulse = Math.sin(attackT * Math.PI);
@@ -15674,13 +15756,13 @@ function drawReassembledOwlPartsSkin(a, stage, sleeping) {
   // Keep the current squeeze deformation, but also bring back the Y-axis
   // out/in flap: upper wing travels upward while lower wing travels downward.
   const flapWave = Math.sin(phase * 2.15);
-  const squeezeAmt = Math.abs(flapWave) * (0.24 + moveRatio * 0.14 + attackPulse * 0.07);
-  const yFlapOut = (0.5 + 0.5 * flapWave) * (3.2 + moveRatio * 1.8 + attackPulse * 0.7) * scale;
+  const squeezeAmt = Math.abs(flapWave) * (0.24 + strideRatio * 0.14 + attackPulse * 0.07);
+  const yFlapOut = (0.5 + 0.5 * flapWave) * (3.2 + strideRatio * 1.8 + attackPulse * 0.7) * scale;
 
-  const tailAngle = Math.sin(phase * 1.05) * (0.10 + moveRatio * 0.08) + attackPulse * 0.025;
-  const headAngle = Math.sin(phase * 0.85 + 0.55) * (0.055 + moveRatio * 0.055) - attackPulse * 0.09;
-  const headBob = Math.sin(phase * 1.05 + 0.2) * (0.7 + moveRatio * 0.6) * scale;
-  const wholeBob = Math.sin(phase * 0.52) * (0.45 + moveRatio * 0.45) * scale;
+  const tailAngle = Math.sin(phase * 1.05) * (0.10 + strideRatio * 0.08) + attackPulse * 0.025;
+  const headAngle = Math.sin(phase * 0.85 + 0.55) * (0.055 + strideRatio * 0.055) - attackPulse * 0.09;
+  const headBob = Math.sin(phase * 1.05 + 0.2) * (0.7 + strideRatio * 0.6) * scale;
+  const wholeBob = Math.sin(phase * 0.52) * (0.45 + strideRatio * 0.45) * scale;
 
   function rectOf(name) {
     const q = ref[name];
@@ -15834,14 +15916,16 @@ function drawReassembledCloudedLeopardSkin(a, stage, sleeping){
   const now=performance.now(),recent=(now-(a._visualMoveAt||0))<170;
   const actual=(!sleeping&&recent)?Math.max(0,Number(a._visualMoveSpeed)||0):0;
   const normal=Math.max(1,Number(a.speed)||animalSpeed("clouded",stage,!!a.owned)||1);
-  const moveRatio=(net.room&&Number.isFinite(a._netAnimMoveRatio))?clamp(a._netAnimMoveRatio,0,1.7):clamp(actual/normal,0,1.7);
-  const phase=(net.room&&Number.isFinite(a._netAnimPhase))?a._netAnimPhase:now*.001*(2.2+moveRatio*5.4)+(a.tailPhase||0);
+  const moveRatio=(net.room&&Number.isFinite(a._netAnimMoveRatio))?clamp(a._netAnimMoveRatio,0,2.35):clamp(actual/normal,0,2.35);
+  const motionProfile=creatureMotionRatios(moveRatio);
+  const cadenceRatio=motionProfile.cadence,strideRatio=motionProfile.stride;
+  const phase=(net.room&&Number.isFinite(a._netAnimPhase))?a._netAnimPhase:now*.001*(2.2+cadenceRatio*5.4)+(a.tailPhase||0);
   const atk=Math.max(0,Math.min(1,Number(a.attackAnim)||0)),bite=sleeping?0:Math.sin(atk*Math.PI);
-  const tailAngle=sleeping?0:Math.sin(phase*1.15)*(.025+moveRatio*.12);
-  const headAngle=sleeping?0:Math.sin(phase*.72+.4)*(.018+moveRatio*.07)-bite*.09;
-  const headBob=sleeping?0:Math.sin(phase*.9)*drawH*(.003+moveRatio*.014);
+  const tailAngle=sleeping?0:Math.sin(phase*1.15)*(.025+strideRatio*.12);
+  const headAngle=sleeping?0:Math.sin(phase*.72+.4)*(.018+strideRatio*.07)-bite*.09;
+  const headBob=sleeping?0:Math.sin(phase*.9)*drawH*(.003+strideRatio*.014);
   const headLunge=sleeping?0:bite*r*.18;
-  const wholeBob=sleeping?Math.sin(game.time*1.8+(a.x||0)*.004)*r*.008:Math.sin(phase*.55)*drawH*.005*moveRatio;
+  const wholeBob=sleeping?Math.sin(game.time*1.8+(a.x||0)*.004)*r*.008:Math.sin(phase*.55)*drawH*.005*strideRatio;
   ctx.save();
   ctx.fillStyle="rgba(0,0,0,.15)";ctx.beginPath();ctx.ellipse(-drawW*.03,drawH*.31,Math.max(r*.58,drawW*.31),Math.max(r*.13,drawH*.12),0,0,TAU);ctx.fill();
   const oldSmooth=ctx.imageSmoothingEnabled,oldQuality=ctx.imageSmoothingQuality;ctx.imageSmoothingEnabled=true;try{ctx.imageSmoothingQuality="high";}catch(_){}
@@ -15996,11 +16080,13 @@ function drawUploadedBeeSkin(a) {
   const recentlyMoved=(nowMs-(a._visualMoveAt||0))<180;
   const actualMoveSpeed=(!a.sleeping&&recentlyMoved)?Math.max(0,Number(a._visualMoveSpeed)||0):0;
   const normalMoveSpeed=Math.max(1,Number(a.speed)||animalSpeed(a.type,a.stage,!!a.owned)||1);
-  const moveRatio=Math.max(0,Math.min(1.8,actualMoveSpeed/normalMoveSpeed));
+  const moveRatio=Math.max(0,Math.min(2.35,actualMoveSpeed/normalMoveSpeed));
+  const motionProfile=creatureMotionRatios(moveRatio);
+  const cadenceRatio=motionProfile.cadence,strideRatio=motionProfile.stride;
   const prevMoveSpeed = Number.isFinite(a._beePrevMoveSpeed) ? a._beePrevMoveSpeed : actualMoveSpeed;
   const speedDelta = (actualMoveSpeed - prevMoveSpeed) / normalMoveSpeed;
   a._beePrevMoveSpeed = actualMoveSpeed;
-  const desiredAntennaLean = a.sleeping ? 0 : Math.max(-0.34, Math.min(0.24, (-moveRatio * 0.09) + (-speedDelta * 0.92)));
+  const desiredAntennaLean = a.sleeping ? 0 : Math.max(-0.34, Math.min(0.24, (-strideRatio * 0.09) + (-speedDelta * 0.92)));
   let antVel = Number(a._beeAntennaVel) || 0;
   let antLean = Number(a._beeAntennaLean) || 0;
   antVel += (desiredAntennaLean - antLean) * 24 * dtSec;
@@ -16009,9 +16095,9 @@ function drawUploadedBeeSkin(a) {
   if (a.sleeping) { antVel *= 0.84; antLean *= 0.78; }
   a._beeAntennaVel = antVel;
   a._beeAntennaLean = antLean;
-  const phase=nowMs*.001*((a.sleeping ? 0.55 : 2.8)+moveRatio*7.4)+(a.tailPhase||0)+a.x*.007+a.y*.005;
-  const wingFlap=a.sleeping?0:Math.sin(phase)*(.10+.34*moveRatio);
-  const headTurn=a.sleeping?Math.sin(phase*.52)*.018:Math.sin(phase*.78+.65)*(.035+.045*moveRatio);
+  const phase=nowMs*.001*((a.sleeping ? 0.55 : 2.8)+cadenceRatio*7.4)+(a.tailPhase||0)+a.x*.007+a.y*.005;
+  const wingFlap=a.sleeping?0:Math.sin(phase)*(.10+.34*strideRatio);
+  const headTurn=a.sleeping?Math.sin(phase*.52)*.018:Math.sin(phase*.78+.65)*(.035+.045*strideRatio);
   const headShift=a.sleeping?0:Math.sin(phase*.78+.65)*r*.035;
   const attackPhase=Math.max(0,Math.min(1,Number(a.attackAnim)||0));
   const stingAttack=Math.sin(attackPhase*Math.PI);
@@ -16115,9 +16201,10 @@ function drawReassembledFoxBearSkin(a, species, stage, sleeping) {
   });
   const tg=geom(tail,tailX), bg=geom(body,bodyX), hg=geom(head,headX);
 
-  const now=performance.now(), moveRatio=Math.max(0,Math.min(1.6,Number(a._netAnimMoveRatio)||Number(a._visualMoveSpeed||0)/Math.max(1,Number(a.speed)||animalSpeed(species,stage,!!a.owned)||1)));
-  const phase=now*.001*((sleeping ? .45 : 1.05)+moveRatio*1.8)+(a.tailPhase||0);
-  const tailAngle=sleeping?0:Math.sin(phase*1.45)*(species === "fox" ? .13 : .07)*(1+moveRatio*.45);
+  const now=performance.now(), moveRatio=Math.max(0,Math.min(2.35,Number(a._netAnimMoveRatio)||Number(a._visualMoveSpeed||0)/Math.max(1,Number(a.speed)||animalSpeed(species,stage,!!a.owned)||1)));
+  const motionProfile=creatureMotionRatios(moveRatio),cadenceRatio=motionProfile.cadence,strideRatio=motionProfile.stride;
+  const phase=now*.001*((sleeping ? .45 : 1.05)+cadenceRatio*1.8)+(a.tailPhase||0);
+  const tailAngle=sleeping?0:Math.sin(phase*1.45)*(species === "fox" ? .13 : .07)*(1+strideRatio*.45);
   const headAngle=sleeping?0:Math.sin(phase*.76)*(species === "fox" ? .045 : .035);
   const attackT=Math.max(0,Math.min(1,Number(a.attackAnim)||0));
   const bite=sleeping?0:Math.sin(attackT*Math.PI);
@@ -16394,13 +16481,16 @@ function drawUploadedAnimalSkin(a) {
     ? Math.max(0, Number(a._visualMoveSpeed) || 0)
     : 0;
   const normalSpeed = Math.max(1, Number(a.speed) || animalSpeed(a.type, a.stage, !!a.owned) || 1);
-  const measuredSpeedRatio = Math.max(0, Math.min(1.9, actualMoveSpeed / normalSpeed));
+  const measuredSpeedRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalSpeed));
   const speedRatio = (net.room && Number.isFinite(a._netAnimMoveRatio))
-    ? Math.max(0, Math.min(1.9, a._netAnimMoveRatio))
+    ? Math.max(0, Math.min(2.35, a._netAnimMoveRatio))
     : measuredSpeedRatio;
+  const motionProfile = creatureMotionRatios(speedRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
 
-  const tailFrequency = 2.6 + speedRatio * 10.4;
-  const headFrequency = 1.9 + speedRatio * 5.0;
+  const tailFrequency = 2.6 + cadenceRatio * 10.4;
+  const headFrequency = 1.9 + cadenceRatio * 5.0;
   const motionTime = nowMs * 0.001;
   const genericPhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase
@@ -16408,7 +16498,7 @@ function drawUploadedAnimalSkin(a) {
 
   const tailAngle = a.sleeping ? 0 :
     Math.sin(genericPhase) *
-    (0.035 + speedRatio * 0.13);
+    (0.035 + strideRatio * 0.13);
 
   // Source costumes face horizontally. Build the animal as true visual layers:
   // 1) tail layer UNDER the torso
@@ -16430,13 +16520,13 @@ function drawUploadedAnimalSkin(a) {
     Math.sin((net.room && Number.isFinite(a._netAnimPhase))
       ? a._netAnimPhase * 0.70 + 0.7
       : motionTime * headFrequency + (a.x || 0) * 0.007) *
-    (0.042 + speedRatio * 0.125);
+    (0.042 + strideRatio * 0.125);
 
   const strongerHeadBob = a.sleeping ? 0 :
     Math.sin((net.room && Number.isFinite(a._netAnimPhase))
       ? a._netAnimPhase * 0.88 + 0.35
       : motionTime * headFrequency * 1.34 + (a.y || 0) * 0.006) *
-    drawH * (0.014 + speedRatio * 0.026);
+    drawH * (0.014 + strideRatio * 0.026);
 
   // ---- Layer 1: copied tail UNDER the body ----
   ctx.save();
@@ -16754,23 +16844,26 @@ let projectiles = [];
 const TINY_BEE_SEP_SOURCE="data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIzNC4xNDI4NiIgaGVpZ2h0PSIxMDAuNTQ3MzIiIHZpZXdCb3g9IjAsMCwzNC4xNDI4NiwxMDAuNTQ3MzIiPjxkZWZzPjxyYWRpYWxHcmFkaWVudCBjeD0iMjQzLjc3MTQzIiBjeT0iMjI0LjQxOTA1IiByPSIxMC40OTk2NyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGlkPSJjb2xvci0xIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM5N2ZkZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzk3ZmRmZiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGN4PSIyNDMuNzcxNDMiIGN5PSIxNDMuODQ3NjIiIHI9IjEwLjQ5OTY3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaWQ9ImNvbG9yLTIiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzk3ZmRmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjOTdmZGZmIi8+PC9yYWRpYWxHcmFkaWVudD48L2RlZnM+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIyNS4yLC0xMzMuMDAyNTMpIj48ZyBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpc1BhaW50aW5nTGF5ZXImcXVvdDs6dHJ1ZX0iIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSJub25lIiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2UtZGFzaGFycmF5PSIiIHN0cm9rZS1kYXNob2Zmc2V0PSIwIiBzdHlsZT0ibWl4LWJsZW5kLW1vZGU6IG5vcm1hbCI+PHBhdGggZD0iTTI1OS4zNDI4NiwxODIuODQ3NjJjMCwwIC0yLjIwNjU5LDIuNDI4NTggLTQuOTI4NTcsMi40Mjg1OGMtMi43MjE5NywwIC0yLjIxNDI5LC0xLjIzMDE3IC0yLjIxNDI5LC0yLjU3MTQzYzAsLTEuMzQxMjYgLTAuNTA3NjgsLTIuMjg1NzEgMi4yMTQyOSwtMi4yODU3MWMyLjcyMTk3LDAgNC45Mjg1NywyLjQyODU3IDQuOTI4NTcsMi40Mjg1N3oiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yNTQuMiwxODIuNjMzMzNjMCw2LjM1MTI3IC02LjQ5MTg3LDExLjUgLTE0LjUsMTEuNWMtOC4wMDgxMywwIC0xNC41LC01LjE0ODczIC0xNC41LC0xMS41YzAsLTYuMzUxMjcgNi40OTE4NywtMTEuNSAxNC41LC0xMS41YzguMDA4MTMsMCAxNC41LDUuMTQ4NzMgMTQuNSwxMS41eiIgZmlsbD0iI2ZmZjc2NiIgc3Ryb2tlLXdpZHRoPSJub25lIi8+PHBhdGggZD0iTTIzMy40ODU3MiwxOTMuMjc2MTlsMC4yODU3MiwtMjEuMTQyODZjMCwwIDIuNjY4NDgsLTEuMTQyODUgNC41NzE0MywtMS4xNDI4NWMyLjIzNDE1LDAgOC40Mjg1NywwLjcxNDI4IDguNDI4NTcsMC43MTQyOGwwLjI4NTcxLDIxLjQyODU3YzAsMCAtNC45ODg1OCwxLjMzNTIyIC03LjI4NDk0LDEuMzU5MzljLTIuMjI1MjEsMC4wMjM0MyAtNi4yODY0OSwtMS4yMTY1MyAtNi4yODY0OSwtMS4yMTY1M3oiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yNDkuOTM4MjUsMjE3LjA4MzY2YzQuODgwODcsNC4zNjU4IDYuMzAwNDcsMTAuNzQxNDMgMy4xNzA3NywxNC4yNDAzNmMtMy4xMjk3LDMuNDk4OTMgLTkuNjIzNTUsMi43OTYyIC0xNC41MDQ0MiwtMS41Njk2Yy00Ljg4MDg3LC00LjM2NTggLTYuMzAwNDcsLTEwLjc0MTQzIC0zLjE3MDc3LC0xNC4yNDAzNmMzLjEyOTcsLTMuNDk4OTMgOS42MjM1NSwtMi43OTYyIDE0LjUwNDQyLDEuNTY5NnoiIGZpbGw9InVybCgjY29sb3ItMSkiIHN0cm9rZS13aWR0aD0iMCIvPjxwYXRoIGQ9Ik0yMzQuNTc2NjksMTUxLjAzODMyYy0zLjEyOTcsLTMuNDk4OTMgLTEuNzEwMSwtOS44NzQ1NyAzLjE3MDc3LC0xNC4yNDAzN2M0Ljg4MDg3LC00LjM2NTggMTEuMzc0NzIsLTUuMDY4NTMgMTQuNTA0NDIsLTEuNTY5NmMzLjEyOTcsMy40OTg5MyAxLjcxMDExLDkuODc0NTcgLTMuMTcwNzcsMTQuMjQwMzdjLTQuODgwODcsNC4zNjU4IC0xMS4zNzQ3Miw1LjA2ODUzIC0xNC41MDQ0MiwxLjU2OTZ6IiBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpbmRleCZxdW90OzpudWxsfSIgZmlsbD0idXJsKCNjb2xvci0yKSIgc3Ryb2tlLXdpZHRoPSIwIi8+PC9nPjwvZz48L3N2Zz4=";
 const TINY_BEE_SEP_IMAGE=new Image();TINY_BEE_SEP_IMAGE.decoding="async";TINY_BEE_SEP_IMAGE.src=TINY_BEE_SEP_SOURCE;
 const TINY_BEE_SEP_W=34.14286,TINY_BEE_SEP_H=100.54732,TINY_BEE_REF_H=40.54733;
-function queenBeeSwarmCount(stage){return {baby:10,adult:30,boss:40,superboss:50,bigmomma:80}[String(stage||"adult")]||30;}
+function queenBeeSwarmCount(stage){return {baby:18,adult:42,boss:66,superboss:90,bigmomma:120}[String(stage||"adult")]||42;}
 function tinyBeeTargetAliveOffline(t){return !!(t&&t!==player?!t.dead&&((Number.isFinite(Number(t.hp))?Number(t.hp):1)>0):t===player&&!player.dead&&player.health>0);}
 function queenSwarmTargetPoolOffline(p){
   if(p.hostile){const out=[];if(!player.dead)out.push(player);for(const q of player.pets||[])if(q&&!q.dead)out.push(q);return out;}
   const out=[];for(const en of enemies)if(en&&!en.dead)out.push(en);for(const a of animals)if(a&&!a.dead&&!a.owned)out.push(a);return out;
 }
-function queenSwarmPickTargetOffline(p,maxRange=920){let best=null,bestD=maxRange;for(const q of queenSwarmTargetPoolOffline(p)){const d=dist(p.x,p.y,q.x,q.y);if(d<bestD){best=q;bestD=d;}}return best;}
+function queenSwarmPickTargetOffline(p,maxRange=1120){let best=null,bestD=maxRange;for(const q of queenSwarmTargetPoolOffline(p)){const d=dist(p.x,p.y,q.x,q.y);if(d<bestD){best=q;bestD=d;}}return best;}
 function spawnQueenBeeSwarmOffline(source,hostile,stats={}){
   if(!source)return;const count=queenBeeSwarmCount(source.stage),sourceKey=(hostile?"wild:":"pet:")+(source.netId||source._spawnId||source.type+":"+Math.round(source.x)+":"+Math.round(source.y));
-  // One active royal storm per queen keeps the 80-bee Big Momma cast bounded.
+  // One active royal storm per queen bounds the larger high-stage swarms.
   for(const q of projectiles)if(q&&q.kind==="queenSwarmBee"&&q.source===source)q.dead=true;
-  const pool=hostile?queenSwarmTargetPoolOffline({hostile:true}):queenSwarmTargetPoolOffline({hostile:false}),dmg=Math.max(.32,(Number(stats.damage)||16)*.8/Math.max(1,count)),dot=Math.max(2,Number(stats.dot)||14);
-  for(let i=0;i<count;i++){const a=(i/count)*TAU+Math.random()*.22,rad=8+(i%7)*2.2,target=pool.length?pool[i%pool.length]:null,speed=150+Math.random()*42;projectiles.push({x:source.x+Math.cos(a)*rad,y:source.y+Math.sin(a)*rad,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:8.5,r:5.2,hostile:!!hostile,kind:"queenSwarmBee",color:"#ffe66a",dmg,swarmDot:dot,source,targetObj:target,nextHit:0,retargetAt:0,swarmSourceKey:sourceKey,seed:Math.random()*100});}
+  const pool=hostile?queenSwarmTargetPoolOffline({hostile:true}):queenSwarmTargetPoolOffline({hostile:false}),dmg=Math.max(.32,(Number(stats.damage)||16)*.8/Math.max(1,count)),dot=Math.max(8,(Number(stats.dot)||14)*1.65),beeHp=({baby:10,adult:14,boss:19,superboss:25,bigmomma:34})[String(source.stage||"adult")]||14;
+  for(let i=0;i<count;i++){const a=(i/count)*TAU+Math.random()*.22,rad=24+(i%12)*4.4,target=pool.length?pool[i%pool.length]:null,speed=220+Math.random()*55;projectiles.push({x:source.x+Math.cos(a)*rad,y:source.y+Math.sin(a)*rad,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:9.5,r:5.2,hp:beeHp,maxHp:beeHp,hostile:!!hostile,kind:"queenSwarmBee",color:"#ffe66a",dmg,swarmDot:dot,source,targetObj:target,nextHit:0,retargetAt:0,swarmSourceKey:sourceKey,seed:Math.random()*100});}
 }
 function spawnPassiveTinyBeesOffline(){
   // Three passive mini bees per hive. They never attack; they simply wander.
-  for(const h of resources){if(!h||!h.alive||h.type!=="rainforestHive")continue;const c=offlineResourceCenter(h);for(let i=0;i<3;i++){const a=Math.random()*TAU,rad=(Number(h.solidR)||70)+70+Math.random()*135,speed=34+Math.random()*22;projectiles.push({x:c.x+Math.cos(a)*rad,y:c.y+Math.sin(a)*rad,vx:Math.cos(a+Math.PI*.5)*speed,vy:Math.sin(a+Math.PI*.5)*speed,life:1e9,r:4.8,hostile:false,kind:"tinyBeeRoam",color:"#ffe66a",dmg:0,roamHomeX:c.x,roamHomeY:c.y,roamAngle:a+Math.PI*.5,roamTurn:.4+Math.random()*1.6,seed:Math.random()*100});}}
+  for(const h of resources){if(!h||!h.alive||h.type!=="rainforestHive")continue;const c=offlineResourceCenter(h);for(let i=0;i<3;i++){const a=Math.random()*TAU,rad=(Number(h.solidR)||70)+70+Math.random()*135,speed=34+Math.random()*22;projectiles.push({x:c.x+Math.cos(a)*rad,y:c.y+Math.sin(a)*rad,vx:Math.cos(a+Math.PI*.5)*speed,vy:Math.sin(a+Math.PI*.5)*speed,life:1e9,r:4.8,hp:8,maxHp:8,hostile:false,kind:"tinyBeeRoam",color:"#ffe66a",dmg:0,roamHomeX:c.x,roamHomeY:c.y,roamAngle:a+Math.PI*.5,roamTurn:.4+Math.random()*1.6,seed:Math.random()*100});}}
+}
+function damageTinyBeeOffline(bee,raw){
+  if(!bee||bee.dead)return false;const max=Math.max(1,Number(bee.maxHp)||Number(bee.hp)||8),dmg=Math.max(1,(Number(raw)||1)*.72);bee.maxHp=max;bee.hp=Math.max(0,(Number.isFinite(Number(bee.hp))?Number(bee.hp):max)-dmg);spark(bee.x,bee.y,"#ffe66a",bee.hp<=0?6:3,bee.hp<=0?65:35);if(bee.hp<=0){bee.dead=true;return true;}return false;
 }
 function drawTinyBeeProjectile(p){
   const img=TINY_BEE_SEP_IMAGE,r=Math.max(4,Number(p.r)||5),drawH=Math.max(17,r*4.35),sc=drawH/TINY_BEE_REF_H,drawW=TINY_BEE_SEP_W*sc,left=-drawW*.5,top=-drawH*.5;
@@ -17121,7 +17214,7 @@ function randomOceanFloorPoint(minDepth=390,maxDepth=1900){
   const a=rand(0,TAU),coast=islandRadiusAtAngle(a,0),dd=minDepth+80;
   return{x:clamp(ISLAND_CX+Math.cos(a)*(coast+dd),80,WORLD_W-80),y:clamp(ISLAND_CY+Math.sin(a)*(coast+dd),80,WORLD_H-80)};
 }
-function underwaterFloorActive(){return (Number(player?._underwaterBlend)||0)>.45;}
+function underwaterFloorActive(){return player?.vehicleType!=="Boat"&&(Number(player?._underwaterBlend)||0)>.45;}
 function blueSeaweedProtectionActive(){return (Number(player?._blueSeaweedUntil)||0)>game.time;}
 function divingSuitActive(){return buildIsKnown("DivingSuit")&&craftedItemCount("DivingSuit")>0;}
 function divingSuitUnderwaterMoveMul(){if(!divingSuitActive())return 1;const t=craftedBuildTier("DivingSuit"),v=craftedBuildVariant("DivingSuit");let m=[.86,.93,1.0,1.05][clamp(t,0,3)]||1;if(t>=3&&v==="ruby")m=1.14;return m;}
@@ -17388,6 +17481,7 @@ function awardPetXpContributors(target,killerPet=null){
   for(const [pet,dealt] of map){
     if(!pet||pet.dead||!pet.owned||!player.pets.includes(pet))continue;
     const killer=pet===killerPet;
+    if(pet.larvaPet&&!killer)continue;
     const share=Math.max(0,Number(dealt)||0)/total;
     const mul=killer?1:clamp(.55+share*.35,.55,.85);
     const xp=Math.max(1,Math.round(base*mul));
@@ -18318,7 +18412,7 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
     abilityCd: rand(3, infoAbilityCd(type)), targetX: null, targetY: null,
     wanderT: rand(1, 3), wanderA: rand(0, TAU),
     flash: 0, dead: false, tailPhase: rand(0, TAU),
-    atkCd: 0, combat: 0, exp: 0, level: 1,
+    atkCd: 0, combat: 0, exp: 0, level: wildStageMinLevel(stage),
     recentHit: 0, attackAnim: 0,
     fleeUntil: 0, enraged: false, tameFailedAggro: false, desperateAggro: false,
   };
@@ -18929,6 +19023,7 @@ function placedVehicleType(w){const k=String(w?.kind||"");return k.startsWith("v
 function placedVehicleTier(w){const m=String(w?.kind||"").match(/^vehicle(?:Boat|Sub)(\d+)/);return clamp(Math.floor(Number(m?.[1])||0),0,3);}
 function placedVehicleVariant(w){const m=String(w?.kind||"").match(/@([a-z]+)$/i);return String(m?.[1]||"").toLowerCase();}
 function isPlacedVehicleWall(w){return !!placedVehicleType(w);}
+function towerSolidRadius(t){return String(t?.kind||"")==="battlebot"?27:24;}
 function vehicleTravelAllowed(x,y){return worldBiomeAt(x,y)==="ocean"||landDepthToCoastAt(x,y)<=VEHICLE_BEACH_INLAND;}
 function vehiclePlacementAllowed(x,y){return nearOceanShore(x,y,VEHICLE_PLACE_COAST_RANGE)&&vehicleTravelAllowed(x,y);}
 function vehicleSpeedMul(type,tier=0,variant=""){tier=clamp(Math.floor(Number(tier)||0),0,3);let m=type==="Sub"?[1.38,1.72,2.08,2.34][tier]:[1.55,1.92,2.32,2.56][tier];if(tier>=3&&variant==="ruby")m*=1.16;else if(tier>=3&&variant==="emerald")m*=1.08;else if(tier>=3&&variant==="diamond")m*=1.04;return m;}
@@ -19416,7 +19511,7 @@ function hostlWeaponShapeTouchesRock(shape,r){
   return false;
 }
 function applyDoubleAxeSecondAnimalHitOffline(a,baseDamage,crit){
-  if(!a||a.dead||(a.owned&&!a.releasedWild))return;const info=PET_TYPES[a.type];let dmg=animalDamageTaken(a.type,a.stage,baseDamage);a.hp-=dmg;gainSkillXp(1,"combat-hit");a.flash=.12;markCreatureHit(a,4.2);a.sleeping=false;a.enraged=true;a.combat=8;
+  if(!a||a.dead||(a.owned&&!a.releasedWild))return;const info=PET_TYPES[a.type];let dmg=animalDamageTaken(a.type,a.stage,baseDamage);rallyPetsToPlayerAttackOffline(a);a.hp-=dmg;gainSkillXp(1,"combat-hit");a.flash=.12;markCreatureHit(a,4.2);a.sleeping=false;a.enraged=true;a.combat=8;
   if(snakeFluteCalmActive(a)){a.enraged=false;a.desperateAggro=false;a.tameFailedAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=null;a.combat=0;}
   else if(isNeutralBeeType(a.type)||(a.type==="dronebee"&&!droneBeeShouldFlee(a))){a.desperateAggro=false;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(droneBeeShouldFlee(a)){a.desperateAggro=false;a.enraged=false;a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+5.5;a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,a.fleeUntil+2.5);a.wanderA=angTo(player.x,player.y,a.x,a.y);}else if(a.stage==="baby"||info?.flee){if(a.hp>0&&a.hp/Math.max(1,a.maxHp)<=.32){a.desperateAggro=true;a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}else if(!a.tameFailedAggro){a.hostileTarget=null;a.fleeFrom=player;a.fleeUntil=game.time+4;a._stayAwakeUntil=Math.max(Number(a._stayAwakeUntil)||0,a.fleeUntil+2.5);a.wanderA=angTo(player.x,player.y,a.x,a.y);}}else{a.fleeUntil=0;a.fleeFrom=null;a.hostileTarget=player;}
   spark(a.x,a.y,crit?"#ffe08a":"#e0563f",6,90);floatText(a.x,a.y-a.r-8,(crit?"CRIT ":"")+Math.round(dmg),crit?"#ffe08a":"#f2836a");
@@ -19500,7 +19595,7 @@ function meleeAttack(preciseResolve=null) {
   for(const bee of projectiles){
     if(!bee||bee.dead||!(bee.kind==="tinyBeeRoam"||(bee.kind==="queenSwarmBee"&&bee.hostile)))continue;
     const br=Math.max(5,Number(bee.r)||5),hit=preciseShape?hostlWeaponShapeTouchesCircle(preciseShape,bee.x,bee.y,br):(dist(player.x,player.y,bee.x,bee.y)<t.range+br&&isFacing(bee.x,bee.y,1.08));
-    if(hit){bee.dead=true;hitSomething=true;spark(bee.x,bee.y,"#ffe66a",5,55);}
+    if(hit){damageTinyBeeOffline(bee,t.dmg*runDamageMul());hitSomething=true;}
   }
   for (const en of enemies) {
     if (en.dead) continue;
@@ -19521,7 +19616,7 @@ function meleeAttack(preciseResolve=null) {
       let rawDmg=t.dmg*runDamageMul()*(t.doubleHit&&!splitDouble?2:1);const crit=Math.random()<.12;if(crit)rawDmg*=2;
       if(splitDouble){const hit=()=>{if(game.started&&!game.over&&!net.room&&!a.dead)applyDoubleAxeSecondAnimalHitOffline(a,rawDmg,crit);};setTimeout(hit,220);setTimeout(hit,385);hitSomething=true;continue;}
       let dmg = animalDamageTaken(a.type, a.stage, rawDmg);
-      a.hp -= dmg;
+      rallyPetsToPlayerAttackOffline(a);a.hp -= dmg;
       if(!net.room)gainSkillXp(1,"combat-hit");
       a.flash = 0.12;
       markCreatureHit(a, 4.2);
@@ -20063,8 +20158,11 @@ function grantMoonmarkRewardsOffline(en) {
   const nextStage={baby:"adult",adult:"boss",boss:"superboss"};
   for(const pet of player.pets){
     if(!pet)continue;
+    // Larvae can only leave the Larva stage through kill-earned XP. Moonmark
+    // rewards must not hatch them or give them bonus XP toward Lv4.
+    if(pet.larvaPet){floatText(pet.x,pet.y-pet.r-34,"LARVA: KILL XP ONLY","#ffe66d");continue;}
     const next=nextStage[pet.stage]||"";
-    if(next){pet.stage=next;pet.r=animalRadius(pet.type,next);pet.maxHp=upgradedPetMaxHp(pet.type,next);pet.hp=pet.maxHp;pet.speed=upgradedPetSpeed(pet.type,next);pet.level=1;pet.exp=0;floatText(pet.x,pet.y-pet.r-34,`→ ${stageDisplayName(next)}`,"#ffe66d");}
+    if(next){pet.stage=next;pet.r=animalRadius(pet.type,next);pet.maxHp=upgradedPetMaxHp(pet.type,next);pet.hp=pet.maxHp;pet.speed=upgradedPetSpeed(pet.type,next);pet.level=Math.max(Math.floor(Number(pet.level)||1),petStageMinLevel(next,!!pet.larvaOrigin));floatText(pet.x,pet.y-pet.r-34,`→ ${stageDisplayName(next)} · LV ${pet.level}`,"#ffe66d");}
     const bonus=Math.max(20,Math.round(expToNext(pet.stage,pet.level||1)*.28));if(pet.dead)pet.exp=Math.max(0,Number(pet.exp)||0)+bonus;else givePetExp(pet,bonus);
   }
   // Three skill numbers are granted at once, but pendingSkillMilestone still makes
@@ -20081,7 +20179,7 @@ function grantMoonmarkRewardsOffline(en) {
 
 function damageEnemy(en, dmg, crit, attacker = player) {
   if (attacker && attacker.owned && dmg > 0) markPetXpContribution(en, attacker, dmg);
-  if(attacker===player&&!net.room&&dmg>0)gainSkillXp(1,"combat-hit");
+  if(attacker===player&&!net.room&&dmg>0){gainSkillXp(1,"combat-hit");rallyPetsToPlayerAttackOffline(en);}
   en.hp -= dmg; en.flash = 0.12;
   en.revengeTarget = (attacker && combatTargetAlive(attacker)) ? attacker : player;
   const knock = en.moonMarked ? 0 : 7;
@@ -20144,7 +20242,7 @@ function spawnOfflineEnemyGuard(en, strong, rider=false) {
     angle: en.angle || 0, r, hp, maxHp: hp, coat, spots: [], spotCol: shadeColor(coat,-30),
     speed: animalSpeed(type, stage, false), sleeping:false, tameProgress:0, owned:false, follow:false,
     abilityCd:rand(3,infoAbilityCd(type)), targetX:null,targetY:null,wanderT:rand(.7,2),wanderA:rand(0,TAU),
-    flash:0,dead:false,tailPhase:rand(0,TAU),atkCd:0,combat:9999,exp:0,level:1,recentHit:0,attackAnim:0,
+    flash:0,dead:false,tailPhase:rand(0,TAU),atkCd:0,combat:9999,exp:0,level:wildStageMinLevel(stage),recentHit:0,attackAnim:0,
     fleeUntil:0,enraged:true,tameFailedAggro:true,desperateAggro:false,
     enemyOwner: en, enemyRider: rider,
   };
@@ -20362,14 +20460,14 @@ function resolveEnemyWorld(en) {
     }
   }
   for (const w of walls) {
-    if(isPlacedVehicleWall(w))continue;
     const wd = dist(en.x, en.y, w.x, w.y);
-    if (wd < w.r + en.r && wd > 0.1) {
-      const pushA = angTo(w.x, w.y, en.x, en.y);
+    if (wd < w.r + en.r) {
+      const pushA = wd > 0.1 ? angTo(w.x, w.y, en.x, en.y) : (Number(en.angle)||0) + Math.PI;
       en.x = w.x + Math.cos(pushA) * (w.r + en.r);
       en.y = w.y + Math.sin(pushA) * (w.r + en.r);
     }
   }
+  for(const t of towers){if(!t||(Number(t.hp)||0)<=0)continue;const tr=towerSolidRadius(t),d=dist(en.x,en.y,t.x,t.y);if(d<tr+en.r){const a=d>.1?angTo(t.x,t.y,en.x,en.y):(Number(en.angle)||0)+Math.PI;en.x=t.x+Math.cos(a)*(tr+en.r);en.y=t.y+Math.sin(a)*(tr+en.r);}}
   for (const c of queryStaticNearby("chests", en.x, en.y, 100)) {
     if (c.opened) continue;
     const ch = chestSolidHitbox(c);
@@ -20490,10 +20588,14 @@ function retargetAfterOwnedPetFalls(killer, fallenPet = null) {
 }
 function setPetAttackerTarget(pet, attacker) {
   if (!pet || pet.dead || !attacker || attacker === pet) return;
-  pet.forcedTarget = attacker;
-  pet.forcedTargetAutoDefense = true;
-  pet.combat = Math.max(pet.combat || 0, 9999);
-  pet.followReturning = false;
+  pet.forcedTarget = attacker;pet.forcedTargetAutoDefense = true;pet.combat = Math.max(pet.combat || 0, 9999);pet.followReturning = false;pet.sleeping=false;pet.huntTarget=null;pet.targetX=null;pet.targetY=null;pet._blockingResourceTarget=null;pet._combatStuckT=0;pet._combatStuckTarget=null;
+}
+function rallyPetsToPlayerAttackOffline(target){
+  if(net.room||!target||!combatTargetAlive(target))return;
+  for(const p of player.pets||[]){if(!p||p.dead)continue;p.forcedTarget=target;p.forcedTargetAutoDefense=false;p.combat=Math.max(p.combat||0,9999);p.sleeping=false;p.huntTarget=null;p.huntRetarget=0;p.targetX=null;p.targetY=null;p.followReturning=false;p._blockingResourceTarget=null;p._combatStuckT=0;p._combatStuckTarget=null;}
+  // Offline Battle Bots follow the same rule as multiplayer: no automatic
+  // nearby-enemy scan. The player's actual attacked target is the only target.
+  for(const t of towers||[])if(t&&t.kind==="battlebot"&&t.ownerId==="local"&&(t.hp??1)>0)t._focusTarget=target;
 }
 function wildlifeHitByPet(target, pet, dealt = 0) {
   if (!target || target.dead || target.owned || !pet || pet.dead) return;
@@ -20608,10 +20710,10 @@ function nearbyWildFightCandidates(grid, x, y) {
 function wildExpNeedOffline(a){const base={baby:28,adult:72,boss:150,superboss:300,bigmomma:999999}[a?.stage]||999999;return Math.round(base*(1+Math.max(0,(Number(a?.level)||1)-1)*.18));}
 function giveWildExpOffline(a,amount,reason="wild"){
   if(!a||a.dead||a.owned||a.stage==="bigmomma")return;amount=Math.max(0,Number(amount)||0);if(amount<=0)return;
-  a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(1,Math.floor(Number(a.level)||1));let safety=0;
-  while(safety++<12){const need=wildExpNeedOffline(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:3,adult:4,boss:5,superboss:6}[a.stage]||999;if(a.level<growAt)continue;
+  a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(wildStageMinLevel(a.stage),Math.floor(Number(a.level)||1));let safety=0;
+  while(safety++<12){const need=wildExpNeedOffline(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:4,adult:8,boss:12,superboss:16}[a.stage]||999;if(a.level<growAt)continue;
     const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&a.type!=="queenbee"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.type!=="queenbee"&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}
-    a.stage=next;a.level=1;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;floatText(a.x,a.y-a.r-18,`${next.toUpperCase()}!`,"#ffe66d");
+    a.stage=next;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;floatText(a.x,a.y-a.r-18,`${next.toUpperCase()} · LV ${a.level}`,"#ffe66d");
   }
 }
 function giveWildKillExpOffline(a,victim){if(!a||!victim)return;giveWildExpOffline(a,petKillXpForAnimal(victim),"hunt");}
@@ -20652,6 +20754,7 @@ function chooseWildlifeFightTarget(a) {
   }
   return best;
 }
+function applyQueenBiteDotOffline(attacker,target){if(attacker?.type!=="queenbee"||!target||target.dead)return;const isAnimal=target!==player&&(!!target.owned||animals.includes(target));applyOfflineFixedDot(target,isAnimal,attacker,queenBeeBiteDot(attacker.stage),5,"#69c84f",true);}
 function damageTargetFromWild(attacker, target, dmg) {
   if (!attacker || attacker.dead || !target || !combatTargetAlive(target)) return false;
   const targetIsWildAnimal = !!(target.type && !target.owned && animals.includes(target));
@@ -20745,6 +20848,7 @@ function petLockedCombat(p, target, dt) {
     } else {
       target.revengeTarget = p;
     }
+    if(p.type==="queenbee"&&target.hp>0)applyOfflineFixedDot(target,targetIsAnimal,p,queenBeeBiteDot(p.stage),5,"#69c84f",false);
     if (target.hp <= 0 && !target.dead) {
       if (targetIsAnimal) {
         setKilledBy(target, p);
@@ -21030,10 +21134,10 @@ function updateProjectiles(dt) {
     if(p.kind==="queenSwarmBee"){
       p.life-=dt;if(p.life<=0){p.dead=true;continue;}
       if(p.source?.dead){p.dead=true;continue;}
-      if(!tinyBeeTargetAliveOffline(p.targetObj)||dist(p.x,p.y,p.targetObj.x,p.targetObj.y)>1100){if(game.time>=(Number(p.retargetAt)||0)){p.targetObj=queenSwarmPickTargetOffline(p);p.retargetAt=game.time+.34;}}
+      if(!tinyBeeTargetAliveOffline(p.targetObj)||dist(p.x,p.y,p.targetObj.x,p.targetObj.y)>1250){if(game.time>=(Number(p.retargetAt)||0)){p.targetObj=queenSwarmPickTargetOffline(p);p.retargetAt=game.time+.34;}}
       const target=p.targetObj;
-      if(tinyBeeTargetAliveOffline(target)){const ta=angTo(p.x,p.y,target.x,target.y),cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-6.2*dt,6.2*dt),spd=178;p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;const tr=target===player?PLAYER_R:(target.r||18);if(dist(p.x,p.y,target.x,target.y)<=tr+p.r+3&&game.time>=(Number(p.nextHit)||0)){if(p.hostile){if(damageTargetFromWild(p.source,target,p.dmg||.4))applyOfflineFixedDot(target,target!==player,p.source,p.swarmDot||8,5,"#69c84f",true);}else{const isAnimal=animals.includes(target);damagePetAbilityTargetOffline(p.source,target,isAnimal,p.dmg||.4);applyOfflineFixedDot(target,isAnimal,p.source,p.swarmDot||8,5,"#69c84f");}p.nextHit=game.time+1.05;p.vx*=-.34;p.vy*=-.34;}}
-      else{p.roamAngle=(Number(p.roamAngle)||Math.atan2(p.vy,p.vx))+Math.sin((game.time+(p.seed||0))*2.4)*1.8*dt;const spd=95;p.vx=Math.cos(p.roamAngle)*spd;p.vy=Math.sin(p.roamAngle)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;}
+      if(tinyBeeTargetAliveOffline(target)){const ta=angTo(p.x,p.y,target.x,target.y),cur=Math.atan2(p.vy,p.vx),delta=Math.atan2(Math.sin(ta-cur),Math.cos(ta-cur)),na=cur+clamp(delta,-8.2*dt,8.2*dt),spd=255;p.vx=Math.cos(na)*spd;p.vy=Math.sin(na)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;const tr=target===player?PLAYER_R:(target.r||18);if(dist(p.x,p.y,target.x,target.y)<=tr+p.r+3&&game.time>=(Number(p.nextHit)||0)){if(p.hostile){if(damageTargetFromWild(p.source,target,p.dmg||.4))applyOfflineFixedDot(target,target!==player,p.source,p.swarmDot||8,5,"#69c84f",true);}else{const isAnimal=animals.includes(target);damagePetAbilityTargetOffline(p.source,target,isAnimal,p.dmg||.4);applyOfflineFixedDot(target,isAnimal,p.source,p.swarmDot||8,5,"#69c84f");}p.nextHit=game.time+1.05;p.vx*=-.34;p.vy*=-.34;}}
+      else{p.roamAngle=(Number(p.roamAngle)||Math.atan2(p.vy,p.vx))+Math.sin((game.time+(p.seed||0))*2.4)*1.8*dt;const spd=138;p.vx=Math.cos(p.roamAngle)*spd;p.vy=Math.sin(p.roamAngle)*spd;p.x+=p.vx*dt;p.y+=p.vy*dt;}
       if(p.x<0||p.y<0||p.x>WORLD_W||p.y>WORLD_H)p.dead=true;continue;
     }
     if(p.kind==="tinyBeeRoam"){
@@ -21069,7 +21173,8 @@ function updateProjectiles(dt) {
       for(const bee of projectiles){if(bee===p||bee.dead||!(bee.kind==="tinyBeeRoam"||(bee.kind==="queenSwarmBee"&&bee.hostile)))continue;consider(segmentCircleT(x0,y0,x1,y1,bee.x,bee.y,p.r+(bee.r||5)),"tinyBee",bee);}
     }
 
-    for(const w of walls){if((w.hp??1)>0&&!isPlacedVehicleWall(w))consider(segmentCircleT(x0,y0,x1,y1,w.x,w.y,w.r+p.r),"solid",w);}
+    for(const w of walls){if((w.hp??1)>0)consider(segmentCircleT(x0,y0,x1,y1,w.x,w.y,w.r+p.r),"solid",w);}
+    for(const t of towers){if(t&&(Number(t.hp)||0)>0)consider(segmentCircleT(x0,y0,x1,y1,t.x,t.y,towerSolidRadius(t)+p.r),"solid",t);}
     const mx=(x0+x1)*.5,my=(y0+y1)*.5,travel=Math.hypot(x1-x0,y1-y0);
     for(const r of queryStaticNearby("resources",mx,my,travel*.5+110)){if(r.alive)consider(resourceProjectileSegmentT(r,x0,y0,x1,y1,p.r),"solid",r);}
     for(const g of queryStaticNearby("gold",mx,my,travel*.5+260)){if(g.infinite||g.goldLeft>0){const gh=goldSolidHitbox(g);consider(segmentCircleT(x0,y0,x1,y1,gh.x,gh.y,gh.r+p.r),"solid",g);}}
@@ -21079,11 +21184,11 @@ function updateProjectiles(dt) {
       if(best.type==="player") hitPlayer(p.dmg||8,p.source||null);
       else if(best.type==="pet") damageCreatureFromEnemy(best.obj,p.source,p.dmg||8);
       else if(best.type==="enemy") damageEnemy(best.obj,p.dmg||TOOLS.Bow.dmg,false);
-      else if(best.type==="tinyBee"){best.obj.dead=true;spark(best.obj.x,best.obj.y,"#ffe66a",5,55);}
+      else if(best.type==="tinyBee"){damageTinyBeeOffline(best.obj,p.dmg||TOOLS.Bow.dmg);}
       else if(best.type==="wild"){
         const wa=best.obj;
         if(p.hostile) damageCreatureFromEnemy(wa,p.source,p.dmg||8);
-        else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else{wa.enraged=true;wa.hostileTarget=player;}if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
+        else {const dealt=animalDamageTaken(wa.type,wa.stage,p.dmg||TOOLS.Bow.dmg);rallyPetsToPlayerAttackOffline(wa);wa.hp-=dealt;gainSkillXp(1,"combat-hit");wa.flash=.12;markCreatureHit(wa,4);wa.sleeping=false;if(snakeFluteCalmActive(wa)){wa.enraged=false;wa.hostileTarget=null;wa.fleeFrom=null;wa.fleeUntil=0;wa.combat=0;}else{wa.enraged=true;wa.hostileTarget=player;}if(wa.hp<=0){setKilledBy(wa,player);wa.dead=true;game.kills++;gainSkillXp(wa.stage==="bigmomma"?24:wa.stage==="superboss"?18:wa.stage==="boss"?14:10,"kill");awardPetXpContributors(wa,null);}}
       }
       // Physical projectile tools gather the resource they actually strike.
       // Arrows are unlimited and behave like ranged gathering hits; Throwing Axe keeps axe gathering.
@@ -21146,17 +21251,16 @@ function battleBotElementAttackOffline(t,target,isAnimal){
 function updateTowers(dt) {
   for (const t of towers) {
     if (!net.room && player.dead && t.ownerId === "local") {
-      const maxHp = Math.max(1, Number(t.maxHp) || (t.kind==="battlebot"?520:(Number(t.tier)>=2?260:Number(t.tier)>=1?180:120)));
+      const maxHp = Math.max(1, Number(t.maxHp) || (t.kind==="battlebot"?180:(Number(t.tier)>=2?260:Number(t.tier)>=1?180:120)));
       t.maxHp = maxHp; t.hp = Math.max(0, (Number.isFinite(Number(t.hp)) ? Number(t.hp) : maxHp) - (maxHp / 75) * dt);
       if (t.hp <= 0) continue;
     }
     if(t.kind==="battlebot"){
       if(net.room)continue;
       const tier=clamp(Math.floor(Number(t.tier)||0),0,3),v=String(t.variant||""),role=tier>=2&&String(t.botRole||"")==="ranged"?"ranged":"melee";
-      const rangedRange=tier>=3&&v==="water"?650:[285,325,365,390][tier],meleeRange=tier>=3&&v==="water"?128:[62,68,76,84][tier],attackRange=role==="ranged"?rangedRange:meleeRange,detectRange=role==="ranged"?attackRange:Math.max(300,attackRange+220);
-      let nearest=null,isAnimal=false,bestD=detectRange;
-      for(const en of enemies){if(en.dead)continue;const d=dist(t.x,t.y,en.x,en.y);if(d<bestD){bestD=d;nearest=en;isAnimal=false;}}
-      for(const a of animals){if(a.dead||a.owned)continue;const d=dist(t.x,t.y,a.x,a.y);if(d<bestD){bestD=d;nearest=a;isAnimal=true;}}
+      const rangedRange=tier>=3&&v==="water"?650:[285,325,365,390][tier],meleeRange=tier>=3&&v==="water"?128:[62,68,76,84][tier],attackRange=role==="ranged"?rangedRange:meleeRange;
+      let nearest=null,isAnimal=false,bestD=Infinity;
+      const focus=t._focusTarget;if(focus&&combatTargetAlive(focus)&&focus!==player){nearest=focus;isAnimal=animals.includes(focus);bestD=dist(t.x,t.y,focus.x,focus.y);}else if(focus)t._focusTarget=null;
       // Battle Bots catch up aggressively and regroup if a very fast player
       // creates an extreme gap, so speed upgrades never strand the robot.
       if(t.ownerId==="local"&&!player.dead){
@@ -21484,7 +21588,7 @@ function tryTameNearby() {
       best.desperateAggro = false;
       best.fleeUntil = 0;
       best.enraged = false;
-      best.exp = usedBeeComb && isWildBeeType(best.type) ? 30 : 0; best.level = 1; best.combat = 0; best.atkCd = 0;
+      best.exp = usedBeeComb && isWildBeeType(best.type) ? 30 : 0; best.level = Math.max(1,Math.floor(Number(best.level)||1)); best.combat = 0; best.atkCd = 0;
       if(usedBeeComb&&isWildBeeType(best.type))best._xpBarShownAt=performance.now();
       best.speed = upgradedPetSpeed(best.type, best.stage);
       best.maxHp = upgradedPetMaxHp(best.type, best.stage);
@@ -21768,7 +21872,8 @@ function movePetChaseWithRecovery(pet, target, speed, dt) {
   pet.angle = direct + pet._combatAvoidSide * 0.76;
   const ax = pet.x, ay = pet.y;
   moveOwnedPetSwept(pet, speed * 0.88, dt);
-  if (dist(ax, ay, pet.x, pet.y) < Math.max(0.15, expected * 0.12)) pet._combatAvoidSide *= -1;
+  const avoided=dist(ax,ay,pet.x,pet.y);if (avoided < Math.max(0.15, expected * 0.12)) pet._combatAvoidSide *= -1;
+  if(avoided<Math.max(.15,expected*.12)&&pet._combatStuckT>1.15){const back=Math.max(58,(pet.r||18)*2.25),oa=(Number(player.angle)||0)+Math.PI+pet._combatAvoidSide*.62;pet.x=clamp(player.x+Math.cos(oa)*back,24,WORLD_W-24);pet.y=clamp(player.y+Math.sin(oa)*back,24,WORLD_H-24);resolveAnimalWorld(pet);pet.angle=angTo(pet.x,pet.y,target.x,target.y);pet.sleeping=false;pet._blockingResourceTarget=null;pet._combatStuckT=0;}
 }
 
 function wildAttackBlockingResource(a) {
@@ -21822,6 +21927,7 @@ function mountedPetAttack() {
   pet.atkCd=animalAttackCooldown(pet.type,pet.stage,true);pet.attackAnim=.18;
   if(targetIsAnimal){target.hp-=dmg;wildlifeHitByPet(target,pet,dmg);if(target.hp<=0&&!target.dead){setKilledBy(target,pet);target.dead=true;game.kills++;awardPetXpContributors(target,pet);}}
   else damageEnemy(target,dmg,false,pet);
+  if(pet.type==="queenbee"&&!target.dead&&target.hp>0)applyOfflineFixedDot(target,targetIsAnimal,pet,queenBeeBiteDot(pet.stage),5,"#69c84f",false);
   petArmorHealFromDamage(pet,dmg);if(st>=3&&sv==="emerald"){const h=dmg*.18;pet.hp=clamp(pet.hp+h,0,pet.maxHp);floatText(pet.x,pet.y-pet.r-8,`+${Math.max(1,Math.round(h))}`,"#7be08a");}
   spark(target.x,target.y,"#7be08a",5,80);
   return true;
@@ -22018,6 +22124,7 @@ function updatePetAbilityStatuses(dt){
 
 function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
   if (!pet || pet.dead) return;
+  if(pet.larvaPet){if(!batchCast)banner(`${petDisplayName(pet)} is still a Larva — reach Lv 4 to unlock its ability.`,true);return;}
   const info = PET_TYPES[pet.type];
   if (!info) return;
   if (pet.bredChild && !inheritedFrom && !isOlderSiblingLeaderPet(pet)) {
@@ -22062,7 +22169,7 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
   }else if(pet.type==="walrus"){
     const t=petAbilityTargetOffline(pet,300),dmg=stats.damage||2;if(t){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8,r:petAbilityRangeFor(pet,85,1.8),baseR:petAbilityRangeFor(pet,85,1.8)});game.shake=5;}
   }else if(pet.type==="queenbee"){
-    spawnQueenBeeSwarmOffline(pet,false,stats);const range=petAbilityRangeFor(pet,135,2.8);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
+    spawnQueenBeeSwarmOffline(pet,false,stats);const range=petAbilityRangeFor(pet,220,4.4);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
   }else if(pet.type==="workerbee"){
     const t=petAbilityTargetOffline(pet,180),dmg=stats.damage||14,dot=stats.dot||10;if(t){damagePetAbilityTargetOffline(pet,t.obj,t.isAnimal,dmg);applyOfflineFixedDot(t.obj,t.isAnimal,pet,dot,5,"#79d866");const aa=angTo(px,py,t.obj.x,t.obj.y);pet.x=clamp(px+Math.cos(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_W-20);pet.y=clamp(py+Math.sin(aa)*Math.min(95,Math.max(24,dist(px,py,t.obj.x,t.obj.y)-18)),20,WORLD_H-20);resolveAnimalWorld(pet);abilityFx.push({type:"pounce",x:px,y:py,fromX:px,fromY:py,targetX:pet.x,targetY:pet.y,angle:aa,life:.55,maxLife:.55,shockScale:.36});spark(t.obj.x,t.obj.y,"#97df63",12,90);}
   }else if(pet.type==="dronebee"){
@@ -22206,12 +22313,20 @@ function safePetFollowPoint(p, tx, ty) {
     }
 
     for (const w of walls) {
-      if(isPlacedVehicleWall(w))continue;
       const d = dist(x, y, w.x, w.y), min = pr + w.r + 5;
       if (d < min) {
         const a = d > 0.01 ? angTo(w.x, w.y, x, y) : (p.angle || 0);
         x = w.x + Math.cos(a) * min;
         y = w.y + Math.sin(a) * min;
+      }
+    }
+    for (const t of towers) {
+      if (!t || (Number(t.hp) || 0) <= 0) continue;
+      const tr = towerSolidRadius(t), d = dist(x, y, t.x, t.y), min = pr + tr + 5;
+      if (d < min) {
+        const a = d > 0.01 ? angTo(t.x, t.y, x, y) : (p.angle || 0);
+        x = t.x + Math.cos(a) * min;
+        y = t.y + Math.sin(a) * min;
       }
     }
   }
@@ -22266,14 +22381,14 @@ function resolveAnimalWorld(a) {
     }
   }
   for (const w of walls) {
-    if(isPlacedVehicleWall(w))continue;
     const hit = deepestAnimalPhysicalOverlap(a, w.x, w.y, w.r);
-    if (hit && hit.d > 0.1) {
-      const ang = angTo(w.x, w.y, hit.h.x, hit.h.y);
+    if (hit && hit.overlap > 0) {
+      const ang = hit.d > 0.1 ? angTo(w.x, w.y, hit.h.x, hit.h.y) : (Number(a.angle)||0) + Math.PI;
       a.x += Math.cos(ang) * hit.overlap;
       a.y += Math.sin(ang) * hit.overlap;
     }
   }
+  for(const t of towers){if(!t||(Number(t.hp)||0)<=0)continue;const tr=towerSolidRadius(t),hit=deepestAnimalPhysicalOverlap(a,t.x,t.y,tr);if(hit&&hit.overlap>0){const ang=hit.d>.1?angTo(t.x,t.y,hit.h.x,hit.h.y):(Number(a.angle)||0)+Math.PI;a.x+=Math.cos(ang)*hit.overlap;a.y+=Math.sin(ang)*hit.overlap;}}
   for (const c of queryStaticNearby("chests", a.x, a.y, searchRange)) {
     if (c.opened) continue;
     const ch = chestSolidHitbox(c);
@@ -22337,7 +22452,7 @@ function wildUseAbility(a) {
   } else if (a.type === "walrus") {
     const st=petAbilityStats(a),dmg=st.damage||2;if(dTarget<300){makeWalrusSpikePrisonOffline(a,target,dmg);abilityFx.push({type:"earthRingBurst",x:tx,y:ty,life:.8,maxLife:.8,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}
   } else if (a.type === "queenbee") {
-    const st=petAbilityStats(a),range=petAbilityRangeFor(a,130,2.7);spawnQueenBeeSwarmOffline(a,true,st);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});
+    const st=petAbilityStats(a),range=petAbilityRangeFor(a,215,4.2);spawnQueenBeeSwarmOffline(a,true,st);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});
   } else if (a.type === "workerbee") {
     const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;
     if(dTarget<185){
@@ -22498,6 +22613,7 @@ function updateCombatHunt(p, dt) {
       if (hunt.isAnimal) {
         wildlifeHitByPet(target, p, dmg);
       }
+      if(p.type==="queenbee"&&target.hp>0)applyOfflineFixedDot(target,hunt.isAnimal,p,queenBeeBiteDot(p.stage),5,"#69c84f",false);
 
       // Wildlife can only retaliate when ITS head is actually touching the pet.
       // Triangle enemies keep their existing abstract contact retaliation.
@@ -22813,7 +22929,7 @@ function updateAnimals(dt) {
         // Keep wildlife-vs-wildlife bites real: this damage path accepts animals.
         const stageDmg = typeDmg(a.type, a.stage) * (a._abilityWeakMul || 1);
         const dmg = rand(stageDmg * 0.8, stageDmg * 1.15);
-        damageTargetFromWild(a, foe, dmg);
+        if(damageTargetFromWild(a, foe, dmg))applyQueenBiteDotOffline(a,foe);
         a.atkCd = animalAttackCooldown(a.type, a.stage, false);
         a.attackAnim = 0.18;
         spark(foe.x, foe.y, "#e0563f", 5, 70);
@@ -22930,7 +23046,7 @@ function updateAnimals(dt) {
       if (headOnPlayer && a.atkCd <= 0) {
         const stageDmg = typeDmg(a.type, a.stage) * (a._abilityWeakMul || 1);
         const dmg = rand(stageDmg * 0.8, stageDmg * 1.15);
-        damageTargetFromWild(a, player, dmg);
+        if(damageTargetFromWild(a, player, dmg))applyQueenBiteDotOffline(a,player);
         a.atkCd = animalAttackCooldown(a.type, a.stage, false);
         a.attackAnim = 0.18;
         a.flash = 0.1;
@@ -23471,14 +23587,14 @@ function resolveSolidCollisions() {
   }
   // walls
   for (const w of walls) {
-    if(isPlacedVehicleWall(w))continue;
     const d = dist(player.x, player.y, w.x, w.y);
     if (d < w.r + PLAYER_R) {
-      const a = angTo(w.x, w.y, player.x, player.y);
+      const a = d > 0.01 ? angTo(w.x, w.y, player.x, player.y) : (Number(player.angle)||0) + Math.PI;
       player.x = w.x + Math.cos(a) * (w.r + PLAYER_R);
       player.y = w.y + Math.sin(a) * (w.r + PLAYER_R);
     }
   }
+  for(const t of towers){if(!t||(Number(t.hp)||0)<=0)continue;const tr=towerSolidRadius(t),d=dist(player.x,player.y,t.x,t.y);if(d<tr+PLAYER_R){const a=d>.01?angTo(t.x,t.y,player.x,player.y):player.angle;player.x=t.x+Math.cos(a)*(tr+PLAYER_R);player.y=t.y+Math.sin(a)*(tr+PLAYER_R);}}
   // animals vs player: smooth TWO-WAY body pressure. The player is never hooked
   // or carried, but both bodies share the overlap correction. Light animals give
   // way more; heavy animals resist more. Tangential movement is preserved so the
@@ -23495,15 +23611,14 @@ function resolveSolidCollisions() {
       if (bdx * bdx + bdy * bdy > broad * broad) continue;
 
       const hit = deepestAnimalPhysicalOverlap(a, player.x, player.y, PLAYER_R * 0.82);
-      if (!hit || hit.d <= 0.1 || hit.overlap <= 0) continue;
-      const nx = (player.x - hit.h.x) / hit.d;
-      const ny = (player.y - hit.h.y) / hit.d;
+      if (!hit || hit.overlap <= 0) continue;
+      let nx,ny;if(hit.d>.10){nx=(player.x-hit.h.x)/hit.d;ny=(player.y-hit.h.y)/hit.d;}else if(moveLen>.05){nx=moveX;ny=moveY;}else{nx=Math.cos(Number(player.angle)||0);ny=Math.sin(Number(player.angle)||0);}
       const movingInto = moveLen > 0.05 && (moveX*(-nx) + moveY*(-ny)) > 0.02;
-      const correction = Math.min(hit.overlap + 0.04, 2.15 + Math.sqrt(Math.max(0,hit.overlap))*0.68);
+      const correction = Math.min(hit.overlap + 0.45, 8.5 + Math.sqrt(Math.max(0,hit.overlap))*0.55);
       const mobility = animalPushMobility(a);
-      let animalShare = Math.max(0.18, Math.min(0.72, 0.18 + mobility * 0.62));
-      if (a.owned) animalShare = Math.min(0.80, animalShare + 0.10);
-      if (movingInto) animalShare = Math.min(0.82, animalShare + 0.08);
+      let animalShare = Math.max(0.24, Math.min(0.80, 0.24 + mobility * 0.64));
+      if (a.owned) animalShare = Math.max(0.90, animalShare);
+      if (movingInto) animalShare = Math.min(0.94, animalShare + 0.08);
       const playerShare = 1 - animalShare;
       player.x = clamp(player.x + nx * correction * playerShare, PLAYER_R, WORLD_W-PLAYER_R);
       player.y = clamp(player.y + ny * correction * playerShare, PLAYER_R, WORLD_H-PLAYER_R);
@@ -23843,7 +23958,8 @@ function updateOceanTravelState(dt){
   const walkingFloor=!player.vehicleType&&biome==="ocean"&&depth>=OCEAN_DIVE_START&&!nearShore;
   const subFloor=player.vehicleType==="Sub"&&biome==="ocean"&&!nearShore;
   const floorTarget=(walkingFloor||subFloor)?clamp((depth-OCEAN_SURFACE_NEAR_SHORE)/(OCEAN_DIVE_START-OCEAN_SURFACE_NEAR_SHORE),0,1):0;
-  player._underwaterBlend+=(floorTarget-(Number(player._underwaterBlend)||0))*Math.min(1,dt*3.2);
+  if(player.vehicleType==="Boat")player._underwaterBlend=0;
+  else player._underwaterBlend+=(floorTarget-(Number(player._underwaterBlend)||0))*Math.min(1,dt*3.2);
   if(nearShore&&player._underwaterBlend<.025)player._underwaterBlend=0;
 
   // Scuba oxygen is a finite tank. Shore/shallow water is the refill point;
@@ -24374,7 +24490,7 @@ function promoteOlderSiblingOffline(pet) {
   pet.maxHp = upgradedPetMaxHp(pet.type, "adult");
   pet.hp = pet.maxHp;
   pet.speed = upgradedPetSpeed(pet.type, "adult");
-  pet.level = 1; pet.exp = 0;
+  pet.level = Math.max(Math.floor(Number(pet.level)||1),petStageMinLevel("adult",!!pet.larvaOrigin));
   spark(pet.x, pet.y, "#7be08a", 18, 140);
   floatText(pet.x, pet.y - pet.r - 18, "OLDER SIBLING!", "#7be08a");
   return true;
@@ -24680,7 +24796,7 @@ function syncPetCards() {
       `<div class="pc-cdbar" style="height:${fillPct}%"></div>` +
       `<div class="pc-icon">${info.emoji}</div>` +
       `<div class="pc-name ${genderClass(pet.gender)}">${name}</div>` +
-      `<div class="pc-type">${info.name} · ${stageDisplayName(pet.stage, pet.gender)} · ${genderSymbol(pet.gender)}${genderDotHtml(pet.gender)}${isOlderSiblingLeaderPet(pet) ? " · Older Sibling" : (pet.bredChild ? " · Family" : "")}</div>` +
+      `<div class="pc-type">${info.name} · ${stageDisplayName(pet, pet.gender)} · ${genderSymbol(pet.gender)}${genderDotHtml(pet.gender)}${isOlderSiblingLeaderPet(pet) ? " · Older Sibling" : (pet.bredChild ? " · Family" : "")}</div>` +
       `<div class="pc-hp"><div class="pc-hp-fill" style="width:${Math.max(0,Math.min(100,(pet.hp/Math.max(1,pet.maxHp))*100))}%"></div></div>` +
       `<button class="pet-orders" type="button" title="Pet orders">⋯</button>` +
       `<div class="pet-menu" data-pet="${pet.type}">` +
@@ -26559,12 +26675,15 @@ function drawCustomDesignedPet(a) {
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 180;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed(a.type, a.stage, !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.8, actualMoveSpeed / normalMoveSpeed));
-  const tailRate = (a.sleeping ? 0.8 : 1.4) + moveRatio * 3.8;
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const motionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = motionProfile.cadence;
+  const strideRatio = motionProfile.stride;
+  const tailRate = (a.sleeping ? 0.8 : 1.4) + cadenceRatio * 3.8;
   const motionPhase = (a.tailPhase || 0) + nowMs * 0.001 * tailRate;
-  const wag = Math.sin(motionPhase) * (a.sleeping ? 0.06 : (0.38 + moveRatio * 0.82));
-  const headWobble = Math.sin(motionPhase * 0.74 + 0.45) * (a.sleeping ? 0.012 : (0.045 + moveRatio * 0.095));
-  const headBob = Math.cos(motionPhase * 0.92 + 0.22) * (a.sleeping ? r * 0.004 : r * (0.010 + moveRatio * 0.014));
+  const wag = Math.sin(motionPhase) * (a.sleeping ? 0.06 : (0.38 + strideRatio * 0.82));
+  const headWobble = Math.sin(motionPhase * 0.74 + 0.45) * (a.sleeping ? 0.012 : (0.045 + strideRatio * 0.095));
+  const headBob = Math.cos(motionPhase * 0.92 + 0.22) * (a.sleeping ? r * 0.004 : r * (0.010 + strideRatio * 0.014));
   const sleepTailTuck = a.sleeping ? (a.type === "cat" ? 0.28 : a.type === "fox" ? 0.24 : a.type === "dog" ? 0.20 : 0.16) : 0;
   const sleepTailShift = a.sleeping ? r * (a.type === "cat" ? 0.20 : a.type === "fox" ? 0.18 : 0.15) : 0;
   const attackT = Math.max(0, Math.min(1, a.attackAnim || 0));
@@ -26780,26 +26899,28 @@ function drawAnimalUnsafe(a) {
   const outline = "#1a1a1a";
   const dark = shadeColor(col, -35);
   const light = shadeColor(col, 30);
-  const wag = Math.sin(a.tailPhase || 0) * (a.sleeping ? 0.05 : 0.45);
-
   const nowMs = performance.now();
   const recentlyMoved = (nowMs - (a._visualMoveAt || 0)) < 150;
   const actualMoveSpeed = (!a.sleeping && recentlyMoved) ? Math.max(0, Number(a._visualMoveSpeed) || 0) : 0;
   const normalMoveSpeed = Math.max(1, Number(a.speed) || animalSpeed(a.type, a.stage, !!a.owned) || 1);
-  const moveRatio = Math.max(0, Math.min(1.9, actualMoveSpeed / normalMoveSpeed));
+  const moveRatio = Math.max(0, Math.min(2.35, actualMoveSpeed / normalMoveSpeed));
+  const fallbackMotionProfile = creatureMotionRatios(moveRatio);
+  const cadenceRatio = fallbackMotionProfile.cadence;
+  const strideRatio = fallbackMotionProfile.stride;
+  const wag = Math.sin(a.tailPhase || 0) * (a.sleeping ? 0.05 : (0.34 + strideRatio * 0.16));
   const slitherT = nowMs * 0.001;
-  const snakeWaveSpeed = 4.0 + moveRatio * 8.8;
+  const snakeWaveSpeed = 4.0 + cadenceRatio * 8.8;
   const snakeWavePhase = (net.room && Number.isFinite(a._netTailPhase))
     ? a._netTailPhase * 1.18
     : slitherT * snakeWaveSpeed + (a.tailPhase || 0);
   const snakeTailSwing = (a.type === "snake" && moveRatio > 0.03)
-    ? Math.sin(snakeWavePhase) * r * (0.10 + moveRatio * 0.28)
+    ? Math.sin(snakeWavePhase) * r * (0.10 + strideRatio * 0.28)
     : 0;
   const snakeMidSwing = (a.type === "snake" && moveRatio > 0.03)
-    ? Math.sin(snakeWavePhase + 0.85) * r * (0.08 + moveRatio * 0.22)
+    ? Math.sin(snakeWavePhase - 0.85) * r * (0.08 + strideRatio * 0.22)
     : 0;
   const snakeHeadSwing = (a.type === "snake" && moveRatio > 0.03)
-    ? Math.sin(snakeWavePhase + 1.55) * r * (0.05 + moveRatio * 0.12)
+    ? Math.sin(snakeWavePhase - 1.55) * r * (0.05 + strideRatio * 0.12)
     : 0;
 
   // ============================================================
@@ -26961,11 +27082,6 @@ function drawAnimalUnsafe(a) {
   } else {
   ctx.fillStyle = col;
   ctx.beginPath(); ctx.ellipse(0, 0, r * bL, r * bW, 0, 0, TAU); ctx.fill();
-  // soft body shading
-  ctx.fillStyle = "rgba(255,255,255,0.14)";
-  ctx.beginPath(); ctx.ellipse(r * 0.1, -r * 0.12, r * bL * 0.5, r * bW * 0.35, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = "rgba(0,0,0,0.12)";
-  ctx.beginPath(); ctx.ellipse(-r * 0.12, r * 0.15, r * bL * 0.45, r * bW * 0.32, 0, 0, TAU); ctx.fill();
   }
 
   // fur tufts along body
@@ -27199,8 +27315,8 @@ function drawAnimalUnsafe(a) {
   let headLift = 0;
   if (a.type === "snake" && moveRatio > 0.03) {
     biteNudge += Math.max(0, snakeHeadSwing * 0.32);
-    biteTilt += Math.sin(snakeWavePhase * 0.78) * (0.12 + moveRatio * 0.18);
-    headLift += Math.sin(snakeWavePhase * 0.78) * r * (0.035 + moveRatio * 0.055);
+    biteTilt += Math.sin(snakeWavePhase * 0.78) * (0.12 + strideRatio * 0.18);
+    headLift += Math.sin(snakeWavePhase * 0.78) * r * (0.035 + strideRatio * 0.055);
   }
   ctx.save();
   ctx.translate(biteNudge, headLift);
@@ -27503,7 +27619,7 @@ function drawAnimalUnsafe(a) {
     ctx.fillStyle = "#7be08a";
     ctx.font = "10px sans-serif";
     ctx.textAlign = "center";
-    drawGenderLabelWithDot(`${petDisplayName(a)} ${stageDisplayName(a.stage, a.gender)} ${genderSymbol(a.gender)}`, a.x, a.y - r - 22, a.gender, true);
+    drawGenderLabelWithDot(`${petDisplayName(a)} ${stageDisplayName(a, a.gender)} ${genderSymbol(a.gender)}`, a.x, a.y - r - 22, a.gender, true);
   } else {
     // Every wild animal always shows its species/type. Special tiers keep the
     // tier name in the same label so rare encounters are obvious at a glance.
@@ -27605,6 +27721,14 @@ function drawPetArmorOverlay(a){
   ctx.beginPath();ctx.ellipse(-r*.08,0,r*.70,r*.58,0,-1.05,1.05);ctx.lineTo(-r*.58,r*.47);ctx.quadraticCurveTo(-r*.82,0,-r*.58,-r*.47);ctx.closePath();ctx.fill();ctx.stroke();
   ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(-r*.05,-r*.28);ctx.lineTo(r*.25,0);ctx.lineTo(-r*.05,r*.28);ctx.lineTo(-r*.29,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
+function drawOwnedLarvaPet(a){
+  if(!a||a.dead)return;const r=Math.max(10,Number(a.r)||12),wiggle=Math.sin(game.time*5+(Number(a.tailPhase)||0))*.08;
+  ctx.save();ctx.translate(a.x,a.y);ctx.rotate((Number(a.angle)||0)+wiggle);ctx.strokeStyle="#6f5017";ctx.lineWidth=Math.max(2,r*.14);
+  const segs=[[-r*.55,0,r*.58],[-r*.12,0,r*.64],[r*.34,0,r*.58],[r*.72,0,r*.45]];for(let i=0;i<segs.length;i++){const [x,y,rr]=segs[i];ctx.fillStyle=i%2?"#f5cf5e":"#ffe88a";ctx.beginPath();ctx.ellipse(x,y,rr,rr*.74,0,0,TAU);ctx.fill();ctx.stroke();}
+  ctx.fillStyle="#2a2416";circ(r*.84,-r*.13,Math.max(1.4,r*.075));circ(r*.84,r*.13,Math.max(1.4,r*.075));ctx.restore();
+  const baseName=petDisplayName(a),name=`${/ Larva$/i.test(baseName)?baseName:`${baseName} Larva`} ${genderSymbol(a.gender)}`;drawGenderLabelWithDot(name,a.x,a.y-r-20,a.gender,true);
+  const hp=Math.max(0,Number(a.hp)||0),max=Math.max(1,Number(a.maxHp)||1),w=Math.max(32,r*2.5),y=a.y-r-12;ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(a.x-w/2,y,w,4);ctx.fillStyle="#79d884";ctx.fillRect(a.x-w/2,y,w*clamp(hp/max,0,1),4);
+}
 function drawAnimal(a) {
   // Offline wildlife/pet AI intentionally runs below render FPS for performance.
   // Smooth only the visual pose between simulation steps; combat/collision keeps
@@ -27634,8 +27758,7 @@ function drawAnimal(a) {
     swimBaseY=a.y;a.y+=Math.sin(game.time*5.8+(Number(a.tailPhase)||0))*Math.min(2.2,Math.max(1,(Number(a.r)||18)*.055));
   }
   try {
-    drawAnimalUnsafe(a);
-    drawPetArmorOverlay(a);
+    if(a?.owned&&a.larvaPet)drawOwnedLarvaPet(a);else{drawAnimalUnsafe(a);drawPetArmorOverlay(a);}
     return true;
   } catch (err) {
     noteEntityRenderFault(a, err);
@@ -29743,7 +29866,7 @@ function applyReviveCarry(snapshot={},serverData={}){
 function spawnStarterPetAfterReviveOffline(){
   if(net.room||!game.startPet||!PET_TYPES[game.startPet]||player.pets.some(p=>p&&!p.dead&&p.type===game.startPet))return;
   const type=game.startPet,stage=starterStageFor(type),rr=animalRadius(type,stage),maxHp=upgradedPetMaxHp(type,stage),coats=PET_TYPES[type].coats||[PET_TYPES[type].color],coat=coats[randi(0,coats.length-1)];
-  player.pets.push({type,stage,x:player.x+45,y:player.y,angle:0,r:rr,hp:maxHp*.60,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:starterPetNameValue(),gender:canonicalAnimalGender(type,starterPetGenderValue()),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:1,recentHit:0,attackAnim:0});
+  player.pets.push({type,stage,x:player.x+45,y:player.y,angle:0,r:rr,hp:maxHp*.60,maxHp,speed:upgradedPetSpeed(type,stage),coat,spots:[],spotCol:shadeColor(coat,-30),sleeping:false,owned:true,follow:true,orderMode:"follow",petName:starterPetNameValue(),gender:canonicalAnimalGender(type,starterPetGenderValue()),bredChild:false,mother:null,father:null,motherId:"",fatherId:"",abilityCd:0,targetX:null,targetY:null,huntTarget:null,huntRetarget:0,huntWanderT:0,wanderT:0,wanderA:0,flash:0,dead:false,tailPhase:0,atkCd:0,combat:0,exp:0,level:petStageMinLevel(stage,false),recentHit:0,attackAnim:0});
 }
 function finishRewardedRevive(serverData={}){
   if(!game.revivePending&&!game.over)return;
@@ -29861,7 +29984,7 @@ function resetGame(options = {}) {
       abilityCd: 0, targetX: null, targetY: null,
       huntTarget: null, huntRetarget: 0, huntWanderT: 0,
       wanderT: 0, wanderA: 0, flash: 0, dead: false, tailPhase: 0,
-      atkCd: 0, combat: 0, exp: 0, level: 1,
+      atkCd: 0, combat: 0, exp: 0, level: petStageMinLevel(stage,false),
       recentHit: 0, attackAnim: 0,
     });
   }
