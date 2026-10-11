@@ -942,6 +942,18 @@ function petUpgradeMultiplier(p,stat){
   return 1+per*lv;
 }
 
+
+const ANIMAL_SLEEP_COLLISION_SCALE = Object.freeze({
+  snake:{len:.50,radius:.76},rabbit:{len:.72,radius:.84},cat:{len:.76,radius:.86},dog:{len:.82,radius:.90},
+  fox:{len:.76,radius:.86},wolf:{len:.79,radius:.89},bear:{len:.72,radius:.88},deer:{len:.78,radius:.86},
+  boar:{len:.80,radius:.89},saber:{len:.80,radius:.88},clouded:{len:.78,radius:.87},fennec:{len:.76,radius:.85},
+  owl:{len:.86,radius:.90},dragon:{len:.82,radius:.90}
+});
+function animalSleepCollisionScale(a){
+  if(!a?.sleeping || ["queenbee","workerbee","dronebee"].includes(a.type))return{len:1,radius:1};
+  return ANIMAL_SLEEP_COLLISION_SCALE[a.type]||{len:.86,radius:.92};
+}
+
 function animalWeight(aOrType,stageMaybe=null){
   const type=typeof aOrType==="string"?aOrType:(aOrType?.type||"dog");
   const stage=stageMaybe||(typeof aOrType==="object"?aOrType?.stage:null)||"adult";
@@ -1032,6 +1044,7 @@ function animalHitCircles(a) {
   // 739: body/head copies keep the renderer's exact scale; no extra fit/enlargement.
   const fit={len:1,body:1,head:1};
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
+  const sleepFit=animalSleepCollisionScale(a);
 
   if(d){
     const cfg={
@@ -1053,8 +1066,8 @@ function animalHitCircles(a) {
 
     return cfg.map(([xf,rf],i)=>{
       const headish=i>=cfg.length-2;
-      const forward=d.w*xf*(headish?fit.head:fit.len);
-      const rr=d.h*rf;
+      const forward=d.w*xf*(headish?fit.head:fit.len)*sleepFit.len;
+      const rr=d.h*rf*sleepFit.radius;
       return{x:a.x+ca*forward,y:a.y+sa*forward,r:rr};
     });
   }

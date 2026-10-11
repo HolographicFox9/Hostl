@@ -9122,6 +9122,30 @@ function uploadedAnimalVisibleDimensions(type, stage) {
   return { h, w: h * lengthMul };
 }
 
+
+const ANIMAL_SLEEP_COLLISION_SCALE = Object.freeze({
+  // Sleeping poses that visibly curl/tuck smaller than their awake silhouette.
+  // Length shrinks more than thickness so the physical body follows the sleep art.
+  snake:{len:.50,radius:.76},
+  rabbit:{len:.72,radius:.84},
+  cat:{len:.76,radius:.86},
+  dog:{len:.82,radius:.90},
+  fox:{len:.76,radius:.86},
+  wolf:{len:.79,radius:.89},
+  bear:{len:.72,radius:.88},
+  deer:{len:.78,radius:.86},
+  boar:{len:.80,radius:.89},
+  saber:{len:.80,radius:.88},
+  clouded:{len:.78,radius:.87},
+  fennec:{len:.76,radius:.85},
+  owl:{len:.86,radius:.90},
+  dragon:{len:.82,radius:.90}
+});
+function animalSleepCollisionScale(a){
+  if(!a?.sleeping || ["queenbee","workerbee","dronebee"].includes(a.type)) return {len:1,radius:1};
+  return ANIMAL_SLEEP_COLLISION_SCALE[a.type] || {len:.86,radius:.92};
+}
+
 function animalWeight(aOrType, stageMaybe = null) {
   const type = typeof aOrType === "string" ? aOrType : (aOrType?.type || "dog");
   const stage = stageMaybe || (typeof aOrType === "object" ? aOrType?.stage : null) || "adult";
@@ -13626,7 +13650,7 @@ function drawCuteSegmentedReferenceAnimal(a, type, stageKey, meta, img, box) {
   }
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(
     (tunedMeta.shadow?.x ?? -0.05) * r,
@@ -13995,7 +14019,7 @@ function drawReassembledDeerPartsSkin(a, stage, sleeping) {
   const top = -drawH * 0.5;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, drawW * 0.31, drawH * 0.14, 0, 0, TAU);
   ctx.fill();
@@ -14124,7 +14148,7 @@ function drawSeparatedDeerBabySleepSkin(a) {
   const top = -drawH * 0.5;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, drawW * 0.31, drawH * 0.14, 0, 0, TAU);
   ctx.fill();
@@ -14204,7 +14228,7 @@ function drawSeparatedDeerBabySkin(a) {
   const top = -drawH * 0.5;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, drawW * 0.31, drawH * 0.14, 0, 0, TAU);
   ctx.fill();
@@ -14635,7 +14659,7 @@ function drawSeparatedViperSkin(a, selected, cfg, stage) {
   const headAttackTilt = attackPulse * -0.10;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(
     -mergedW * 0.02,
@@ -14798,7 +14822,7 @@ function drawUploadedViperSkin(a, img, cfg, stage) {
   const attackPush = a.sleeping ? 0 : Math.sin(attackT * Math.PI) * r * 0.10;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(
     -drawW * 0.04,
@@ -15001,7 +15025,7 @@ function drawReassembledFennecPartsSkin(a, stage, sleeping) {
   const headPush = a.sleeping ? -r * 0.05 : 0;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, drawW * 0.31, drawH * 0.13, 0, 0, TAU);
   ctx.fill();
@@ -15094,7 +15118,7 @@ function drawReassembledRabbitPartsSkin(a, stage, sleeping) {
     Math.cos(phase * 0.68 + 0.3) * r * (a.sleeping ? 0.0015 : (0.006 + strideRatio * 0.010)),rabbitVisualDt,3.8);
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.02, drawH * 0.30, drawW * 0.30, drawH * 0.13, 0, 0, TAU);
   ctx.fill();
@@ -15290,7 +15314,7 @@ function drawReassembledWolfPartsSkin(a, stage, sleeping) {
   ctx.imageSmoothingEnabled = true;
   try { ctx.imageSmoothingQuality = "high"; } catch (_) {}
 
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(drawW * 0.00, drawH * 0.31, drawW * 0.33, Math.max(r * 0.12, drawH * 0.12), 0, 0, TAU);
   ctx.fill();
@@ -15416,7 +15440,7 @@ function drawReassembledBoarPartsSkin(a, stage, sleeping) {
   ctx.imageSmoothingEnabled = true;
   try { ctx.imageSmoothingQuality = "high"; } catch (_) {}
 
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.31, drawW * 0.32, Math.max(r * 0.12, drawH * 0.12), 0, 0, TAU);
   ctx.fill();
@@ -15566,7 +15590,7 @@ function drawReassembledSaberPartsSkin(a, stage, sleeping) {
     : Math.sin(phase * 0.55) * drawH * 0.006 * strideRatio;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, Math.max(r * 0.62, drawW * 0.31), Math.max(r * 0.14, drawH * 0.13), 0, 0, TAU);
   ctx.fill();
@@ -15654,7 +15678,7 @@ function drawStaticSaberReferenceSkin(a, stage, sleeping) {
     : Math.sin(phase * 0.55) * drawH * 0.006 * strideRatio;
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-drawW * 0.03, drawH * 0.30, Math.max(r * 0.62, drawW * 0.31), Math.max(r * 0.14, drawH * 0.13), 0, 0, TAU);
   ctx.fill();
@@ -15837,7 +15861,7 @@ function drawReassembledOwlPartsSkin(a, stage, sleeping) {
   }
 
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(0, top + targetH * 0.83, Math.max(r * 0.56, targetW * 0.29), Math.max(r * 0.12, targetH * 0.105), 0, 0, TAU);
   ctx.fill();
@@ -15927,7 +15951,7 @@ function drawReassembledCloudedLeopardSkin(a, stage, sleeping){
   const headLunge=sleeping?0:bite*r*.18;
   const wholeBob=sleeping?Math.sin(game.time*1.8+(a.x||0)*.004)*r*.008:Math.sin(phase*.55)*drawH*.005*strideRatio;
   ctx.save();
-  ctx.fillStyle="rgba(0,0,0,.15)";ctx.beginPath();ctx.ellipse(-drawW*.03,drawH*.31,Math.max(r*.58,drawW*.31),Math.max(r*.13,drawH*.12),0,0,TAU);ctx.fill();
+  ctx.fillStyle="rgba(0,0,0,0)";ctx.beginPath();ctx.ellipse(-drawW*.03,drawH*.31,Math.max(r*.58,drawW*.31),Math.max(r*.13,drawH*.12),0,0,TAU);ctx.fill();
   const oldSmooth=ctx.imageSmoothingEnabled,oldQuality=ctx.imageSmoothingQuality;ctx.imageSmoothingEnabled=true;try{ctx.imageSmoothingQuality="high";}catch(_){}
   ctx.translate(0,wholeBob);
   const drawPart=(name,fn)=>{const q=state.parts[name];if(!q)return;const sx=q.sx*sxMul,sw=q.sw*sxMul,dx=left+q.tx*dxMul,dw=q.sw*dxMul;ctx.save();if(fn)fn(dx,dw);ctx.drawImage(img,sx,0,sw,img.naturalHeight,dx,top,dw,drawH);ctx.restore();};
@@ -16119,7 +16143,7 @@ function drawUploadedBeeSkin(a) {
   ctx.imageSmoothingEnabled=true;
   ctx.translate(0,hoverBob);
   ctx.rotate(bodySway);
-  ctx.fillStyle="rgba(0,0,0,.14)";
+  ctx.fillStyle="rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(0,r*.24,r*(a.type==="queenbee"?1.04:a.type==="workerbee" ? 0.88 : 0.80),r*.28,0,0,TAU);
   ctx.fill();
@@ -16214,7 +16238,7 @@ function drawReassembledFoxBearSkin(a, species, stage, sleeping) {
   ctx.save();
   const oldSmooth=ctx.imageSmoothingEnabled, oldQuality=ctx.imageSmoothingQuality;
   ctx.imageSmoothingEnabled=true; try{ctx.imageSmoothingQuality="high";}catch(_){}
-  ctx.fillStyle="rgba(0,0,0,.15)"; ctx.beginPath();
+  ctx.fillStyle="rgba(0,0,0,0)"; ctx.beginPath();
   ctx.ellipse(-drawW*.02,drawH*.31,drawW*.32,Math.max(r*.12,drawH*.12),0,0,TAU);ctx.fill();
 
   // Tail always UNDER the torso.
@@ -16457,7 +16481,7 @@ function drawUploadedAnimalSkin(a) {
 
   // Ground shadow sized from the actual rendered pose rather than source canvas size.
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(
     -drawW * 0.03,
@@ -17695,6 +17719,7 @@ function animalBodyHitboxes(a) {
   // No species/stage fit multiplier and no post-copy enlargement.
   const fit = {len:1, body:1, head:1};
   const dims = uploadedAnimalVisibleDimensions(a.type, a.stage);
+  const sleepFit = animalSleepCollisionScale(a);
 
   if (dims) {
     // Collision follows the actual SVG size on screen and scales proportionately
@@ -17718,8 +17743,8 @@ function animalBodyHitboxes(a) {
 
     return cfg.map(([xFrac, rFrac], i) => {
       const headish = i >= cfg.length - 2;
-      const forward = dims.w * xFrac * (headish ? fit.head : fit.len);
-      const rr = dims.h * rFrac;
+      const forward = dims.w * xFrac * (headish ? fit.head : fit.len) * sleepFit.len;
+      const rr = dims.h * rFrac * sleepFit.radius;
       // Keep the copied part centered on the visible body/head. The old code
       // pushed head circles to only one side, leaving the opposite cheek exposed.
       return {
@@ -26731,7 +26756,7 @@ function drawCustomDesignedPet(a) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.translate(0, sleepBob);
-    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillStyle = "rgba(0,0,0,0)";
     ctx.beginPath();
     ctx.ellipse(meta.shadow.x * r, meta.shadow.y * r, meta.shadow.rx * r, meta.shadow.ry * r, 0, 0, TAU);
     ctx.fill();
@@ -26808,7 +26833,7 @@ function drawCustomDesignedPet(a) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.translate(0, sleepBob);
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(meta.shadow.x * r, meta.shadow.y * r, meta.shadow.rx * r, meta.shadow.ry * r, 0, 0, TAU);
   ctx.fill();
@@ -26861,7 +26886,7 @@ function drawReferencePetSprite(a) {
   const wag = Math.sin(a.tailPhase || 0) * (a.sleeping ? 0.02 : 0.09);
   const sleepBob = a.sleeping ? Math.sin(game.time * 2.4 + a.x * 0.01) * r * 0.02 : 0;
 
-  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.fillStyle = "rgba(0,0,0,0)";
   ctx.beginPath();
   ctx.ellipse(-r * 0.05, r * 0.22, drawW * 0.28, drawH * 0.14, 0, 0, TAU);
   ctx.fill();
@@ -29576,7 +29601,7 @@ function rebuildMinimapGround(left,top,size,relief){
   // Draw every minimap pixel from the actual biome lookup. The old coarse cell
   // sampling let ocean-colored squares overlap the island coastline and made the
   // map call those pixels part of the wrong biome.
-  const rgb={forest:[102,138,82],rainforest:[40,95,59],arctic:[217,237,242],desert:[216,179,106],mountains:[119,123,115],ocean:[47,131,167]};
+  const rgb={forest:[102,138,82],rainforest:[40,95,59],arctic:[217,237,242],desert:[216,179,106],mountains:[119,123,115],galaxytropic:[103,60,160],ocean:[47,131,167]};
   const img=minimapGroundCtx.createImageData(size,size),d=img.data;
   for(let py=0;py<size;py++)for(let px=0;px<size;px++){
     const wx=left+(px+.5)/size*MINIMAP_VIEW_SPAN,wy=top+(py+.5)/size*MINIMAP_VIEW_SPAN,b=biomeBaseId(worldBiomeAt(wx,wy)),c=rgb[b]||rgb.ocean,i=(py*size+px)*4;
