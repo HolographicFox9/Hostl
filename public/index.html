@@ -9101,7 +9101,7 @@ function animalRadius(type, stage) {
 function uploadedAnimalVisibleDimensions(type, stage) {
   const baseR = animalRadius(type, stage);
   const speciesHeight = {
-    dog: 1.06, cat: 1.02, dragon: 1.00,
+    dog: 1.06, seal: 1.00, cat: 1.02, dragon: 1.00,
     fox: 1.06, wolf: 1.10, bear: 1.18, rabbit: 0.98, owl: 1.48, snake: 0.68,
     deer: 0.98, boar: 0.92, saber: 1.10, clouded: 1.02, fennec: 0.92
   }[type];
@@ -9119,7 +9119,7 @@ function uploadedAnimalVisibleDimensions(type, stage) {
   }[stage] || 1.45;
 
   const lengthMul = {
-    dog: 1.62, cat: 1.58, dragon: 1.92,
+    dog: 1.62, seal: 1.92, cat: 1.58, dragon: 1.92,
     fox: 1.70, wolf: 1.72, bear: 1.42, rabbit: 1.42, owl: 1.05, snake: 3.70,
     deer: 1.78, boar: 1.58, saber: 1.66, clouded: 1.64, fennec: 1.73
   }[type] || 1.55;
@@ -13957,11 +13957,13 @@ const DEER_REFERENCE_ALIGNED_SPLIT_SPECS = {
   bigmomma: {
     awake: {
       sourceStage: "adult", srcW: 204.86661, srcH: 76.46779,
-      parts: [[0.0,22.0,22.0],[27.0,90.0,21.0],[91.0,204.86661,-95.0]]
+      // Big Momma Ref match: tail touches the rear body seam; head/antlers sit a little farther forward.
+      parts: [[0.0,22.0,36.0],[27.0,90.0,21.0],[91.0,204.86661,-78.0]]
     },
     sleep: {
       sourceStage: "adult", srcW: 206.06412, srcH: 76.46779,
-      parts: [[0.0,19.0,22.0],[28.0,91.0,20.0],[92.0,206.06412,-96.0]]
+      // Sleeping Big Momma uses the same corrected seams against its sleep Ref.
+      parts: [[0.0,19.0,38.0],[28.0,91.0,20.0],[92.0,206.06412,-79.0]]
     }
   }
 };
@@ -17774,21 +17776,24 @@ function animalBodyHitboxes(a) {
   if (dims) {
     // Collision follows the actual SVG size on screen and scales proportionately
     // with the animal's visible length/height.
+    // Invisible hitbox copies are calibrated from each animal's assembled Ref silhouette.
+    // Centers never extend outside the Ref bounds; smaller circles follow the torso/head instead of a large bubble.
     const cfg = {
-      dog:    [[-0.34,0.17],[-0.17,0.26],[0.05,0.31],[0.27,0.28],[0.43,0.23],[0.54,0.17]],
-      cat:    [[-0.35,0.16],[-0.18,0.24],[0.04,0.29],[0.26,0.25],[0.43,0.21],[0.54,0.16]],
-      dragon: [[-0.39,0.14],[-0.22,0.21],[0.02,0.26],[0.28,0.22],[0.46,0.18],[0.60,0.13]],
-      rabbit: [[-0.28,0.16],[-0.10,0.22],[0.08,0.27],[0.26,0.24],[0.41,0.20],[0.51,0.15]],
-      owl:    [[-0.24,0.19],[-0.08,0.27],[0.10,0.31],[0.27,0.28],[0.40,0.23],[0.50,0.18]],
-      snake:  [[-0.44,0.22],[-0.32,0.27],[-0.19,0.30],[-0.05,0.31],[0.10,0.31],[0.24,0.30],[0.37,0.27],[0.47,0.23]],
-      fox:    [[-0.37,0.17],[-0.19,0.25],[0.04,0.30],[0.27,0.26],[0.44,0.21],[0.56,0.16]],
-      wolf:   [[-0.36,0.18],[-0.18,0.27],[0.05,0.32],[0.28,0.28],[0.45,0.23],[0.57,0.17]],
-      bear:   [[-0.30,0.21],[-0.14,0.32],[0.07,0.38],[0.28,0.34],[0.43,0.27],[0.54,0.20]],
-      deer:   [[-0.28,0.13],[-0.09,0.20],[0.12,0.24],[0.33,0.21],[0.49,0.16],[0.61,0.11]],
-      boar:   [[-0.31,0.20],[-0.14,0.30],[0.07,0.34],[0.28,0.31],[0.44,0.25],[0.55,0.18]],
-      saber:  [[-0.34,0.17],[-0.17,0.25],[0.05,0.30],[0.27,0.27],[0.44,0.22],[0.55,0.16]],
-      clouded:[[-0.35,0.16],[-0.18,0.24],[0.04,0.29],[0.26,0.25],[0.43,0.20],[0.54,0.15]],
-      fennec: [[-0.31,0.14],[-0.13,0.21],[0.07,0.25],[0.27,0.21],[0.41,0.16],[0.51,0.11]]
+      dog:    [[-.40,.105],[-.27,.165],[-.11,.215],[.08,.225],[.27,.175],[.41,.120]],
+      seal:   [[-.40,.125],[-.27,.185],[-.10,.235],[.09,.245],[.28,.190],[.41,.135]],
+      cat:    [[-.40,.100],[-.27,.155],[-.10,.205],[.09,.215],[.28,.165],[.41,.110]],
+      dragon: [[-.42,.085],[-.28,.125],[-.11,.165],[.09,.175],[.29,.135],[.42,.090]],
+      rabbit: [[-.38,.090],[-.24,.140],[-.07,.180],[.11,.190],[.28,.150],[.40,.105]],
+      owl:    [[-.30,.150],[-.18,.205],[-.04,.235],[.12,.230],[.26,.190],[.36,.145]],
+      snake:  [[-.45,.145],[-.34,.175],[-.22,.195],[-.09,.205],[.04,.205],[.17,.200],[.30,.180],[.43,.150]],
+      fox:    [[-.41,.100],[-.27,.155],[-.10,.205],[.09,.215],[.28,.165],[.42,.105]],
+      wolf:   [[-.40,.110],[-.27,.170],[-.10,.225],[.09,.235],[.28,.180],[.42,.120]],
+      bear:   [[-.37,.145],[-.24,.215],[-.07,.275],[.11,.285],[.29,.225],[.41,.155]],
+      deer:   [[-.40,.075],[-.26,.115],[-.09,.155],[.10,.165],[.28,.125],[.41,.085]],
+      boar:   [[-.38,.135],[-.24,.205],[-.07,.255],[.11,.265],[.29,.210],[.41,.145]],
+      saber:  [[-.40,.105],[-.27,.160],[-.10,.210],[.09,.220],[.28,.170],[.41,.115]],
+      clouded:[[-.40,.095],[-.27,.150],[-.10,.200],[.09,.210],[.28,.160],[.41,.105]],
+      fennec: [[-.40,.080],[-.26,.125],[-.08,.165],[.10,.175],[.27,.135],[.40,.090]]
     }[a.type];
 
     return cfg.map(([xFrac, rFrac], i) => {
@@ -29574,7 +29579,8 @@ function drawTopHealthOverlays(viewResources = resources, viewGold = goldChunks,
     const ratio = smoothDamageRatio(a, a.hp / Math.max(1, a.maxHp));
     const fill = ratio > 0.6 ? "#e6b85c" : ratio > 0.3 ? "#e58f4f" : "#e0563f";
     const w = Math.max(96, Math.min(170, a.r * 1.5));
-    const y = a.y - a.r - 34;
+    // Keep the apex HP bar well above the wild animal name so the two never overlap.
+    const y = a.y - a.r - 58;
     drawTopHealthBar(a.x, y, w, 10, ratio, fill, a.gender === "Male" ? "BIG DADDY" : "BIG MOMMA");
   }
 
