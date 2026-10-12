@@ -16399,19 +16399,18 @@ function drawUploadedAnimalSkin(a) {
 
   if (a.type === "rabbit") {
     const rabbitStage = uploadedAnimalStageKey(a.stage);
-    // Actual separated body art for Baby awake + both Super Boss states.
-    // The uploaded Boss/Super Boss assembled files are reference-only.
-    if (rabbitStage === "baby" && !a.sleeping) {
-      if (drawReassembledRabbitPartsSkin(a, "baby", false)) return true;
+    // Rabbit Ref sheets are reference-only. EVERY Rabbit stage/state is rendered
+    // from its matching separated tail/body/head sheet so Big Momma can never
+    // fall back to an Adult or assembled reference image.
+    try {
+      if (drawReassembledRabbitPartsSkin(a, rabbitStage, !!a.sleeping)) return true;
+    } catch (rabbitDrawErr) {
+      const t=performance.now();
+      if(!a._rabbitSepWarnAt||t-a._rabbitSepWarnAt>2500){a._rabbitSepWarnAt=t;console.warn("Skipped one separated Rabbit draw frame:",rabbitStage,a.sleeping?"sleep":"awake",rabbitDrawErr);}
     }
-    // Boss rabbit uses the same independently animated tail/body/head system
-    // as the other separated animals, for both awake and sleeping poses.
-    if (rabbitStage === "boss") {
-      if (drawReassembledRabbitPartsSkin(a, "boss", !!a.sleeping)) return true;
-    }
-    if (rabbitStage === "superboss") {
-      if (drawReassembledRabbitPartsSkin(a, "superboss", !!a.sleeping)) return true;
-    }
+    // Do NOT fall through to UPLOADED_ANIMAL_SKINS.rabbit (assembled Ref art).
+    // While the Sep image is loading, use the procedural fallback for that frame.
+    return false;
   }
 
   if (a.type === "deer") {
@@ -18074,19 +18073,19 @@ function placePonds() {
   }
 }
 function placeBiomeFeatures() {
-  for (let i = 0; i < scaledBiomeResourceCount(72,"rainforest",24); i++) {
+  for (let i = 0; i < scaledBiomeResourceCount(112,"rainforest",30); i++) {
     const pos = randomPointInBiome("rainforest", 80);
     const scale=rand(1.05,1.65),solid=10.8*scale;
     if (!solidOverlaps(pos.x, pos.y, solid+10)) addGeneratedResource({type:"bush",x:pos.x,y:pos.y,hp:8,maxHp:8,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:24*scale,scale,rot:0});
   }
   const placeUnique=(type,count,biome)=>{const info=BIOME_RESOURCE_INFO[type];count=scaledBiomeResourceCount(count,biome,1);for(let i=0;i<count;i++){for(let t=0;t<50;t++){const pos=randomPointInBiome(biome,72),isCactus=type==="desertCactusGood"||type==="desertCactusBad",isHive=type==="rainforestHive",isFlower=type==="forestGiantFlower"||type==="rainforestGiantFlower",scale=isHive?rand(4.0,4.8):(isFlower?rand(2.0,2.85):(isCactus?rand(1.55,2.15):rand(.9,1.35))),solid=isHive?(27*scale):(isFlower?8.5*scale:((info.category==="stone"?17:(isCactus?14:12))*scale)),hp=isHive?Math.round(info.hp*2.15):info.hp;if(solidOverlaps(pos.x,pos.y,solid+12))continue;addGeneratedResource({type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35)});break;}}};
-  placeUnique("forestHerb",24,"forest"); placeUnique("forestResin",22,"forest"); placeUnique("forestGiantFlower",20,"forest");
+  placeUnique("forestHerb",42,"forest"); placeUnique("forestResin",30,"forest"); placeUnique("forestGiantFlower",34,"forest");
   placeUnique("rainforestHive",2,"forest");
-  placeUnique("rainforestVine",26,"rainforest"); placeUnique("rainforestFruit",24,"rainforest"); placeUnique("rainforestGiantFlower",24,"rainforest"); placeUnique("rainforestHive",2,"rainforest");
+  placeUnique("rainforestVine",46,"rainforest"); placeUnique("rainforestFruit",42,"rainforest"); placeUnique("rainforestGiantFlower",40,"rainforest"); placeUnique("rainforestHive",2,"rainforest");
   placeUnique("rainforestHive",2,"mountains");
-  placeUnique("arcticIceCrystal",30,"arctic"); placeUnique("arcticFrostBerry",26,"arctic");
-  placeUnique("desertCactusGood",22,"desert"); placeUnique("desertCactusBad",18,"desert"); placeUnique("desertSandstone",24,"desert");
-  placeUnique("mountainIron",30,"mountains"); placeUnique("mountainQuartz",26,"mountains"); placeUnique("mountainGem",22,"mountains"); placeUnique("mountainStoneFruit",24,"mountains");
+  placeUnique("arcticIceCrystal",34,"arctic"); placeUnique("arcticFrostBerry",46,"arctic");
+  placeUnique("desertCactusGood",40,"desert"); placeUnique("desertCactusBad",32,"desert"); placeUnique("desertSandstone",26,"desert");
+  placeUnique("mountainIron",32,"mountains"); placeUnique("mountainQuartz",28,"mountains"); placeUnique("mountainGem",24,"mountains"); placeUnique("mountainStoneFruit",42,"mountains");
 }
 
 function placeUnderwaterFeatures() {
@@ -18110,10 +18109,10 @@ function placeUnderwaterFeatures() {
   // The ocean floor is intentionally resource-dense. Rocks use a broad scale
   // range so the seafloor contains obvious small rubble and large boulders.
   add("oceanRock",1450,4,10,.48,2.65);
-  add("oceanUrchin",190,4,6.5,.88,1.35);
-  add("oceanAnemone",180,5,5.5,.94,1.45);
-  add("oceanBlueSeaweed",300,4,6,1.35,2.25);
-  add("oceanGreenSeaweed",360,4,6,1.45,2.45);
+  add("oceanUrchin",230,4,6.5,.88,1.35);
+  add("oceanAnemone",310,5,5.5,.94,1.45);
+  add("oceanBlueSeaweed",520,4,6,1.35,2.25);
+  add("oceanGreenSeaweed",640,4,6,1.45,2.45);
 }
 
 
@@ -18138,6 +18137,43 @@ function placeGalaxyTropicsFeatures(){
     if(!clear(pos.x,pos.y,solid))continue;
     addGeneratedResource({type:"galaxyCelestFruit",x:pos.x,y:pos.y,hp:info.hp,maxHp:info.hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:0,scale,rot:rand(-.35,.35),_outerIslandId:spec.id});
     occupied.push({x:pos.x,y:pos.y,r:solid});break;
+  }
+}
+
+function placeOuterIslandFlora(){
+  const plans={
+    forest:[
+      ["tree",95,9,8.8,46,1.15,2.15],["bush",125,8,10.8,24,1.0,1.7],["log",36,2.4,17.5,0,1.0,1.55],
+      ["forestHerb",48,BIOME_RESOURCE_INFO.forestHerb?.hp||4,10,0,.9,1.3],["forestGiantFlower",30,BIOME_RESOURCE_INFO.forestGiantFlower?.hp||5,8.5,0,1.8,2.5]
+    ],
+    rainforest:[
+      ["tree",112,9,8.8,46,1.15,2.2],["bush",145,8,10.8,24,1.0,1.75],["log",38,2.4,17.5,0,1.0,1.6],
+      ["rainforestVine",54,BIOME_RESOURCE_INFO.rainforestVine?.hp||5,12,0,.9,1.35],["rainforestFruit",48,BIOME_RESOURCE_INFO.rainforestFruit?.hp||5,12,0,.9,1.35],["rainforestGiantFlower",34,BIOME_RESOURCE_INFO.rainforestGiantFlower?.hp||5,8.5,0,1.8,2.55]
+    ],
+    arctic:[
+      ["tree",48,9,8.8,46,1.05,1.85],["bush",92,8,10.8,24,1.0,1.6],["log",26,2.4,17.5,0,1.0,1.45],
+      ["arcticFrostBerry",56,BIOME_RESOURCE_INFO.arcticFrostBerry?.hp||5,12,0,.9,1.35]
+    ],
+    desert:[
+      ["tree",18,9,8.8,46,1.05,1.7],["bush",54,8,10.8,24,1.0,1.55],
+      ["desertCactusGood",48,BIOME_RESOURCE_INFO.desertCactusGood?.hp||5,14,0,1.45,2.05],["desertCactusBad",34,BIOME_RESOURCE_INFO.desertCactusBad?.hp||5,14,0,1.45,2.05]
+    ],
+    mountains:[
+      ["tree",50,9,8.8,46,1.05,1.9],["bush",86,8,10.8,24,1.0,1.6],["log",28,2.4,17.5,0,1.0,1.5],
+      ["mountainStoneFruit",48,BIOME_RESOURCE_INFO.mountainStoneFruit?.hp||5,12,0,.9,1.35]
+    ]
+  };
+  for(const spec of OUTER_ISLANDS){
+    if(!spec||spec.id==="galaxaytropic")continue;
+    const plan=plans[biomeBaseId(spec.biome)]||plans.forest;
+    for(const [type,count,hp,solidBase,canopyBase,minScale,maxScale] of plan){
+      for(let i=0;i<count;i++)for(let tries=0;tries<85;tries++){
+        const scale=rand(minScale,maxScale),solid=Math.max(5,solidBase*scale),canopy=Math.max(0,canopyBase*scale),pos=randomPointOnOuterIsland(spec,Math.max(80,solid+45));
+        if(outerIslandAnimalSpawnBlocked(spec,pos.x,pos.y,solid+3))continue;
+        addGeneratedResource({type,x:pos.x,y:pos.y,hp,maxHp:hp,alive:true,respawnAt:0,pulse:0,solidR:solid,canopyR:canopy,scale,rot:type==="log"?rand(0,TAU):rand(-.25,.25),_outerIslandId:spec.id});
+        break;
+      }
+    }
   }
 }
 
@@ -18427,8 +18463,6 @@ function spawnWildAnimal(nearPlayer, forcedStage = null, forcedType = null, grou
     else if (sr < 0.95) stage = "boss";
     else stage = "superboss";
   }
-
-  if (stage === "bigmomma" && type !== "queenbee" && animals.filter(q => q && !q.dead && !q.owned && q.type !== "queenbee" && q.stage === "bigmomma").length >= 5) stage = "superboss";
 
   const r = animalRadius(type, stage);
   const spawnR = animalSpawnFootprint(type, stage);
@@ -18749,14 +18783,15 @@ function initWorld() {
   placeBiomeFeatures();
   placeUnderwaterFeatures();
   placeGalaxyTropicsFeatures();
+  placeOuterIslandFlora();
   // The giant world should feel full instead of sparse: many more, larger resources.
   // Dense-world pass: basic resources are intentionally much more common.
   // randomLandPoint is biome-area weighted, so physically larger biomes naturally
   // receive the largest share while the static grid keeps placement/collision local.
-  scatter("tree", 1450, 9, 240, 12);
-  scatter("rock", 860, 4, 240, 20);
-  scatter("log", 540, 2.4, 180, 16); // easy fallen wood: a few punches, wood every hit
-  scatter("bush", 980, 8, 180, 13); // bushes take several hits; drop berries
+  scatter("tree", 1900, 9, 240, 12);
+  scatter("rock", 900, 4, 240, 20);
+  scatter("log", 720, 2.4, 180, 16); // easy fallen wood: a few punches, wood every hit
+  scatter("bush", 1580, 8, 180, 13); // bushes take several hits; drop berries
   placeGoldChunks();
   placeChests();
   walls = []; towers = []; projectiles = []; petBlasts = []; particles = []; floaters = []; enemies = []; animals = [];
@@ -18766,55 +18801,52 @@ function initWorld() {
   // receive more individuals per species and feel just as alive.
   // Much denser wildlife. The map is enormous, so the old counts left long empty stretches.
   // Keep this species-based so every biome feels populated instead of just adding one giant cluster.
-  const STARTING_WILD_PER_SPECIES_BY_BIOME = {forest:12,rainforest:16,arctic:22,desert:18,mountains:20};
-  const STARTING_STAGE_PLAN = ["baby","baby","adult","adult","adult","boss","superboss"];
-  const EXTRA_STAGE_PLAN = ["baby","adult","adult","baby","adult"];
-  const BIG_MOMMA_SPECIES_INDEXES = new Set([0,7,14,21,28]);
-  const bigMommaTargets=[];
-  let speciesOrdinal = 0;
+  const STARTING_WILD_PER_SPECIES_BY_BIOME = {forest:18,rainforest:22,arctic:28,desert:24,mountains:26};
+  // Babies and Adults should be the normal wildlife, not the rare sight. Boss
+  // stages stay uncommon while the guaranteed apex animal is handled separately.
+  const STARTING_STAGE_PLAN = ["baby","baby","baby","baby","adult","adult","adult","adult","boss","superboss"];
+  const EXTRA_STAGE_PLAN = ["baby","adult","baby","adult","baby","adult"];
   populateRainforestHivesOffline(true);
   spawnPassiveTinyBeesOffline();
+
+  // Every active wild species gets at least one apex Big Momma/Big Daddy.
+  // Gender still comes from the normal species/gender rules; bigmomma is the stage.
+  for(const type of [...new Set(WILD_SPECIES)]){
+    if(animals.some(a=>a&&!a.dead&&!a.owned&&a.type===type&&a.stage==="bigmomma"))continue;
+    const biome=speciesHomeBiome(type);
+    let made=null;
+    for(let attempt=0;attempt<18&&!made;attempt++)made=spawnWildAnimal(false,"bigmomma",type,null,biome);
+  }
+
   for (const biome of BIOME_ORDER) {
     for (const type of (BIOME_PROFILES[biome]?.species || [])) {
-      if (isWildBeeType(type)) { speciesOrdinal++; continue; }
-      const wantsBigMomma=BIG_MOMMA_SPECIES_INDEXES.has(speciesOrdinal);
-      if(wantsBigMomma)bigMommaTargets.push({type,biome});
-      const stages=[...STARTING_STAGE_PLAN];
-      if(wantsBigMomma)stages[stages.length-1]="bigmomma";
-      const basePerSpecies=type==="fennec"?28:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||12);
+      if (isWildBeeType(type)) continue;
+      const basePerSpecies=type==="fennec"?34:(STARTING_WILD_PER_SPECIES_BY_BIOME[biome]||18);
       const targetPerSpecies=Math.max(STARTING_STAGE_PLAN.length,scaledBiomeSpawnCount(basePerSpecies,biome,STARTING_STAGE_PLAN.length));
       let made=0;
-      for(const stage of stages){
+      for(const stage of STARTING_STAGE_PLAN){
         let spawned=false;
-        for(let attempt=0;attempt<5&&!spawned;attempt++)spawned=!!spawnWildAnimal(false,stage,type,null,biome);
+        for(let attempt=0;attempt<6&&!spawned;attempt++)spawned=!!spawnWildAnimal(false,stage,type,null,biome);
         if(spawned)made++;
       }
-      for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*7;retry++){
+      for(let retry=0;made<targetPerSpecies&&retry<targetPerSpecies*8;retry++){
         const extraIndex=Math.max(0,made-STARTING_STAGE_PLAN.length);
         const stage=EXTRA_STAGE_PLAN[(extraIndex+retry)%EXTRA_STAGE_PLAN.length];
         if(spawnWildAnimal(false,stage,type,null,biome))made++;
       }
-      speciesOrdinal++;
     }
-  }
-  // Placement can occasionally reject a huge body. Repair the starting roster so
-  // the world still enters Play with exactly five living Big Mommas already present.
-  let bigMommaCount=animals.filter(a=>a&&!a.dead&&!a.owned&&a.type!=="queenbee"&&a.stage==="bigmomma").length;
-  for(let pass=0;bigMommaCount<5&&pass<25;pass++){
-    const target=bigMommaTargets[pass%Math.max(1,bigMommaTargets.length)]||{type:"bear",biome:"forest"};
-    if(spawnWildAnimal(false,"bigmomma",target.type,null,target.biome))bigMommaCount++;
   }
 
   // Outer islands now have their own real wildlife instead of being empty land.
   // Keep island populations mostly baby/adult so the smaller islands stay navigable.
-  const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:28,sunbar_isle:24,frost_isle:20,westwood_isle:24,southwest_isle:22,southcap_isle:21,northeast_isle:24,northwest_isle:23};
+  const OUTER_ISLAND_WILDLIFE_TARGETS={reef_isle:40,sunbar_isle:34,frost_isle:30,westwood_isle:34,southwest_isle:32,southcap_isle:30,northeast_isle:36,northwest_isle:34};
   for(const spec of OUTER_ISLANDS){
     if(spec.id==="galaxaytropic")continue;
     const pool=(BIOME_PROFILES[spec.biome]?.species||WILD_SPECIES).filter(type=>WILD_SPECIES.includes(type)&&!isWildBeeType(type));
     const target=OUTER_ISLAND_WILDLIFE_TARGETS[spec.id]||18;
     let made=0;
     for(let attempt=0;attempt<target*10&&made<target;attempt++){
-      const type=pool[randi(0,Math.max(0,pool.length-1))]||chooseWildType(spec.biome),roll=Math.random(),stage=roll<.52?"baby":roll<.93?"adult":roll<.995?"boss":"superboss";
+      const type=pool[randi(0,Math.max(0,pool.length-1))]||chooseWildType(spec.biome),roll=Math.random(),stage=roll<.55?"baby":roll<.97?"adult":roll<.995?"boss":"superboss";
       if(spawnWildAnimal(false,stage,type,null,spec.biome,spec))made++;
     }
   }
@@ -20791,7 +20823,7 @@ function giveWildExpOffline(a,amount,reason="wild"){
   if(!a||a.dead||a.owned||a.stage==="bigmomma")return;amount=Math.max(0,Number(amount)||0);if(amount<=0)return;
   a.exp=Math.max(0,Number(a.exp)||0)+amount;a.level=Math.max(wildStageMinLevel(a.stage),Math.floor(Number(a.level)||1));let safety=0;
   while(safety++<12){const need=wildExpNeedOffline(a);if(a.exp<need)break;a.exp-=need;a.level++;const growAt={baby:4,adult:8,boss:12,superboss:16}[a.stage]||999;if(a.level<growAt)continue;
-    const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;if(next==="bigmomma"&&a.type!=="queenbee"&&animals.filter(q=>q&&!q.dead&&!q.owned&&q.type!=="queenbee"&&q.stage==="bigmomma").length>=5){a.exp=Math.min(a.exp,need-1);a.level=growAt-1;break;}
+    const next={baby:"adult",adult:"boss",boss:"superboss",superboss:"bigmomma"}[a.stage];if(!next)break;
     a.stage=next;a.r=animalRadius(a.type,next);a.maxHp=typeHp(a.type,next);a.hp=a.maxHp;a.speed=animalSpeed(a.type,next,false);a.sleeping=false;a.enraged=false;a._abilityFightTarget=null;floatText(a.x,a.y-a.r-18,`${next.toUpperCase()} · LV ${a.level}`,"#ffe66d");
   }
 }
