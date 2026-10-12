@@ -8686,6 +8686,10 @@ const PET_TYPES = {
            desc: "Raises a long-lasting spiked stone wall", startUnlock: true, baseSpeed: 78, friendly: true,
            sizeMul: 1.15, flee: false, style: "wall",
            coats: ["#c9a06a","#8b6914","#e8d5b7","#5c4033","#d2b48c"] },
+  seal:  { name: "Seal", emoji: "🦭", elem: "Stone", color: "#8f979d", abilityCd: 15,
+           desc: "Creates a spinning spiked stone prison around every nearby target for 10 seconds", baseSpeed: 64, friendly: true,
+           sizeMul: 1.08, flee: false, style: "prison",
+           coats: ["#8f979d","#747d84","#a5afb6","#70675f"] },
   cat:   { name: "Cat",   emoji: "🐈", elem: "Sound", color: "#e8b8a0", abilityCd: 12,
            desc: "Huge sonic wave — damages and knocks enemies back", startUnlock: true, baseSpeed: 72, friendly: true,
            sizeMul: 1.0, flee: true, style: "ring",
@@ -8740,7 +8744,7 @@ const PET_TYPES = {
   queenbee: { name:"Queen Bee", emoji:"🐝", elem:"Insect", color:"#d2b33b", abilityCd:15, desc:"Royal swarm — releases killable tiny bees that chase targets, sting, and apply poison damage over time", baseSpeed:74, friendly:true, sizeMul:1.42, flee:false, style:"beeswarm", coats:["#d2b33b","#f0d35e","#8a5d20"] },
   workerbee: { name:"Worker Bee", emoji:"🐝", elem:"Poison", color:"#d9b84b", abilityCd:11, desc:"Poison charge — charges into the target and applies stackable poison damage over time", baseSpeed:92, friendly:true, sizeMul:1.06, flee:false, style:"workersting", coats:["#d9b84b","#f0d774","#8b6a22"] },
   dronebee: { name:"Drone Bee", emoji:"🐝", elem:"Normal", color:"#f3f3f0", abilityCd:10, desc:"Ram — slams into the target with a strong body hit", baseSpeed:86, friendly:false, sizeMul:.90, flee:false, style:"droneram", coats:["#f3f3f0","#dfddd8","#c3bfb5"] },};
-const ACTIVE_PET_TYPES = Object.freeze(["dog","cat","dragon","fox","wolf","bear","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee"]);
+const ACTIVE_PET_TYPES = Object.freeze(["dog","seal","cat","dragon","fox","wolf","bear","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee"]);
 const ACTIVE_PET_TYPE_SET = new Set(ACTIVE_PET_TYPES);
 
 // Species are intentionally different instead of sharing one generic health pool.
@@ -8748,6 +8752,7 @@ const ACTIVE_PET_TYPE_SET = new Set(ACTIVE_PET_TYPES);
 // This also makes babies naturally different from one another before they grow.
 const ANIMAL_BALANCE = {
   dog:    { hpMul:1.15, damageTaken:0.88, attack:6.5 },
+  seal:   { hpMul:1.18, damageTaken:0.90, attack:7.0 },
   cat:    { hpMul:0.90, damageTaken:1.05, attack:7.2 },
   dragon: { hpMul:1.05, damageTaken:0.93, attack:6.2 },
   fox:    { hpMul:0.92, damageTaken:1.05, attack:8.5 },
@@ -8988,7 +8993,7 @@ function wallDamageForTool(toolName, wall) {
 // One canonical animal rarity table.  Viper uses the internal species key `snake`.
 // Bearded Dragon stays Starter-only until its normal rarity is chosen.
 const PET_RARITY = Object.freeze({
-  dog:"Common", cat:"Common", rabbit:"Common",
+  dog:"Common", seal:"Common", cat:"Common", rabbit:"Common",
   wolf:"Uncommon", bear:"Uncommon", fox:"Uncommon",
   boar:"Rare", deer:"Rare", owl:"Rare",
   snake:"Legendary", saber:"Legendary", clouded:"Rare",
@@ -9002,6 +9007,7 @@ function petCardRarityWeight(type){ return PET_RARITY_CARD_WEIGHT[petRarity(type
 
 const PET_UNLOCK = {
   dog:    { cards: 50,  servs: 0,    rarity: PET_RARITY.dog },
+  seal:   { cards: 50,  servs: 700,  rarity: PET_RARITY.seal },
   cat:    { cards: 50,  servs: 0,    rarity: PET_RARITY.cat },
   dragon: { cards: 50,  servs: 0,    rarity: PET_RARITY.dragon },
   rabbit: { cards: 50, servs: 600,  rarity: PET_RARITY.rabbit },
@@ -16266,7 +16272,47 @@ function drawReassembledFoxBearSkin(a, species, stage, sleeping) {
   return true;
 }
 
+function drawSealSeparatedStyle(a){
+  if(a.type!=="seal")return false;
+  const r=Math.max(8,Number(a.r)||18);
+  const now=performance.now();
+  const moveRatio=Math.max(0,Math.min(2.35,Number(a._netAnimMoveRatio)||Number(a._visualMoveSpeed||0)/Math.max(1,Number(a.speed)||animalSpeed(a.type,a.stage,!!a.owned)||1)));
+  const motionProfile=creatureMotionRatios(moveRatio),cadenceRatio=motionProfile.cadence,strideRatio=motionProfile.stride;
+  const phase=now*.001*(((a.sleeping)?0.55:1.55)+cadenceRatio*2.5)+(a.tailPhase||0)+a.x*.006+a.y*.004;
+  const bodyCol=a.coat||PET_TYPES.seal?.color||"#8f979d",dark="#5f666c",light="#c6cdd2",outline="#1f2327",stoneGlow="#c9d1d6";
+  const attackT=Math.max(0,Math.min(1,Number(a.attackAnim)||0)),lunge=Math.sin(attackT*Math.PI);
+  const headBob=(a.sleeping?Math.sin(phase*.55):Math.sin(phase*1.15))*(a.sleeping?r*.018:r*.045);
+  const headTurn=a.sleeping?Math.sin(phase*.42)*.03:Math.sin(phase*.92)*(.04+.05*strideRatio)+lunge*.06;
+  const flipperSwing=a.sleeping?Math.sin(phase*.6)*.08:Math.sin(phase*1.9)*(.16+.26*strideRatio);
+  const tailBase=a.sleeping?Math.sin(phase*.7)*.05:Math.sin(phase*1.6)*(.10+.15*strideRatio);
+  const tailA=tailBase-lunge*.06,tailB=-tailBase*1.08+lunge*.03;
+  ctx.save();
+  const oldSmooth=ctx.imageSmoothingEnabled,oldQuality=ctx.imageSmoothingQuality;ctx.imageSmoothingEnabled=true;try{ctx.imageSmoothingQuality="high";}catch(_){}
+  ctx.fillStyle="rgba(0,0,0,.16)";ctx.beginPath();ctx.ellipse(-r*.05,r*.34,r*1.05,r*.23,0,0,TAU);ctx.fill();
+  const drawFlipper=(ax,ay,rot,scaleY=1)=>{ctx.save();ctx.translate(ax,ay);ctx.rotate(rot);ctx.fillStyle=bodyCol;ctx.strokeStyle=outline;ctx.lineWidth=Math.max(1.6,r*.06);ctx.beginPath();ctx.moveTo(-r*.08,0);ctx.quadraticCurveTo(r*.20,-r*.16*scaleY,r*.54,-r*.10*scaleY);ctx.quadraticCurveTo(r*.72,0,r*.54,r*.10*scaleY);ctx.quadraticCurveTo(r*.20,r*.16*scaleY,-r*.08,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=light;ctx.lineWidth=Math.max(1,r*.028);ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(r*.05,0);ctx.quadraticCurveTo(r*.28,-r*.08*scaleY,r*.50,-r*.03*scaleY);ctx.stroke();ctx.globalAlpha=1;ctx.restore();};
+  const drawTailPiece=(ax,ay,rot,sign)=>{ctx.save();ctx.translate(ax,ay);ctx.rotate(rot);ctx.fillStyle=dark;ctx.strokeStyle=outline;ctx.lineWidth=Math.max(1.4,r*.055);ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-r*.34,sign*r*.08,-r*.56,sign*r*.22);ctx.quadraticCurveTo(-r*.78,sign*r*.12,-r*.80,0);ctx.quadraticCurveTo(-r*.76,-sign*r*.14,-r*.56,-sign*r*.20);ctx.quadraticCurveTo(-r*.34,-sign*r*.06,0,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();};
+  drawTailPiece(-r*.86,-r*.10,tailA,-1);
+  drawTailPiece(-r*.86,r*.10,tailB,1);
+  drawFlipper(-r*.10,-r*.30,-.48-flipperSwing,1);
+  drawFlipper(-r*.10,r*.30,.48+flipperSwing,-1);
+  ctx.fillStyle=bodyCol;ctx.strokeStyle=outline;ctx.lineWidth=Math.max(2,r*.07);ctx.beginPath();ctx.ellipse(-r*.08,0,r*.98,r*.58,0,0,TAU);ctx.fill();ctx.stroke();
+  ctx.fillStyle=dark;ctx.globalAlpha=.65;ctx.beginPath();ctx.ellipse(-r*.24,0,r*.32,r*.18,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=stoneGlow;ctx.lineWidth=Math.max(1.2,r*.035);ctx.globalAlpha=.6;ctx.beginPath();ctx.arc(-r*.22,-r*.10,r*.18,.25,2.65);ctx.stroke();ctx.beginPath();ctx.arc(r*.02,r*.12,r*.14,3.55,5.75);ctx.stroke();ctx.globalAlpha=1;
+  ctx.save();ctx.translate(r*.82+lunge*r*.10,headBob);ctx.rotate(headTurn);ctx.fillStyle=bodyCol;ctx.strokeStyle=outline;ctx.lineWidth=Math.max(2,r*.07);ctx.beginPath();ctx.ellipse(0,0,r*.46,r*.34,0,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle=light;ctx.globalAlpha=.85;ctx.beginPath();ctx.ellipse(r*.10,0,r*.22,r*.15,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle="#1b1d20";
+  if(a.sleeping){ctx.strokeStyle="#1b1d20";ctx.lineWidth=Math.max(1.2,r*.035);for(const side of[-1,1]){ctx.beginPath();ctx.arc(r*.02,-side*r*.11,r*.05,0.25,2.85);ctx.stroke();}}else{for(const side of[-1,1]){ctx.beginPath();ctx.arc(r*.03,-side*r*.11,r*.055,0,TAU);ctx.fill();ctx.fillStyle="#f4f8fb";ctx.beginPath();ctx.arc(r*.05,-side*r*.12,r*.018,0,TAU);ctx.fill();ctx.fillStyle="#1b1d20";}}
+  ctx.strokeStyle="#2b2f33";ctx.lineWidth=Math.max(1.2,r*.038);ctx.beginPath();ctx.moveTo(r*.22,0);ctx.quadraticCurveTo(r*.33,-r*.05,r*.36,0);ctx.quadraticCurveTo(r*.33,r*.05,r*.22,0);ctx.stroke();
+  ctx.strokeStyle=outline;ctx.lineWidth=Math.max(1,r*.028);for(const side of[-1,1]){ctx.beginPath();ctx.moveTo(r*.18,side*r*.02);ctx.lineTo(r*.36,side*r*.10);ctx.stroke();ctx.beginPath();ctx.moveTo(r*.18,side*r*.02);ctx.lineTo(r*.37,side*r*.00);ctx.stroke();}
+  ctx.restore();
+  if(player.riding===a){const saddleW=r*.76,saddleH=r*.28;drawMountedSaddleOnCustom(r*1.9,r*1.18,-r*.08,-r*.14,saddleW,saddleH);}
+  ctx.imageSmoothingEnabled=oldSmooth;try{ctx.imageSmoothingQuality=oldQuality;}catch(_){}ctx.restore();
+  return true;
+}
+
 function drawUploadedAnimalSkin(a) {
+  if (a.type === "seal") {
+    if (drawSealSeparatedStyle(a)) return true;
+  }
   if (a.type === "queenbee" || a.type === "workerbee" || a.type === "dronebee") {
     try { if (drawUploadedBeeSkin(a)) return true; } catch (beeDrawErr) {
       const t = performance.now();
@@ -17128,7 +17174,7 @@ const BIOME_ZONES = {
 const BIOME_PROFILES = {
   forest:{ id:"forest", name:"Forest", tint:"rgba(53,92,50,0)", edge:"rgba(32,58,29,.16)", minimap:"#7fa95d", species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"] },
   rainforest:{ id:"rainforest", name:"Rain Forest", tint:"rgba(22,100,54,.24)", edge:"rgba(12,60,30,.28)", minimap:"#1f6436", species:["snake","dragon","clouded","saber","queenbee","workerbee","dronebee"] },
-  arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["rabbit"] },
+  arctic:{ id:"arctic", name:"Arctic", tint:"rgba(206,238,247,.20)", edge:"rgba(136,190,209,.24)", minimap:"#d9edf2", species:["rabbit","seal"] },
   desert:{ id:"desert", name:"Desert", tint:"rgba(230,198,131,.12)", edge:"rgba(167,121,47,.18)", minimap:"#d8b36a", species:["fennec","snake","dragon","boar"] },
   mountains:{ id:"mountains", name:"Mountains", tint:"rgba(111,117,111,.10)", edge:"rgba(75,80,76,.18)", minimap:"#777b73", species:["dog","wolf","saber","queenbee","workerbee","dronebee"] },
   ocean:{ id:"ocean", name:"Ocean", tint:"rgba(0,0,0,0)", edge:"rgba(0,0,0,0)", minimap:"#2f83a7", species:[] },
@@ -18115,7 +18161,7 @@ function placeGoldChunks() {
   for(let i=0;i<82;i++){for(let t=0;t<55;t++){const pos=randomLandPoint(170);if(solidOverlaps(pos.x,pos.y,16))continue;goldChunks.push({x:pos.x,y:pos.y,size:"small",r:16,goldLeft:6,pulse:0});break;}}
 }
 
-const WILD_SPECIES = ["fox","wolf","bear","cat","dog","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
+const WILD_SPECIES = ["fox","wolf","bear","cat","dog","seal","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
 // World population now follows the same rarity tiers shown in the pet/card UI.
 const WILD_RARITY_TARGET = Object.freeze({Common:1.45,Uncommon:.82,Rare:.44,Legendary:.16,Starter:.28});
 const WILD_TYPE_TARGETS = Object.fromEntries(WILD_SPECIES.map(type => [type, WILD_RARITY_TARGET[petRarity(type)] || .7]));
@@ -21480,6 +21526,11 @@ function updateWalls(dt) {
       w.maxHp = maxHp; w.hp = Math.max(0, (Number.isFinite(Number(w.hp)) ? Number(w.hp) : maxHp) - (maxHp / 75) * dt);
     }
     if (w.flash > 0) w.flash = Math.max(0, w.flash - dt);
+    if (!net.room && w.orbitTarget && !w.orbitTarget.dead && Number.isFinite(w.orbitRadius)) {
+      w.orbitAngle = (Number(w.orbitAngle) || 0) + (Number(w.orbitSpeed) || 0) * dt;
+      w.x = w.orbitTarget.x + Math.cos(w.orbitAngle) * w.orbitRadius;
+      w.y = w.orbitTarget.y + Math.sin(w.orbitAngle) * w.orbitRadius;
+    }
     if (!net.room && w.ttl > 0) w.ttl -= dt;
     if (!net.room && (w.hp ?? 1) > 0 && !isPlacedVehicleWall(w)) {
       w.enemyBreakCd = Math.max(0, (w.enemyBreakCd || 0) - dt);
@@ -21984,6 +22035,19 @@ function petAbilityTargetOffline(pet, maxRange=520) {
   for(const wa of animals){if(wa.dead||wa.owned||wa===pet)continue;const d=dist(pet.x,pet.y,wa.x,wa.y);if(d<bestD){best={obj:wa,isAnimal:true};bestD=d;}}
   return best;
 }
+function petAbilityTargetsOffline(pet, maxRange=320) {
+  const out=[];
+  const push=(obj,isAnimal)=>{
+    if(!obj||obj.dead||out.some(e=>e.obj===obj))return;
+    if(dist(pet.x,pet.y,obj.x,obj.y)<=maxRange)out.push({obj,isAnimal});
+  };
+  const hunt=pet?.huntTarget;
+  if(hunt?.obj&&combatTargetAlive(hunt.obj))push(hunt.obj,!!hunt.isAnimal);
+  for(const en of enemies){ if(en.dead) continue; push(en,false); }
+  for(const wa of animals){ if(wa.dead||wa.owned||wa===pet) continue; push(wa,true); }
+  out.sort((a,b)=>dist(pet.x,pet.y,a.obj.x,a.obj.y)-dist(pet.x,pet.y,b.obj.x,b.obj.y));
+  return out;
+}
 function petAbilityAimAngleOffline(pet,maxRange=520){
   // Projectile/blast abilities always fire where the pet is currently looking.
   // Targeting may decide when the pet uses an ability, but it never bends the shot.
@@ -22041,11 +22105,11 @@ function damagePercentTargetOffline(attacker,target,isAnimal,pct){
 function makeWalrusSpikePrisonOffline(source,target,spikeDmg){
   if(!source||!target)return;
   const stage=uploadedAnimalStageKey(source.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1;
-  const ring=Math.max((target.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27),count=6;
+  const ring=Math.max((target.r||PLAYER_R)+36,68*mul),wallR=clamp(12.5*mul,10,27),count=8,duration=10,spin=(source.owned?1:-1)*(1.2+mul*.18);
   for(let i=0;i<count;i++){
     const a=i/count*TAU,x=target.x+Math.cos(a)*ring,y=target.y+Math.sin(a)*ring;
-    walls.push({x,y,ttl:4,r:wallR,hp:999,maxHp:999,kind:"stoneSpike",spiked:true,spikeDmg,spikeCd:0,sourcePet:source.owned?source:null,hostileToPlayer:!source.owned,sourceAnimal:source.owned?null:source});
-    abilityFx.push({type:"stone",x,y,life:4,maxLife:4,r:wallR});
+    walls.push({x,y,ttl:duration,r:wallR,hp:999,maxHp:999,kind:"stoneSpike",spiked:true,spikeDmg,spikeCd:0,sourcePet:source.owned?source:null,hostileToPlayer:!source.owned,sourceAnimal:source.owned?null:source,orbitTarget:target,orbitRadius:ring,orbitAngle:a,orbitSpeed:spin});
+    abilityFx.push({type:"stone",x,y,life:duration,maxLife:duration,r:wallR});
   }
 }
 function petSkillHealFromDamageOffline(pet,dealt){
@@ -22196,6 +22260,8 @@ function activatePetAbility(pet, batchCast = false, inheritedFrom = null) {
     else{abilityFx=abilityFx.filter(f=>!(f.type==="arcticShardOrbit"&&f.sourcePet===pet));abilityFx.push({type:"arcticShardOrbit",x:px,y:py,life:1e9,maxLife:1e9,sourcePet:pet,anchorPet:pet,petR:pet.r,orbitR:Math.max(pet.r+28,48),damage:dmg,phase:0});}
   }else if(pet.type==="walrus"){
     const t=petAbilityTargetOffline(pet,300),dmg=stats.damage||2;if(t){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.8,maxLife:.8,r:petAbilityRangeFor(pet,85,1.8),baseR:petAbilityRangeFor(pet,85,1.8)});game.shake=5;}
+  }else if(pet.type==="seal"){
+    const dmg=stats.damage||10,targets=petAbilityTargetsOffline(pet,320);if(targets.length){for(const t of targets){makeWalrusSpikePrisonOffline(pet,t.obj,dmg);abilityFx.push({type:"earthRingBurst",x:t.obj.x,y:t.obj.y,life:.9,maxLife:.9,r:petAbilityRangeFor(pet,90,1.9),baseR:petAbilityRangeFor(pet,90,1.9)});}game.shake=6;}
   }else if(pet.type==="queenbee"){
     spawnQueenBeeSwarmOffline(pet,false,stats);const range=petAbilityRangeFor(pet,220,4.4);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});spark(px,py,"#ffe27c",18,135);
   }else if(pet.type==="workerbee"){
@@ -22479,6 +22545,9 @@ function wildUseAbility(a) {
     const st=petAbilityStats(a),dmg=st.damage||10,base=angTo(px,py,tx,ty),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++)projectiles.push({x:px+Math.cos(base+i*.12)*(a.r+10),y:py+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,dmg,hostile:true,kind:"iceShard",color:"#bfeeff",source:a,targetObj:target});
   } else if (a.type === "walrus") {
     const st=petAbilityStats(a),dmg=st.damage||2;if(dTarget<300){makeWalrusSpikePrisonOffline(a,target,dmg);abilityFx.push({type:"earthRingBurst",x:tx,y:ty,life:.8,maxLife:.8,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}
+  } else if (a.type === "seal") {
+    const st=petAbilityStats(a),dmg=st.damage||10,targets=[player,...player.pets.filter(p=>!p.dead)].filter(t=>dist(a.x,a.y,t.x,t.y)<320);
+    if(targets.length){for(const t of targets){makeWalrusSpikePrisonOffline(a,t,dmg);abilityFx.push({type:"earthRingBurst",x:t.x,y:t.y,life:.9,maxLife:.9,r:90*petAbilityStageSize(a.stage),baseR:90*petAbilityStageSize(a.stage)});}game.shake=Math.max(game.shake||0,6);}
   } else if (a.type === "queenbee") {
     const st=petAbilityStats(a),range=petAbilityRangeFor(a,215,4.2);spawnQueenBeeSwarmOffline(a,true,st);abilityFx.push({type:"beeSwarm",x:px,y:py,life:.45,maxLife:.45,r:range,baseR:range,color:"#ffe27c"});
   } else if (a.type === "workerbee") {
@@ -28233,6 +28302,13 @@ function hostlDrawHoneyIcon(kind="HoneyComb") {
   ctx.restore();
 }
 function hostlDrawWallIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#a9744f";ctx.strokeStyle="#5c3a22";ctx.lineWidth=2.3;roundRect(-9,-18,18,36,3);ctx.fill();ctx.stroke();ctx.restore();}
+function hostlDrawTowerIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#92613e";ctx.strokeStyle="#4b2f1f";ctx.lineWidth=2;roundRect(-7,-13,14,26,2.5);ctx.fill();ctx.stroke();ctx.fillStyle="#b88555";ctx.beginPath();ctx.moveTo(-11,-13);ctx.lineTo(11,-13);ctx.lineTo(8,-19);ctx.lineTo(-8,-19);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle="#6ac8ff";circ(0,-2,3.2);ctx.restore();}
+function hostlDrawWindmillIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#8a603d";ctx.strokeStyle="#4a2f1c";ctx.lineWidth=2;roundRect(-3,-8,6,22,2);ctx.fill();ctx.stroke();ctx.fillStyle="#d7e3e6";ctx.beginPath();ctx.arc(0,-8,2.5,0,TAU);ctx.fill();ctx.stroke();ctx.strokeStyle="#dfe9ed";ctx.lineWidth=3;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(0,-20);ctx.moveTo(0,-8);ctx.lineTo(12,-8);ctx.moveTo(0,-8);ctx.lineTo(0,4);ctx.moveTo(0,-8);ctx.lineTo(-12,-8);ctx.stroke();ctx.restore();}
+function hostlDrawBoatItemIcon(){ctx.save();ctx.translate(0,18);ctx.scale(.38,.38);drawVehicleLocal("Boat",null,false,false);ctx.restore();}
+function hostlDrawSubItemIcon(){ctx.save();ctx.translate(0,18);ctx.scale(.34,.34);drawVehicleLocal("Sub",null,false,false);ctx.restore();}
+function hostlDrawBattleBotIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#6f7d84";ctx.strokeStyle="#20272b";ctx.lineWidth=2;roundRect(-9,-10,18,20,5);ctx.fill();ctx.stroke();ctx.fillStyle="#8eeaff";circ(-3,-2,2.2);circ(3,-2,2.2);ctx.strokeStyle="#30383d";ctx.lineWidth=2.2;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-5,10);ctx.lineTo(-7,15);ctx.moveTo(5,10);ctx.lineTo(7,15);ctx.moveTo(0,-10);ctx.lineTo(0,-15);ctx.stroke();ctx.fillStyle="#f2c94c";circ(0,-16.5,1.6);ctx.restore();}
+function hostlDrawPetArmorIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#9a8771";ctx.strokeStyle="#4f4031";ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(10,-8);ctx.lineTo(8,7);ctx.lineTo(0,14);ctx.lineTo(-8,7);ctx.lineTo(-10,-8);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle="#dbc79f";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(0,9);ctx.moveTo(-5,-1);ctx.lineTo(5,-1);ctx.stroke();ctx.restore();}
+function hostlDrawRepairBuildingIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#7f5d3a";ctx.strokeStyle="#3d2a1d";ctx.lineWidth=2;roundRect(-10,-10,20,20,3);ctx.fill();ctx.stroke();ctx.fillStyle="#7be08a";ctx.strokeStyle="#274a31";ctx.lineWidth=1.5;roundRect(-6,-6,12,12,2);ctx.fill();ctx.stroke();ctx.strokeStyle="#eefaf0";ctx.lineWidth=2.3;ctx.beginPath();ctx.moveTo(0,-3.8);ctx.lineTo(0,3.8);ctx.moveTo(-3.8,0);ctx.lineTo(3.8,0);ctx.stroke();ctx.restore();}
 function hostlDrawSaddleIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#9a6238";ctx.strokeStyle="#4a2d18";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-10,-8);ctx.quadraticCurveTo(0,-15,10,-8);ctx.lineTo(8,8);ctx.quadraticCurveTo(0,13,-8,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
 function hostlDrawPlayerItemPose(iconFn, walkAmt=0){
   const pose=HOSTL_PLAYER_POSES.player, armShift=walkAmt*1.15;
@@ -28357,7 +28433,14 @@ function hostlDrawSwimmingPose(actor, holding, attackT=0){
   if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(()=>hostlDrawHoneyIcon(holding),swimPhase);
   if(holding==="Chakrams") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},swimPhase);
   if(holding==="Flute") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
-  if(holding==="Wall"||holding==="Tower"||holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
+  if(holding==="Wall") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
+  if(holding==="Tower") return hostlDrawSwimmingIconPose(hostlDrawTowerIcon,swimPhase);
+  if(holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWindmillIcon,swimPhase);
+  if(holding==="Boat") return hostlDrawSwimmingIconPose(hostlDrawBoatItemIcon,swimPhase);
+  if(holding==="Sub") return hostlDrawSwimmingIconPose(hostlDrawSubItemIcon,swimPhase);
+  if(holding==="BattleBot") return hostlDrawSwimmingIconPose(hostlDrawBattleBotIcon,swimPhase);
+  if(holding==="PetArmor") return hostlDrawSwimmingIconPose(hostlDrawPetArmorIcon,swimPhase);
+  if(holding==="RepairBuilding") return hostlDrawSwimmingIconPose(hostlDrawRepairBuildingIcon,swimPhase);
   if(holding==="Saddle") return hostlDrawSwimmingIconPose(hostlDrawSaddleIcon,swimPhase);
   const swimPoseKey=hostlWeaponPoseKey(actor,holding),swimPose=HOSTL_PLAYER_POSES[swimPoseKey];
   if((holding==="Pickaxe"||holding==="TigerClaws"||holding==="BoxingGloves")&&swimPose&&((swimPose.arms&&swimPose.arms.length)||(swimPose.tools&&swimPose.tools.length))){
@@ -28478,7 +28561,14 @@ function hostlRenderModernPlayer(actor,opts={}){
   if(holding==="HoneyComb"||holding==="Honey"){hostlDrawPlayerItemPose(()=>hostlDrawHoneyIcon(holding),walkAmt);return;}
   if(holding==="Chakrams"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},walkAmt);return;}
   if(holding==="Flute"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},walkAmt);return;}
-  if(holding==="Wall"||holding==="Tower"||holding==="Windmill"){hostlDrawPlayerItemPose(hostlDrawWallIcon,walkAmt);return;}
+  if(holding==="Wall"){hostlDrawPlayerItemPose(hostlDrawWallIcon,walkAmt);return;}
+  if(holding==="Tower"){hostlDrawPlayerItemPose(hostlDrawTowerIcon,walkAmt);return;}
+  if(holding==="Windmill"){hostlDrawPlayerItemPose(hostlDrawWindmillIcon,walkAmt);return;}
+  if(holding==="Boat"){hostlDrawPlayerItemPose(hostlDrawBoatItemIcon,walkAmt);return;}
+  if(holding==="Sub"){hostlDrawPlayerItemPose(hostlDrawSubItemIcon,walkAmt);return;}
+  if(holding==="BattleBot"){hostlDrawPlayerItemPose(hostlDrawBattleBotIcon,walkAmt);return;}
+  if(holding==="PetArmor"){hostlDrawPlayerItemPose(hostlDrawPetArmorIcon,walkAmt);return;}
+  if(holding==="RepairBuilding"){hostlDrawPlayerItemPose(hostlDrawRepairBuildingIcon,walkAmt);return;}
   if(holding==="Saddle"){hostlDrawPlayerItemPose(hostlDrawSaddleIcon,walkAmt);return;}
   if(holding==="Bow"){hostlDrawCurrentBow(actor,attackT,walkAmt,false,0);return;}
   if((holding==="Axe"||holding==="Sword"||holding==="Pickaxe")&&pose){
@@ -28488,7 +28578,6 @@ function hostlRenderModernPlayer(actor,opts={}){
     if(poseKey==="axeDouble"){hostlDrawDoubleAxe(pose,attackT,walkAmt);return;}
     hostlDrawGenericWeaponPose(pose,poseKey,attackT,walkAmt);return;
   }
-  // Bow has its own current-player pose above, so the old procedural arms are never used for it.
   const base=HOSTL_PLAYER_POSES.player;
   drawTwoHandWeapon(holding,HOSTL_LOCKED_PLAYER_COLOR,opts.swingEase||0,walkAmt*2.2,actor);
   for(let i=0;i<base.arms.length;i++)hostlDrawPosePiece(base.arms[i],0,(i%2?-walkAmt:walkAmt));
