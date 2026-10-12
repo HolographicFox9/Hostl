@@ -8688,7 +8688,7 @@ const PET_TYPES = {
            coats: ["#c9a06a","#8b6914","#e8d5b7","#5c4033","#d2b48c"] },
   seal:  { name: "Seal", emoji: "🦭", elem: "Stone", color: "#8f979d", abilityCd: 15,
            desc: "Creates a spinning spiked stone prison around every nearby target for 10 seconds", baseSpeed: 64, friendly: true,
-           sizeMul: 1.08, flee: false, style: "prison",
+           sizeMul: 1.42, flee: false, style: "prison",
            coats: ["#8f979d","#747d84","#a5afb6","#70675f"] },
   cat:   { name: "Cat",   emoji: "🐈", elem: "Sound", color: "#e8b8a0", abilityCd: 12,
            desc: "Huge sonic wave — damages and knocks enemies back", startUnlock: true, baseSpeed: 72, friendly: true,
@@ -16291,7 +16291,7 @@ function drawSealSeparatedStyle(a){
   if(a.type!=="seal")return false;
   const stage=uploadedAnimalStageKey(a.stage),state=a.sleeping?"sleep":"awake",stageSpec=SEAL_SEPARATED_SOURCES[stage]||SEAL_SEPARATED_SOURCES.adult,spec=stageSpec[state],img=SEAL_SEPARATED_IMAGES[stage]?.[state]||SEAL_SEPARATED_IMAGES.adult[state];
   if(!spec||!img?.complete||!img.naturalWidth||!img.naturalHeight)return false;
-  const r=Math.max(8,Number(a.r)||18),scale=(r*1.25)/Math.max(1,Number(stageSpec.awakeRefH)||spec.refH),left=-spec.refW*scale*.5,top=-spec.refH*scale*.5;
+  const r=Math.max(8,Number(a.r)||18),sealDrawMul=({baby:1.45,adult:1.62,boss:1.78,superboss:1.90,bigmomma:2.05}[stage]||1.62),scale=(r*sealDrawMul)/Math.max(1,Number(stageSpec.awakeRefH)||spec.refH),left=-spec.refW*scale*.5,top=-spec.refH*scale*.5;
   const now=Number.isFinite(renderFrameNowMs)?renderFrameNowMs:performance.now(),last=Number(a._sealAnimMs)||now,dt=Math.max(.001,Math.min(.05,(now-last)/1000));a._sealAnimMs=now;
   const movedRecently=(now-(a._visualMoveAt||0))<180,actual=(!a.sleeping&&movedRecently)?Math.max(0,Number(a._visualMoveSpeed)||0):0,normal=Math.max(1,Number(a.speed)||animalSpeed(a.type,a.stage,!!a.owned)||1),ratio=Math.max(0,Math.min(2.35,actual/normal)),motion=creatureMotionRatios(ratio);
   a._sealPhase=(Number(a._sealPhase)||0)+dt*((a.sleeping?0.9:2.3)+motion.cadence*3.0);const phase=a._sealPhase+(a.tailPhase||0);

@@ -470,7 +470,7 @@ function chooseHostlRole(phaseName){
 
 const PET_TYPES = {
   dog:    { baseSpeed: 78, friendly: true,  flee: false, sizeMul: 1.15, color: "#c9a06a", abilityCd: 14, elem: "Stone", coats:["#c9a06a","#8b6914","#e8d5b7","#5c4033","#d2b48c"] },
-  seal:   { baseSpeed: 64, friendly: true,  flee: false, sizeMul: 1.08, color: "#8f979d", abilityCd: 15, elem: "Stone", coats:["#8f979d","#747d84","#a5afb6","#70675f"] },
+  seal:   { baseSpeed: 64, friendly: true,  flee: false, sizeMul: 1.42, color: "#8f979d", abilityCd: 15, elem: "Stone", coats:["#8f979d","#747d84","#a5afb6","#70675f"] },
   cat:    { baseSpeed: 72, friendly: true,  flee: true,  sizeMul: 1.00, color: "#e8b8a0", abilityCd: 12, elem: "Sound", coats:["#e8b8a0","#f5d0a9","#c4a882","#8b7355","#f0e6d2"] },
   dragon: { baseSpeed: 38, friendly: true,  flee: true,  sizeMul: 1.05, color: "#d4a050", abilityCd: 16, elem: "Fire", coats:["#d4a050","#c4783a","#e8b86d","#a06030"] },
   fox:    { baseSpeed: 92, friendly: true,  flee: false, sizeMul: 1.08, color: "#e07a40", abilityCd: 13, elem: "Lightning", coats:["#e07a40","#d4652a","#f09550","#c85820"] },
@@ -927,10 +927,10 @@ function animalRadius(type, stage) {
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
-  const speciesHeight={dog:1.06,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,saber:1.10,clouded:1.02,fennec:.92}[type];
+  const speciesHeight={dog:1.06,seal:1.00,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,saber:1.10,clouded:1.02,fennec:.92}[type];
   if(!speciesHeight)return null;
   const stageScale={baby:1.78,adult:1.52,boss:1.43,superboss:1.40,bigmomma:1.38}[stage]||1.45;
-  const lengthMul={dog:1.62,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
+  const lengthMul={dog:1.62,seal:1.92,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
   const h=animalRadius(type,stage)*speciesHeight*stageScale;
   return{h,w:h*lengthMul};
 }
