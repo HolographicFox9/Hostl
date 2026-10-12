@@ -28326,10 +28326,10 @@ function hostlDrawBucketIcon(full) {
   ctx.restore();
 }
 function hostlDrawBerryIcon(kind="Berry") {
-  if(kind==="SeaFruit"){ctx.fillStyle="#d58bd7";ctx.strokeStyle="#6e3d73";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#f2c3ee";ctx.beginPath();ctx.arc(-2.5,-2.5,2,0,TAU);ctx.fill();return;}
-  if(kind==="BlueSeaweed"||kind==="GreenSeaweed"){ctx.strokeStyle=kind==="GreenSeaweed"?"#54c878":"#59c7de";ctx.lineWidth=3.2;ctx.lineCap="round";for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*4,7);ctx.quadraticCurveTo(i*5+Math.sin(game.time*3+i)*3,0,i*3,-8);ctx.stroke();}return;}
-  if(kind==="CelestFruit"){ctx.fillStyle="#c584ff";ctx.strokeStyle="#5d2c8d";ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?5:10,x=Math.cos(a)*rr,y=Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();ctx.stroke();return;}
   ctx.save();ctx.translate(0,18);
+  if(kind==="SeaFruit"){ctx.fillStyle="#d58bd7";ctx.strokeStyle="#6e3d73";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#f2c3ee";ctx.beginPath();ctx.arc(-2.5,-2.5,2,0,TAU);ctx.fill();ctx.restore();return;}
+  if(kind==="BlueSeaweed"||kind==="GreenSeaweed"){ctx.strokeStyle=kind==="GreenSeaweed"?"#54c878":"#59c7de";ctx.lineWidth=3.2;ctx.lineCap="round";for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*4,7);ctx.quadraticCurveTo(i*5+Math.sin(game.time*3+i)*3,0,i*3,-8);ctx.stroke();}ctx.restore();return;}
+  if(kind==="CelestFruit"){ctx.fillStyle="#c584ff";ctx.strokeStyle="#5d2c8d";ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?5:10,x=Math.cos(a)*rr,y=Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();return;}
   if(kind==="JungleBerry"){ctx.fillStyle="#f07a42";ctx.strokeStyle="#7c3c20";ctx.lineWidth=1.7;ctx.beginPath();ctx.ellipse(0,0,7.2,5.8,.12,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle="#3d8a45";ctx.beginPath();ctx.ellipse(3,-6,5,2,-.3,0,TAU);ctx.fill();}
   else if(kind==="FrostBerry"){ctx.fillStyle="#88b8f2";ctx.strokeStyle="#365c8b";ctx.lineWidth=1.2;circ(-3.4,1.5,4.6);ctx.stroke();ctx.fillStyle="#b8dcff";circ(3.3,1.4,4.6);ctx.stroke();ctx.fillStyle="#76a5e3";circ(0,-2.4,4.2);ctx.stroke();}
   else if(kind==="GoodCactus"||kind==="BadCactus"){ctx.fillStyle="#67a555";ctx.strokeStyle="#30511f";ctx.lineWidth=1.2;circ(0,0,5.2);ctx.stroke();ctx.beginPath();ctx.ellipse(0,-5.5,3.3,2.1,0,0,TAU);ctx.fill();ctx.stroke();}
@@ -28352,12 +28352,57 @@ function hostlDrawBattleBotIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="
 function hostlDrawPetArmorIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#9a8771";ctx.strokeStyle="#4f4031";ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(10,-8);ctx.lineTo(8,7);ctx.lineTo(0,14);ctx.lineTo(-8,7);ctx.lineTo(-10,-8);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle="#dbc79f";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(0,9);ctx.moveTo(-5,-1);ctx.lineTo(5,-1);ctx.stroke();ctx.restore();}
 function hostlDrawRepairBuildingIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#7f5d3a";ctx.strokeStyle="#3d2a1d";ctx.lineWidth=2;roundRect(-10,-10,20,20,3);ctx.fill();ctx.stroke();ctx.fillStyle="#7be08a";ctx.strokeStyle="#274a31";ctx.lineWidth=1.5;roundRect(-6,-6,12,12,2);ctx.fill();ctx.stroke();ctx.strokeStyle="#eefaf0";ctx.lineWidth=2.3;ctx.beginPath();ctx.moveTo(0,-3.8);ctx.lineTo(0,3.8);ctx.moveTo(-3.8,0);ctx.lineTo(3.8,0);ctx.stroke();ctx.restore();}
 function hostlDrawSaddleIcon(){ctx.save();ctx.translate(0,18);ctx.fillStyle="#9a6238";ctx.strokeStyle="#4a2d18";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-10,-8);ctx.quadraticCurveTo(0,-15,10,-8);ctx.lineTo(8,8);ctx.quadraticCurveTo(0,13,-8,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
-function hostlDrawPlayerItemPose(iconFn, walkAmt=0){
-  const pose=HOSTL_PLAYER_POSES.player, armShift=walkAmt*1.15;
-  if(iconFn)iconFn();
-  for(let i=0;i<pose.arms.length;i++)hostlDrawPosePiece(pose.arms[i],0,(i%2?-armShift:armShift));
-  hostlDrawPosePiece(pose.body);
+const HOSTL_HELD_GRIP_PROFILES=Object.freeze({
+  Bucket:{itemY:0,left:{x:-7,y:28},right:{x:7,y:28}},
+  Berry:{itemY:1,left:{x:-4.5,y:27},right:{x:4.5,y:27}},
+  JungleBerry:{itemY:1,left:{x:-4.5,y:27},right:{x:4.5,y:27}},
+  FrostBerry:{itemY:1,left:{x:-4.5,y:27},right:{x:4.5,y:27}},
+  GoodCactus:{itemY:1,left:{x:-4.2,y:27},right:{x:4.2,y:27}},
+  BadCactus:{itemY:1,left:{x:-4.2,y:27},right:{x:4.2,y:27}},
+  StoneFruit:{itemY:1,left:{x:-4.5,y:27},right:{x:4.5,y:27}},
+  SeaFruit:{itemY:1,left:{x:-4.6,y:27},right:{x:4.6,y:27}},
+  BlueSeaweed:{itemY:1,left:{x:-4,y:28},right:{x:4,y:28}},
+  GreenSeaweed:{itemY:1,left:{x:-4,y:28},right:{x:4,y:28}},
+  CelestFruit:{itemY:1,left:{x:-5,y:27},right:{x:5,y:27}},
+  HoneyComb:{itemY:1,left:{x:-5.5,y:27},right:{x:5.5,y:27}},
+  Honey:{itemY:1,left:{x:-5,y:28},right:{x:5,y:28}},
+  Chakrams:{itemY:1,left:{x:-5,y:27},right:{x:5,y:27}},
+  Flute:{itemY:0,left:{x:-6.5,y:28},right:{x:5.5,y:21}},
+  Wall:{itemY:-2,left:{x:-8,y:29},right:{x:8,y:29}},
+  Tower:{itemY:-1,left:{x:-8,y:28},right:{x:8,y:28}},
+  Windmill:{itemY:-1,left:{x:-7,y:28},right:{x:7,y:28}},
+  Boat:{itemY:-1,left:{x:-10,y:28},right:{x:10,y:28}},
+  Sub:{itemY:-1,left:{x:-10,y:28},right:{x:10,y:28}},
+  BattleBot:{itemY:0,left:{x:-8,y:28},right:{x:8,y:28}},
+  PetArmor:{itemY:0,left:{x:-8,y:28},right:{x:8,y:28}},
+  RepairBuilding:{itemY:-1,left:{x:-8,y:28},right:{x:8,y:28}},
+  Saddle:{itemY:0,left:{x:-8,y:28},right:{x:8,y:28}}
+});
+function hostlHeldGripProfile(kind){return HOSTL_HELD_GRIP_PROFILES[kind]||{itemY:6,left:{x:-7,y:28},right:{x:7,y:28}};}
+function hostlArmHandPoint(part,side){return{x:part.x+part.w*(side<0?.48:.52),y:part.y+part.h*.88};}
+function hostlDrawArmToGrip(part,side,targetX,targetY,bob=0){
+  if(!part)return;
+  const shoulder=hostlPoseShoulder(part,side),hand=hostlArmHandPoint(part,side);
+  const baseA=Math.atan2(hand.y-shoulder.y,hand.x-shoulder.x),targetA=Math.atan2((targetY+bob)-shoulder.y,targetX-shoulder.x);
+  let rot=targetA-baseA;while(rot>Math.PI)rot-=TAU;while(rot<-Math.PI)rot+=TAU;
+  rot=clamp(rot,-1.18,1.18);
+  const reach=Math.hypot(hand.x-shoulder.x,hand.y-shoulder.y),want=Math.hypot(targetX-shoulder.x,(targetY+bob)-shoulder.y),reachFix=clamp(want-reach,-5,5)*.55;
+  const dx=Math.cos(targetA)*reachFix,dy=Math.sin(targetA)*reachFix+bob;
+  hostlDrawPosePiece(part,dx,dy,rot,shoulder.x,shoulder.y);
 }
+function hostlDrawHeldItemPose(kind,iconFn,walkAmt=0,swimming=false,swimPhase=0){
+  const pose=HOSTL_PLAYER_POSES.player,arms=pose.arms,profile=hostlHeldGripProfile(kind);
+  const swimBob=swimming?Math.cos(swimPhase*.55)*.5:0;
+  const itemBob=(swimming?Math.cos(swimPhase*1.05)*1.4:walkAmt*.45),itemX=(profile.itemX||0)+(swimming?Math.sin(swimPhase)*2.0:0),itemY=(profile.itemY||0)+itemBob;
+  const itemRot=(profile.itemRot||0)+(swimming?Math.sin(swimPhase)*.12:0);
+  if(iconFn){ctx.save();ctx.translate(itemX,itemY);ctx.rotate(itemRot);iconFn();ctx.restore();}
+  const cos=Math.cos(itemRot),sin=Math.sin(itemRot),tx=(g)=>({x:itemX+g.x*cos-g.y*sin,y:itemY+g.x*sin+g.y*cos});
+  const lg=tx(profile.left),rg=tx(profile.right);
+  hostlDrawArmToGrip(arms[0],-1,lg.x,lg.y,walkAmt*.18);
+  hostlDrawArmToGrip(arms[1],1,rg.x,rg.y,-walkAmt*.18);
+  hostlDrawPosePiece(pose.body,0,swimBob);
+}
+function hostlDrawPlayerItemPose(kind,iconFn,walkAmt=0){hostlDrawHeldItemPose(kind,iconFn,walkAmt,false,0);}
 function hostlDrawSwimmingBaseArms(pose, swimPhase, usePoseArms=true){
   const arms=(usePoseArms&&pose?.arms?.length)?pose.arms:HOSTL_PLAYER_POSES.player.arms;
   for(let i=0;i<arms.length;i++){
@@ -28369,14 +28414,7 @@ function hostlDrawSwimmingBaseArms(pose, swimPhase, usePoseArms=true){
     hostlDrawPosePiece(arm,dx,dy,rot,piv.x,piv.y);
   }
 }
-function hostlDrawSwimmingIconPose(iconFn, swimPhase){
-  const pose=HOSTL_PLAYER_POSES.player;
-  const itemRot=Math.sin(swimPhase)*0.16;
-  const itemDy=7 + Math.cos(swimPhase*1.05)*1.4;
-  if(iconFn){ ctx.save(); ctx.translate(Math.sin(swimPhase)*2.4,itemDy); ctx.rotate(itemRot); iconFn(); ctx.restore(); }
-  hostlDrawSwimmingBaseArms(pose, swimPhase, false);
-  hostlDrawPosePiece(pose.body,0,Math.cos(swimPhase*0.55)*0.5);
-}
+function hostlDrawSwimmingIconPose(kind,iconFn,swimPhase){hostlDrawHeldItemPose(kind,iconFn,0,true,swimPhase);}
 function hostlDrawCurrentBow(actor, attackT=0, walkAmt=0, swimming=false, swimPhase=0){
   const pose=HOSTL_PLAYER_POSES.player,arms=pose.arms,tier=clamp(Math.floor(Number(actor?.toolTiers?.Bow)||0),0,2);
   const mat=toolMaterialPalette(tier>=1?2:0);
@@ -28470,20 +28508,20 @@ function hostlDrawCompactWeaponPose(pose, attackT=0, walkAmt=0, options={}){
 }
 function hostlDrawSwimmingPose(actor, holding, attackT=0){
   const swimPhase=game.time*4.1 + (actor?.x||0)*0.01 + (actor?.y||0)*0.008 + attackT*0.4;
-  if(holding==="Bucket") return hostlDrawSwimmingIconPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
-  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)) return hostlDrawSwimmingIconPose(()=>hostlDrawBerryIcon(holding),swimPhase);
-  if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(()=>hostlDrawHoneyIcon(holding),swimPhase);
-  if(holding==="Chakrams") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},swimPhase);
-  if(holding==="Flute") return hostlDrawSwimmingIconPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
-  if(holding==="Wall") return hostlDrawSwimmingIconPose(hostlDrawWallIcon,swimPhase);
-  if(holding==="Tower") return hostlDrawSwimmingIconPose(hostlDrawTowerIcon,swimPhase);
-  if(holding==="Windmill") return hostlDrawSwimmingIconPose(hostlDrawWindmillIcon,swimPhase);
-  if(holding==="Boat") return hostlDrawSwimmingIconPose(hostlDrawBoatItemIcon,swimPhase);
-  if(holding==="Sub") return hostlDrawSwimmingIconPose(hostlDrawSubItemIcon,swimPhase);
-  if(holding==="BattleBot") return hostlDrawSwimmingIconPose(hostlDrawBattleBotIcon,swimPhase);
-  if(holding==="PetArmor") return hostlDrawSwimmingIconPose(hostlDrawPetArmorIcon,swimPhase);
-  if(holding==="RepairBuilding") return hostlDrawSwimmingIconPose(hostlDrawRepairBuildingIcon,swimPhase);
-  if(holding==="Saddle") return hostlDrawSwimmingIconPose(hostlDrawSaddleIcon,swimPhase);
+  if(holding==="Bucket") return hostlDrawSwimmingIconPose(holding,()=>hostlDrawBucketIcon(!!actor.bucketWater),swimPhase);
+  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)) return hostlDrawSwimmingIconPose(holding,()=>hostlDrawBerryIcon(holding),swimPhase);
+  if(holding==="HoneyComb"||holding==="Honey") return hostlDrawSwimmingIconPose(holding,()=>hostlDrawHoneyIcon(holding),swimPhase);
+  if(holding==="Chakrams") return hostlDrawSwimmingIconPose(holding,()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},swimPhase);
+  if(holding==="Flute") return hostlDrawSwimmingIconPose(holding,()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},swimPhase);
+  if(holding==="Wall") return hostlDrawSwimmingIconPose("Wall",hostlDrawWallIcon,swimPhase);
+  if(holding==="Tower") return hostlDrawSwimmingIconPose("Tower",hostlDrawTowerIcon,swimPhase);
+  if(holding==="Windmill") return hostlDrawSwimmingIconPose("Windmill",hostlDrawWindmillIcon,swimPhase);
+  if(holding==="Boat") return hostlDrawSwimmingIconPose(holding,hostlDrawBoatItemIcon,swimPhase);
+  if(holding==="Sub") return hostlDrawSwimmingIconPose(holding,hostlDrawSubItemIcon,swimPhase);
+  if(holding==="BattleBot") return hostlDrawSwimmingIconPose("BattleBot",hostlDrawBattleBotIcon,swimPhase);
+  if(holding==="PetArmor") return hostlDrawSwimmingIconPose("PetArmor",hostlDrawPetArmorIcon,swimPhase);
+  if(holding==="RepairBuilding") return hostlDrawSwimmingIconPose("RepairBuilding",hostlDrawRepairBuildingIcon,swimPhase);
+  if(holding==="Saddle") return hostlDrawSwimmingIconPose("Saddle",hostlDrawSaddleIcon,swimPhase);
   const swimPoseKey=hostlWeaponPoseKey(actor,holding),swimPose=HOSTL_PLAYER_POSES[swimPoseKey];
   if((holding==="Pickaxe"||holding==="TigerClaws"||holding==="BoxingGloves")&&swimPose&&((swimPose.arms&&swimPose.arms.length)||(swimPose.tools&&swimPose.tools.length))){
     return hostlDrawSwimmingWeaponPose(actor, holding, swimPhase);
@@ -28598,20 +28636,20 @@ function hostlRenderModernPlayer(actor,opts={}){
   if((holding==="TigerClaws"||holding==="BoxingGloves")&&pose){
     hostlDrawPunchToolPose(pose,attackT,walkAmt,punchSide);return;
   }
-  if(holding==="Bucket"){hostlDrawPlayerItemPose(()=>hostlDrawBucketIcon(!!actor.bucketWater),walkAmt);return;}
-  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)){hostlDrawPlayerItemPose(()=>hostlDrawBerryIcon(holding),walkAmt);return;}
-  if(holding==="HoneyComb"||holding==="Honey"){hostlDrawPlayerItemPose(()=>hostlDrawHoneyIcon(holding),walkAmt);return;}
-  if(holding==="Chakrams"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},walkAmt);return;}
-  if(holding==="Flute"){hostlDrawPlayerItemPose(()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},walkAmt);return;}
-  if(holding==="Wall"){hostlDrawPlayerItemPose(hostlDrawWallIcon,walkAmt);return;}
-  if(holding==="Tower"){hostlDrawPlayerItemPose(hostlDrawTowerIcon,walkAmt);return;}
-  if(holding==="Windmill"){hostlDrawPlayerItemPose(hostlDrawWindmillIcon,walkAmt);return;}
-  if(holding==="Boat"){hostlDrawPlayerItemPose(hostlDrawBoatItemIcon,walkAmt);return;}
-  if(holding==="Sub"){hostlDrawPlayerItemPose(hostlDrawSubItemIcon,walkAmt);return;}
-  if(holding==="BattleBot"){hostlDrawPlayerItemPose(hostlDrawBattleBotIcon,walkAmt);return;}
-  if(holding==="PetArmor"){hostlDrawPlayerItemPose(hostlDrawPetArmorIcon,walkAmt);return;}
-  if(holding==="RepairBuilding"){hostlDrawPlayerItemPose(hostlDrawRepairBuildingIcon,walkAmt);return;}
-  if(holding==="Saddle"){hostlDrawPlayerItemPose(hostlDrawSaddleIcon,walkAmt);return;}
+  if(holding==="Bucket"){hostlDrawPlayerItemPose(holding,()=>hostlDrawBucketIcon(!!actor.bucketWater),walkAmt);return;}
+  if(["Berry","JungleBerry","FrostBerry","GoodCactus","BadCactus","StoneFruit","SeaFruit","BlueSeaweed","GreenSeaweed","CelestFruit"].includes(holding)){hostlDrawPlayerItemPose(holding,()=>hostlDrawBerryIcon(holding),walkAmt);return;}
+  if(holding==="HoneyComb"||holding==="Honey"){hostlDrawPlayerItemPose(holding,()=>hostlDrawHoneyIcon(holding),walkAmt);return;}
+  if(holding==="Chakrams"){hostlDrawPlayerItemPose(holding,()=>{ctx.save();ctx.translate(0,18);ctx.strokeStyle="#d9dde0";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.stroke();ctx.restore();},walkAmt);return;}
+  if(holding==="Flute"){hostlDrawPlayerItemPose(holding,()=>{ctx.save();ctx.translate(0,18);ctx.rotate(-.45);ctx.fillStyle="#a97543";ctx.strokeStyle="#402818";ctx.lineWidth=1.5;roundRect(-9,-2.5,18,5,2);ctx.fill();ctx.stroke();ctx.restore();},walkAmt);return;}
+  if(holding==="Wall"){hostlDrawPlayerItemPose(holding,hostlDrawWallIcon,walkAmt);return;}
+  if(holding==="Tower"){hostlDrawPlayerItemPose(holding,hostlDrawTowerIcon,walkAmt);return;}
+  if(holding==="Windmill"){hostlDrawPlayerItemPose(holding,hostlDrawWindmillIcon,walkAmt);return;}
+  if(holding==="Boat"){hostlDrawPlayerItemPose(holding,hostlDrawBoatItemIcon,walkAmt);return;}
+  if(holding==="Sub"){hostlDrawPlayerItemPose(holding,hostlDrawSubItemIcon,walkAmt);return;}
+  if(holding==="BattleBot"){hostlDrawPlayerItemPose(holding,hostlDrawBattleBotIcon,walkAmt);return;}
+  if(holding==="PetArmor"){hostlDrawPlayerItemPose(holding,hostlDrawPetArmorIcon,walkAmt);return;}
+  if(holding==="RepairBuilding"){hostlDrawPlayerItemPose(holding,hostlDrawRepairBuildingIcon,walkAmt);return;}
+  if(holding==="Saddle"){hostlDrawPlayerItemPose(holding,hostlDrawSaddleIcon,walkAmt);return;}
   if(holding==="Bow"){hostlDrawCurrentBow(actor,attackT,walkAmt,false,0);return;}
   if((holding==="Axe"||holding==="Sword"||holding==="Pickaxe")&&pose){
     if(poseKey==="axeThrow"&&throwingAxeOutForActor(actor)){hostlDrawPoseBase("player",walkAmt);return;}
