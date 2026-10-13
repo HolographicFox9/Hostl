@@ -481,6 +481,7 @@ const PET_TYPES = {
   snake:  { baseSpeed: 68, friendly: false, flee: false, sizeMul: 1.10, color: "#5cb85c", abilityCd: 14, elem: "Poison", coats:["#5cb85c","#3a8a40","#7ec850","#2d6a30"] },
   deer:   { baseSpeed: 85, friendly: true,  flee: true,  sizeMul: 1.20, color: "#c9a06a", abilityCd: 15, elem: "Light", coats:["#c9a06a","#a07850","#e8d5b7","#8b6914"] },
   boar:   { baseSpeed: 55, friendly: false, flee: false, sizeMul: 1.40, color: "#6b4423", abilityCd: 16, elem: "Earth", coats:["#6b4423","#8a6040","#5c3a1e","#a07850"] },
+  rhino:  { baseSpeed: 44, friendly: false, flee: false, sizeMul: 1.48, color: "#6b625b", abilityCd: 18, elem: "Earth", coats:["#6b625b","#7b726b","#5b544f","#8a8178"] },
   saber:  { baseSpeed:100, friendly: false, flee: false, sizeMul: 1.45, color: "#d4a060", abilityCd: 11, elem: "Combat", coats:["#d4a060","#c49050","#e8c080","#a07040","#f0d0a0"] },
   clouded:{ baseSpeed:98,friendly:false,flee:false,sizeMul:1.28,color:"#c9ac7c",abilityCd:11,elem:"Wind",coats:["#c9ac7c","#b99669","#d6bc8d","#aa8b60"]},
 
@@ -503,6 +504,7 @@ const ANIMAL_BALANCE = {
   snake:  { hpMul:0.84, damageTaken:1.10, attack:9.0 },
   deer:   { hpMul:1.08, damageTaken:0.94, attack:6.0 },
   boar:   { hpMul:1.62, damageTaken:0.70, attack:9.0 },
+  rhino:  { hpMul:1.08, damageTaken:0.54, attack:10.5 },
   saber:  { hpMul:1.00, babyHpMul:1.78, damageTaken:0.98, attack:12.0 },
   clouded:{ hpMul:0.98, babyHpMul:1.52, damageTaken:0.96, attack:11.1 },
   queenbee:{ hpMul:3.20, damageTaken:0.45, attack:10.5 },
@@ -512,8 +514,8 @@ const ANIMAL_BALANCE = {
 const ANIMAL_STAGE_HP = { baby:28, adult:100, boss:320, superboss:900, bigmomma:5200 };
 const ANIMAL_STAGE_ATTACK = { baby:0.55, adult:1.15, boss:1.80, superboss:2.45, bigmomma:3.00 };
 const ANIMAL_STAGE_DAMAGE_TAKEN = { baby:1.04, adult:1.00, boss:0.96, superboss:0.92, bigmomma:0.58 };
-const BIG_MOMMA_HP_MUL = {bear:1.55,saber:1.45,wolf:1.25,boar:1.35,clouded:1.25,dragon:1.35,rabbit:.78,fennec:.88,owl:.90};
-const BIG_MOMMA_DEF_MUL = {bear:.68,saber:.72,boar:.75,wolf:.82,clouded:.82,rabbit:1.08,fennec:1.02};
+const BIG_MOMMA_HP_MUL = {bear:1.55,saber:1.45,wolf:1.25,boar:1.35,rhino:1.22,clouded:1.25,dragon:1.35,rabbit:.78,fennec:.88,owl:.90};
+const BIG_MOMMA_DEF_MUL = {bear:.68,saber:.72,boar:.75,rhino:.66,wolf:.82,clouded:.82,rabbit:1.08,fennec:1.02};
 const ANIMAL_RESOURCE_STAGE_PERCENT = Object.freeze({ baby:.08, adult:.13, boss:.18, superboss:.24, bigmomma:.34 });
 function animalBalance(type){ return ANIMAL_BALANCE[type]||{hpMul:1,babyHpMul:1,damageTaken:1,attack:7}; }
 function animalDamageTaken(type,stage,raw){raw=Math.max(0,Number(raw)||0);if(raw<=0)return 0;const speciesStage=stage==="bigmomma"?(BIG_MOMMA_DEF_MUL[type]??1):1;return Math.max(.1,raw*animalBalance(type).damageTaken*(ANIMAL_STAGE_DAMAGE_TAKEN[stage]??1)*speciesStage);}
@@ -537,6 +539,7 @@ fennec:{baby:{damage:15,per:0},adult:{damage:20,per:0},boss:{damage:25,per:0},su
 
 deer:{baby:{damage:16,per:2},adult:{damage:24,per:2},boss:{damage:34,per:2},superboss:{damage:40,per:2},bigmomma:{damage:60,per:2}},
 boar:{baby:{damage:20,per:1},adult:{damage:25,per:1},boss:{damage:30,per:1},superboss:{damage:49,per:1},bigmomma:{damage:57,per:1}},
+rhino:{baby:{damage:14,per:1,spike:7},adult:{damage:22,per:1,spike:10},boss:{damage:30,per:1,spike:14},superboss:{damage:40,per:1,spike:18},bigmomma:{damage:56,per:1,spike:24}},
 saber:{baby:{damage:34,per:1},adult:{damage:38,per:1},boss:{damage:47,per:1},superboss:{damage:50,per:1},bigmomma:{damage:65,per:1}}};
 function petStoneFruitStrengthMul(p){return 1+Math.max(0,Math.floor(Number(p?.stoneFruitStacks)||0))*.20;}
 function petStoneFruitMoveMul(p){return Math.max(.50,1-Math.max(0,Math.floor(Number(p?.stoneFruitStacks)||0))*.10);}
@@ -551,17 +554,17 @@ function towerDamageForTool(toolName,tower){const t=TOOL[toolName]||TOOL.Fist;co
 
 // Keep online wildlife/card rarity in sync with the browser game.
 // Bearded Dragon remains a starter species and is not part of normal wild rarity spawning.
-const ANIMAL_RARITY={dog:"Common",seal:"Common",cat:"Common",rabbit:"Common",wolf:"Uncommon",bear:"Uncommon",fox:"Uncommon",boar:"Rare",deer:"Rare",owl:"Rare",snake:"Legendary",saber:"Legendary",clouded:"Rare",fennec:"Common",queenbee:"Rare",workerbee:"Uncommon",dronebee:"Common",dragon:"Starter"};
+const ANIMAL_RARITY={dog:"Common",seal:"Common",cat:"Common",rabbit:"Common",wolf:"Uncommon",bear:"Uncommon",fox:"Uncommon",boar:"Rare",rhino:"Rare",deer:"Rare",owl:"Rare",snake:"Legendary",saber:"Legendary",clouded:"Rare",fennec:"Common",queenbee:"Rare",workerbee:"Uncommon",dronebee:"Common",dragon:"Starter"};
 const RARITY_WILD_WEIGHT={Common:5.0,Uncommon:2.5,Rare:1.15,Legendary:.32,Starter:.45};
 const RARITY_CARD_WEIGHT={Common:2.4,Uncommon:1.5,Rare:.82,Legendary:.28,Starter:.55};
 const RARITY_TAME_CHANCE={Common:.50,Uncommon:.40,Rare:.28,Legendary:.18,Starter:.42};
 function animalRarity(type){return ANIMAL_RARITY[type]||"Common";}
 function randomWildSpecies(speciesList=WILD_SPECIES){return weighted((speciesList&&speciesList.length?speciesList:WILD_SPECIES).map(v=>({v,w:RARITY_WILD_WEIGHT[animalRarity(v)]||1})));}
-const WILD_SPECIES = ["fox","wolf","bear","cat","dog","seal","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
+const WILD_SPECIES = ["fox","wolf","bear","cat","dog","seal","rabbit","owl","snake","deer","boar","rhino","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
 const WILD_PREY = {
   fox:new Set(["rabbit"]), wolf:new Set(["rabbit","deer","boar"]), bear:new Set(["rabbit","deer","boar"]),
   cat:new Set(["rabbit","snake"]), dog:new Set(["rabbit"]), rabbit:new Set(), owl:new Set(["rabbit","snake"]),
-  snake:new Set(["rabbit"]), deer:new Set(), boar:new Set(), saber:new Set(["rabbit","deer","boar","wolf"]), clouded:new Set(["rabbit","deer","boar","fox"]),
+  snake:new Set(["rabbit"]), deer:new Set(), boar:new Set(), rhino:new Set(), saber:new Set(["rabbit","deer","boar","rhino","wolf"]), clouded:new Set(["rabbit","deer","boar","rhino","fox"]),
   fennec:new Set(), queenbee:new Set(), workerbee:new Set(), dronebee:new Set(), dragon:new Set(["rabbit","snake"]),
 };
 function wildCanPreyOn(predatorType,preyType){return !!predatorType&&!!preyType&&predatorType!==preyType&&!!WILD_PREY[predatorType]?.has(preyType);}
@@ -923,14 +926,14 @@ function animalRadius(type, stage) {
   const mul=(PET_TYPES[type]?.sizeMul)||1,dietMul=animalDietSizeMultiplier(type); let base=22;
   if(stage==="adult") base=45; else if(stage==="boss") base=68; else if(stage==="superboss") base=96; else if(stage==="bigmomma") base=140;
   let extra=1;
-  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.16:1.08;
+  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.16:(type==="rhino"?1.24:1.08);
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
-  const speciesHeight={dog:1.06,seal:1.00,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,saber:1.10,clouded:1.02,fennec:.92}[type];
+  const speciesHeight={dog:1.06,seal:1.00,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,rhino:.98,saber:1.10,clouded:1.02,fennec:.92}[type];
   if(!speciesHeight)return null;
   const stageScale={baby:1.78,adult:1.52,boss:1.43,superboss:1.40,bigmomma:1.38}[stage]||1.45;
-  const lengthMul={dog:1.62,seal:1.92,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
+  const lengthMul={dog:1.62,seal:1.92,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,rhino:1.72,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
   const h=animalRadius(type,stage)*speciesHeight*stageScale;
   return{h,w:h*lengthMul};
 }
@@ -949,7 +952,7 @@ function petUpgradeMultiplier(p,stat){
 const ANIMAL_SLEEP_COLLISION_SCALE = Object.freeze({
   snake:{len:.50,radius:.76},seal:{len:.90,radius:.80},rabbit:{len:.72,radius:.84},cat:{len:.76,radius:.86},dog:{len:.82,radius:.90},
   fox:{len:.76,radius:.86},wolf:{len:.79,radius:.89},bear:{len:.72,radius:.88},deer:{len:.78,radius:.86},
-  boar:{len:.80,radius:.89},saber:{len:.80,radius:.88},clouded:{len:.78,radius:.87},fennec:{len:.76,radius:.85},
+  boar:{len:.80,radius:.89},rhino:{len:.84,radius:.92},saber:{len:.80,radius:.88},clouded:{len:.78,radius:.87},fennec:{len:.76,radius:.85},
   owl:{len:.86,radius:.90},dragon:{len:.82,radius:.90}
 });
 function animalSleepCollisionScale(a){
@@ -961,7 +964,7 @@ function animalWeight(aOrType,stageMaybe=null){
   const type=typeof aOrType==="string"?aOrType:(aOrType?.type||"dog");
   const stage=stageMaybe||(typeof aOrType==="object"?aOrType?.stage:null)||"adult";
   const stageMass={baby:.78,adult:1.35,boss:2.10,superboss:3.25,bigmomma:5.10}[stage]||1.35;
-  const speciesMass={rabbit:.58,cat:.72,fox:.82,dragon:.88,dog:1,owl:.72,deer:1.05,snake:.78,wolf:1.28,boar:1.42,saber:1.38,clouded:1.30,bear:1.75}[type]||1;
+  const speciesMass={rabbit:.58,cat:.72,fox:.82,dragon:.88,dog:1,owl:.72,deer:1.05,snake:.78,wolf:1.28,boar:1.42,rhino:2.00,saber:1.38,clouded:1.30,bear:1.75}[type]||1;
   const d=uploadedAnimalVisibleDimensions(type,stage);
   let sizeMass=1;
   if(d){
@@ -1000,6 +1003,7 @@ function animalHitboxFit(type,stage){
     rabbit:{len:1.02,body:1.00,head:1.08},
     snake:{len:.84,body:.74,head:.82},
     boar:{len:1.03,body:1.04,head:1.06},
+    rhino:{len:1.02,body:1.08,head:1.12},
     saber:{len:.88,body:.88,head:.90},
     clouded:{len:.92,body:.90,head:.93},
     deer:{len:.82,body:.74,head:.78},
@@ -1314,7 +1318,7 @@ const BIOME_ZONES={
 };
 const BIOME_ORDER=["forest","rainforest","arctic","desert","mountains"];
 const BIOME_PROFILES={
-  forest:{id:"forest",name:"Forest",species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"]},
+  forest:{id:"forest",name:"Forest",species:["dog","cat","boar","rhino","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"]},
   rainforest:{id:"rainforest",name:"Rain Forest",species:["snake","dragon","clouded","saber","queenbee","workerbee","dronebee"]},
   arctic:{id:"arctic",name:"Arctic",species:["rabbit","seal"]},
   desert:{id:"desert",name:"Desert",species:["fennec","snake","dragon","boar"]},
