@@ -16586,68 +16586,101 @@ for (const [stage, states] of Object.entries(RHINO_SEPARATED_SKIN_SPECS)) {
     RHINO_SEPARATED_SKIN_IMAGES[stage][state] = { img, spec };
   }
 }
+const RHINO_PUZZLE_LAYOUTS = Object.freeze({
+  baby:{
+    awake:[
+      {role:"tail",src:[0,25,21,35],dst:[0,25]},
+      {role:"body",src:[23,6,87,57],dst:[14,6]},
+      {role:"head",src:[91,0,147,63],dst:[43,0]}
+    ],
+    sleep:[
+      {role:"tail",src:[0,27,18,41],dst:[0,27]},
+      {role:"body",src:[22,0,105,63],dst:[10,0]}
+    ]
+  },
+  adult:{
+    awake:[
+      {role:"tail",src:[0,25,21,35],dst:[0,25]},
+      {role:"body",src:[26,6,90,57],dst:[14,6]},
+      {role:"head",src:[94,0,150,63],dst:[43,0]}
+    ],
+    sleep:[
+      {role:"tail",src:[0,20,18,34],dst:[0,20]},
+      {role:"body",src:[22,0,106,51],dst:[10,0]}
+    ]
+  },
+  boss:{
+    awake:[
+      {role:"tail",src:[0,25,21,36],dst:[0,25]},
+      {role:"body",src:[26,6,90,57],dst:[14,6]},
+      {role:"head",src:[94,0,150,63],dst:[43,0]}
+    ],
+    sleep:[
+      {role:"tail",src:[0,20,17,35],dst:[0,20]},
+      {role:"body",src:[23,0,106,51],dst:[11,0]}
+    ]
+  },
+  superboss:{
+    awake:[
+      {role:"tail",src:[0,25,21,36],dst:[0,25]},
+      {role:"body",src:[26,6,90,57],dst:[14,6]},
+      {role:"head",src:[94,0,150,63],dst:[43,0]}
+    ],
+    sleep:[
+      {role:"tail",src:[0,21,17,37],dst:[0,21]},
+      {role:"body",src:[22,0,105,53],dst:[10,0]}
+    ]
+  },
+  bigmomma:{
+    awake:[
+      {role:"tail",src:[0,26,21,37],dst:[0,26]},
+      {role:"body",src:[26,6,93,59],dst:[14,6]},
+      {role:"head",src:[94,0,153,63],dst:[43,0]}
+    ],
+    sleep:[
+      {role:"tail",src:[0,24,19,38],dst:[0,24]},
+      {role:"body",src:[24,0,106,55],dst:[12,0]}
+    ]
+  }
+});
 function drawRhinoSeparatedSkin(a, stage, sleeping) {
-  const state = sleeping ? "sleep" : "awake";
-  const entry = RHINO_SEPARATED_SKIN_IMAGES[stage]?.[state] || RHINO_SEPARATED_SKIN_IMAGES[stage]?.awake || RHINO_SEPARATED_SKIN_IMAGES[stage]?.sleep;
-  if (!entry || !entry.img || !entry.img.complete || !entry.img.naturalWidth) return false;
-  const img = entry.img, spec = entry.spec;
-  const dims = uploadedAnimalVisibleDimensions("rhino", stage) || { w: (a.r || 20) * 2.4, h: (a.r || 20) * 1.2 };
-  const scale = Math.min(dims.w / spec.refW, dims.h / spec.refH);
-  const phase = (Number(a.id || 0) % 97) * 0.17;
-  const t = performance.now() * 0.001;
-  const dir = Number(a.dir || Math.atan2(a.vy || 0, a.vx || 1) || 0);
-  const bodyBob = sleeping ? Math.sin(t * 1.5 + phase) * scale * 0.8 : Math.sin(t * 6.0 + phase) * scale * 0.35;
-  const attackT = Math.max(0, Number(a.attackT) || 0);
-  const charging = Number(a._rhinoChargeUntil || 0) > (game?.time || 0);
-  const tailSwing = sleeping ? Math.sin(t * 2.0 + phase) * 0.14 : Math.sin(t * 8.0 + phase) * (charging ? 0.22 : 0.15);
-  const headSwing = sleeping ? 0 : Math.sin(t * 7.0 + phase) * (charging ? 0.18 : 0.11) + (attackT > 0 ? Math.sin(attackT * 0.04) * 0.18 : 0);
-  const pieces = spec.parts.map((b, i) => ({ i, x:b[0], y:b[1], w:b[2]-b[0], h:b[3]-b[1] }));
-  const pieceOrder = state === "sleep" ? [0,1] : [0,1,2];
-  let placements = [];
-  if (state === "sleep") {
-    const [tail, main] = pieces;
-    const overlap = Math.max(0, tail.w + main.w - spec.refW);
-    placements = [
-      { piece: tail, x: 0, y: spec.refH * 0.50, rot: tailSwing * 0.85, pivotX: tail.w * 0.75, pivotY: tail.h * 0.5 },
-      { piece: main, x: tail.w - overlap, y: spec.refH * 0.50, rot: 0, pivotX: main.w * 0.45, pivotY: main.h * 0.5 }
-    ];
-  } else {
-    const [tail, torso, head] = pieces;
-    const overlap = Math.max(0, tail.w + torso.w + head.w - spec.refW);
-    const seam1 = overlap * 0.45;
-    const seam2 = overlap - seam1;
-    const bodyX = tail.w - seam1;
-    const headX = bodyX + torso.w - seam2;
-    placements = [
-      { piece: tail, x: 0, y: spec.refH * 0.52, rot: tailSwing, pivotX: tail.w * 0.82, pivotY: tail.h * 0.52 },
-      { piece: torso, x: bodyX, y: spec.refH * 0.52, rot: charging ? 0.035 : 0, pivotX: torso.w * 0.50, pivotY: torso.h * 0.5 },
-      { piece: head, x: headX, y: spec.refH * 0.50, rot: headSwing, pivotX: head.w * 0.20, pivotY: head.h * 0.52 }
-    ];
+  const state=sleeping?"sleep":"awake";
+  const entry=RHINO_SEPARATED_SKIN_IMAGES[stage]?.[state];
+  const layout=RHINO_PUZZLE_LAYOUTS[stage]?.[state];
+  if(!entry?.img?.complete||!entry.img.naturalWidth||!layout)return false;
+  const img=entry.img,spec=entry.spec;
+  const dims=uploadedAnimalVisibleDimensions("rhino",stage)||{w:(a.r||20)*2.4,h:(a.r||20)*1.2};
+  const scale=Math.min(dims.w/Math.max(1,spec.refW),dims.h/Math.max(1,spec.refH));
+  const left=-spec.refW*scale*.5,top=-spec.refH*scale*.5;
+  const now=performance.now()*.001,phase=(Number(a.tailPhase)||0);
+  const recentlyMoved=(performance.now()-(Number(a._visualMoveAt)||0))<180;
+  const moveSpeed=(!sleeping&&recentlyMoved)?Math.max(0,Number(a._visualMoveSpeed)||0):0;
+  const normal=Math.max(1,Number(a.speed)||animalSpeed("rhino",stage,!!a.owned)||1);
+  const motion=creatureMotionRatios(Math.min(2.35,moveSpeed/normal));
+  const charging=Number(a._rhinoChargeUntil||0)>(Number(game?.time)||0);
+  const tailAngle=sleeping
+    ? Math.sin(now*1.25+phase)*.055
+    : Math.sin(now*(2.6+motion.cadence*3.2)+phase)*(.055+motion.stride*.11+(charging?.045:0));
+  const attack=Math.sin(Math.max(0,Math.min(1,Number(a.attackAnim)||0))*Math.PI);
+  const headAngle=sleeping?0:Math.sin(now*(1.8+motion.cadence*1.65)+phase*.25)*(.035+motion.stride*.065)+attack*.06;
+  const bodyBob=sleeping?Math.sin(now*1.2+phase)*scale*.12:Math.sin(now*(2.2+motion.cadence*1.9)+phase)*scale*(.08+motion.stride*.16);
+  const smooth=ctx.imageSmoothingEnabled,quality=ctx.imageSmoothingQuality;
+  ctx.save();ctx.translate(0,bodyBob);ctx.imageSmoothingEnabled=true;try{ctx.imageSmoothingQuality="high";}catch(_){}
+  for(const part of layout){
+    const [sx,sy,sx1,sy1]=part.src,[dx,dy]=part.dst,sw=sx1-sx,sh=sy1-sy,dw=sw*scale,dh=sh*scale;
+    const x=left+dx*scale,y=top+dy*scale;
+    if(part.role==="tail"){
+      const px=x+dw*.90,py=y+dh*.52;
+      ctx.save();ctx.translate(px,py);ctx.rotate(tailAngle);ctx.drawImage(img,sx,sy,sw,sh,-dw*.90,-dh*.52,dw,dh);ctx.restore();
+    }else if(part.role==="head"&&!sleeping){
+      const px=x+dw*.10,py=y+dh*.52;
+      ctx.save();ctx.translate(px+attack*(a.r||18)*.05,py);ctx.rotate(headAngle);ctx.drawImage(img,sx,sy,sw,sh,-dw*.10,-dh*.52,dw,dh);ctx.restore();
+    }else{
+      ctx.drawImage(img,sx,sy,sw,sh,x,y,dw,dh);
+    }
   }
-  const totalW = spec.refW * scale, totalH = spec.refH * scale;
-  ctx.save();
-  ctx.translate(a.x, a.y + bodyBob);
-  ctx.rotate(dir);
-  for (const place of placements) {
-    const p = place.piece;
-    const cx = (place.x + place.pivotX - spec.refW * 0.5) * scale;
-    const cy = (place.y + place.pivotY - spec.refH * 0.5) * scale;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(place.rot);
-    ctx.drawImage(img, p.x, p.y, p.w, p.h, -place.pivotX * scale, -place.pivotY * scale, p.w * scale, p.h * scale);
-    ctx.restore();
-  }
-  if (charging) {
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = "#6b4a2d";
-    ctx.beginPath();
-    ctx.ellipse(-totalW * 0.10, 0, totalW * 0.62, totalH * 0.42, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.restore();
+  if(player.riding===a){const saddleW=Math.min(spec.refW*scale*.30,(a.r||18)*1.05),saddleH=Math.max(7,saddleW*.42);drawMountedSaddleOnCustom(spec.refW*scale,spec.refH*scale,-spec.refW*scale*.05,-spec.refH*scale*.10,saddleW,saddleH);}
+  ctx.imageSmoothingEnabled=smooth;try{ctx.imageSmoothingQuality=quality;}catch(_){}ctx.restore();
   return true;
 }
 
@@ -22558,14 +22591,14 @@ function healOfflinePetTeam(amount,color="#8ff0a8"){
   player.health=clamp(player.health+heal,0,player.maxHealth);floatText(player.x,player.y-30,`+${Math.round(heal)}`,color);
   for(const mate of player.pets){if(mate.dead)continue;mate.hp=clamp(mate.hp+heal,0,mate.maxHp);floatText(mate.x,mate.y-(mate.r||18)-8,`+${Math.round(heal)}`,color);}
 }
-function rhinoChargeDurationMs(entity){ return 4000; }
+function rhinoChargeDurationMs(entity){ return 4; }
 function rhinoChargeSpeed(entity){
   const info = PET_TYPES.rhino || {};
   const base = Number(info.baseSpeed) || 44;
   return base * 3.6 * petMoveSpeedMul(entity) * petStoneFruitMoveMul(entity);
 }
 function spawnRhinoSpikeAt(x,y,dir,ownerId,damage){
-  const spike={id:uid(),x,y,dir,hp:9999,maxHp:9999,kind:"stoneSpike",ttl:5000,ownerId:ownerId||"",spikeDmg:damage||10,earthTint:true};
+  const spike={id:uid(),x,y,dir,hp:9999,maxHp:9999,kind:"stoneSpike",ttl:5,ownerId:ownerId||"",spikeDmg:damage||10,earthTint:true};
   walls.push(spike);
   return spike;
 }
@@ -26699,16 +26732,16 @@ function drawWall(w) {
     ctx.fillStyle="#737e85";ctx.strokeStyle="#171a1b";ctx.lineWidth=4;hexPath(w.r);ctx.fill();ctx.stroke();
     ctx.fillStyle=gem;ctx.strokeStyle="#253238";ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(10,-2);ctx.lineTo(6,11);ctx.lineTo(-6,11);ctx.lineTo(-10,-2);ctx.closePath();ctx.fill();ctx.stroke();
   } else if (w.kind === "stoneSpike") {
-    ctx.fillStyle = "#858f98"; ctx.strokeStyle = "#191b1b"; ctx.lineWidth = 4;
+    ctx.fillStyle = w.earthTint ? "#5b3a24" : "#858f98"; ctx.strokeStyle = "#191b1b"; ctx.lineWidth = 4;
     hexPath(w.r); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = "#5b6670"; ctx.lineWidth = 2;
+    ctx.strokeStyle = w.earthTint ? "#392317" : "#5b6670"; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-w.r*.68, -w.r * .10); ctx.lineTo(w.r*.68, -w.r * .10);
     ctx.moveTo(-w.r*.68, w.r * .34); ctx.lineTo(w.r*.68, w.r * .34);
     ctx.moveTo(-w.r * .30, -w.r*.60); ctx.lineTo(-w.r * .30, w.r*.60);
     ctx.moveTo(w.r * .30, -w.r*.60); ctx.lineTo(w.r * .30, w.r*.60); ctx.stroke();
 
-    ctx.fillStyle = "#d8e0e6"; ctx.strokeStyle = "#4a545d"; ctx.lineWidth = 2;
+    ctx.fillStyle = w.earthTint ? "#7a5132" : "#d8e0e6"; ctx.strokeStyle = w.earthTint ? "#2e1c12" : "#4a545d"; ctx.lineWidth = 2;
     const spike = (rot) => { ctx.save(); ctx.rotate(rot); ctx.beginPath(); ctx.moveTo(w.r - 3, -6.5); ctx.lineTo(w.r + 13, 0); ctx.lineTo(w.r - 3, 6.5); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); };
     for(let i=0;i<6;i++)spike(-Math.PI/6 + i*TAU/6);
   } else if (w.kind === "stone") {
