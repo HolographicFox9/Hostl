@@ -1045,17 +1045,32 @@ function copiedBeeTorsoHeadCircles(a){
   return pair.map(([forward,rad])=>({x:(Number(a.x)||0)+ca*forward*r,y:(Number(a.y)||0)+sa*forward*r,r:rad*r}));
 }
 
+const RHINO_REF_COLLISION_PROFILES=Object.freeze({
+  awake:[[-.338,.238],[-.204,.381],[-.069,.450],[.066,.450],[.200,.381],[.335,.349],[.470,.206]],
+  bigmommaAwake:[[-.343,.238],[-.208,.397],[-.072,.450],[.064,.450],[.199,.397],[.335,.365],[.471,.206]],
+  sleep:{
+    baby:[[-.371,.270],[-.231,.413],[-.091,.450],[.048,.450],[.188,.450],[.328,.413],[.468,.317]],
+    adult:[[-.372,.294],[-.232,.450],[-.092,.450],[.048,.450],[.188,.450],[.328,.431],[.468,.314]],
+    boss:[[-.362,.314],[-.223,.450],[-.085,.450],[.053,.450],[.191,.450],[.330,.450],[.468,.353]],
+    superboss:[[-.371,.302],[-.231,.450],[-.091,.450],[.048,.450],[.188,.450],[.328,.450],[.468,.377]],
+    bigmomma:[[-.351,.291],[-.215,.450],[-.078,.450],[.059,.450],[.195,.450],[.332,.436],[.468,.345]]
+  }
+});
+const RHINO_REF_COLLISION_DIMS=Object.freeze({baby:{awake:[99,63],sleep:[93,63]},adult:{awake:[99,63],sleep:[94,51]},boss:{awake:[99,63],sleep:[94,51]},superboss:{awake:[99,63],sleep:[93,53]},bigmomma:{awake:[102,63],sleep:[94,55]}});
+function rhinoRefCollisionSpec(a,dims){if(!a||a.type!=="rhino"||!dims)return null;const stage=["baby","adult","boss","superboss","bigmomma"].includes(a.stage)?a.stage:"adult",state=a.sleeping?"sleep":"awake",ref=RHINO_REF_COLLISION_DIMS[stage][state],scale=Math.min(dims.w/ref[0],dims.h/ref[1]);return{cfg:a.sleeping?RHINO_REF_COLLISION_PROFILES.sleep[stage]:(stage==="bigmomma"?RHINO_REF_COLLISION_PROFILES.bigmommaAwake:RHINO_REF_COLLISION_PROFILES.awake),w:ref[0]*scale,h:ref[1]*scale};}
+
 function animalHitCircles(a) {
   const beeCopy=copiedBeeTorsoHeadCircles(a); if(beeCopy)return beeCopy;
   const ang=a?.angle||0,ca=Math.cos(ang),sa=Math.sin(ang);
   // 739: body/head copies keep the renderer's exact scale; no extra fit/enlargement.
   const fit={len:1,body:1,head:1};
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
-  const sleepFit=animalSleepCollisionScale(a);
+  const rhinoRef=a?.type==="rhino"?rhinoRefCollisionSpec(a,d):null;
+  const sleepFit=rhinoRef?{len:1,radius:1}:animalSleepCollisionScale(a);
 
   if(d){
     // Per-species Ref-silhouette copies. These stay inside the art instead of using oversized generic bubbles.
-    const cfg={
+    const cfg=rhinoRef?.cfg||({
       dog:[[-.40,.105],[-.27,.165],[-.11,.215],[.08,.225],[.27,.175],[.41,.120]],
       seal:[[-.40,.125],[-.27,.185],[-.10,.235],[.09,.245],[.28,.190],[.41,.135]],
       cat:[[-.40,.100],[-.27,.155],[-.10,.205],[.09,.215],[.28,.165],[.41,.110]],
@@ -1068,15 +1083,21 @@ function animalHitCircles(a) {
       bear:[[-.37,.145],[-.24,.215],[-.07,.275],[.11,.285],[.29,.225],[.41,.155]],
       deer:[[-.40,.075],[-.26,.115],[-.09,.155],[.10,.165],[.28,.125],[.41,.085]],
       boar:[[-.38,.135],[-.24,.205],[-.07,.255],[.11,.265],[.29,.210],[.41,.145]],
+      rhino:[[-.338,.238],[-.204,.381],[-.069,.450],[.066,.450],[.200,.381],[.335,.349],[.470,.206]],
       saber:[[-.40,.105],[-.27,.160],[-.10,.210],[.09,.220],[.28,.170],[.41,.115]],
       clouded:[[-.40,.095],[-.27,.150],[-.10,.200],[.09,.210],[.28,.160],[.41,.105]],
       fennec:[[-.40,.080],[-.26,.125],[-.08,.165],[.10,.175],[.27,.135],[.40,.090]]
-    }[a.type];
+    }[a.type]);
 
+    if(!cfg){
+      const r=Math.max(4,Number(a?.r)||18),generic=[[-.22,.30],[.08,.34],[.37,.27],[.61,.19]];
+      return generic.map(([f,rad])=>({x:a.x+ca*f*r,y:a.y+sa*f*r,r:r*rad}));
+    }
     return cfg.map(([xf,rf],i)=>{
       const headish=i>=cfg.length-2;
-      const forward=d.w*xf*(headish?fit.head:fit.len)*sleepFit.len;
-      const rr=d.h*rf*sleepFit.radius;
+      const collisionW=rhinoRef?.w||d.w,collisionH=rhinoRef?.h||d.h;
+      const forward=collisionW*xf*(headish?fit.head:fit.len)*sleepFit.len;
+      const rr=collisionH*rf*sleepFit.radius;
       return{x:a.x+ca*forward,y:a.y+sa*forward,r:rr};
     });
   }
@@ -1118,6 +1139,7 @@ function animalTorsoHeadCopyPartCount(a){
   const hits=animalHitCircles(a),total=hits.length;
   if(!total)return 0;
   if(a.type==="snake")return total;
+  if(a.type==="rhino")return total; // Rhino profile already excludes the tail.
   if(["queenbee","workerbee","dronebee"].includes(a.type))return total;
   return total<=2?total:total-1;
 }
@@ -1236,6 +1258,7 @@ const ANIMAL_SPECIES_SPEED_PROFILE=Object.freeze({
   snake:{baby:1.28,adult:1.25,boss:1.22,superboss:1.20,bigmomma:1.18,massBlend:.18},
   deer:{baby:1.14,adult:1.10,boss:1.07,superboss:1.04,bigmomma:1,massBlend:.50},
   boar:{baby:1.03,adult:.98,boss:.93,superboss:.88,bigmomma:.84,massBlend:.85},
+  rhino:{baby:.96,adult:.90,boss:.84,superboss:.78,bigmomma:.72,massBlend:.95},
   saber:{baby:1.15,adult:1.12,boss:1.08,superboss:1.04,bigmomma:1,massBlend:.55},
   clouded:{baby:1.18,adult:1.14,boss:1.10,superboss:1.06,bigmomma:1.02,massBlend:.50},
   queenbee:{baby:1.08,adult:1.02,boss:.99,superboss:.96,bigmomma:.92,massBlend:.26},
@@ -3304,9 +3327,21 @@ export class WorldRoom extends Room {
   launchArcticShardVolley(ownerId,petId,p,target,damage){if(!p||!target)return;const base=angTo(p.x,p.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(p.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:p.x+Math.cos(base+i*.12)*(p.r+10),y:p.y+Math.sin(base+i*.12)*(p.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:false,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId,petBlast:true,knock:0,sourcePetId:petId});const q=this.state.projectiles.get(pid);if(q)q._targetRef={kind:target.ref.kind,id:target.ref.id};}}
   createSpikePrison(ownerId,sourcePetId,sourceAnimalId,targetRef,targetObj,spikeDmg,stage){if(!targetObj||!targetRef)return;const params=spikePrisonParams(stage,targetObj.r||PLAYER_R),spin=(sourceAnimalId?-1:1)*params.spin;for(let i=0;i<params.count;i++){const aa=i/params.count*TAU,wx=targetObj.x+Math.cos(aa)*params.ring,wy=targetObj.y+Math.sin(aa)*params.ring,wid=this.addWall(wx,wy,params.wallR,params.duration,ownerId||"",{hp:999,kind:"stoneSpike",spiked:true,spikeDmg,sourcePetId:sourcePetId||""});if(sourceAnimalId)this.hostileWildWalls.set(wid,sourceAnimalId);this.orbitSpikeWalls.set(wid,{cx:targetObj.x,cy:targetObj.y,radius:params.ring,angle:aa,speed:spin});}this.broadcast("abilityEvent",{petId:sourcePetId||"",ownerId:ownerId||"",wildAnimalId:sourceAnimalId||"",elem:"Stone",fxType:"earthRingBurst",x:targetObj.x,y:targetObj.y,targetX:targetObj.x,targetY:targetObj.y,r:targetObj.r||PLAYER_R,stage,range:params.ring+params.wallR,life:.9});}
   petAbilityTargetsAll(ownerId,p,x,y,range){const refs=[];for(const[id,en]of this.state.enemies)if(!en.dead&&dist(x,y,en.x,en.y)<=range+(en.r||16)*.25)refs.push({ref:{kind:"enemy",id},obj:en});for(const[id,a]of this.state.animals)if(!a.dead&&a.hp>0&&dist(x,y,a.x,a.y)<=range+(a.r||18)*.25)refs.push({ref:{kind:"animal",id},obj:a});for(const[id,pl]of this.state.players)if(id!==ownerId&&!pl.dead&&dist(x,y,pl.x,pl.y)<=range+PLAYER_R*.25)refs.push({ref:{kind:"player",id},obj:pl});for(const[id,q]of this.state.pets)if(q.ownerId!==ownerId&&!q.dead&&dist(x,y,q.x,q.y)<=range+(q.r||18)*.25)refs.push({ref:{kind:"pet",id},obj:q});return refs;}
+  rhinoChargeSpeed(source){const base=Math.max(1,Number(source?.speed)||animalSpeed("rhino",source?.stage||"adult",!!source?.ownerId)||44);return Math.max(190,base*3.65)*petStoneFruitMoveMul(source);}
+  spawnRhinoTrailSpike(ownerId,sourcePetId,sourceAnimalId,source,damage){if(!source)return"";const a=Number(source.angle)||0,back=(Number(source.r)||18)*.64,wx=source.x-Math.cos(a)*back,wy=source.y-Math.sin(a)*back,wallR=clamp((Number(source.r)||18)*.22,8,17),wid=this.addWall(wx,wy,wallR,5,ownerId||"",{hp:9999,kind:"earthSpike",spiked:true,spikeDmg:Math.max(1,Number(damage)||10),sourcePetId:sourcePetId||""});if(sourceAnimalId)this.hostileWildWalls.set(wid,sourceAnimalId);return wid;}
   updateActivePetAbilities(dt){
     const now=this.state.worldTime,next=[];
-    for(const fx of this.activePetAbilities){fx.time-=dt;const p=this.state.pets.get(fx.petId);if(!p||p.dead||fx.time<=0)continue;
+    for(const fx of this.activePetAbilities){fx.time-=dt;const p=this.state.pets.get(fx.petId);if(!p||p.dead)continue;
+      if(fx.type==="rhinoCharge"){
+        if(fx.time<=0)continue;
+        p.angle=Number(fx.angle)||Number(p.angle)||0;p._rhinoChargeUntil=now+Math.max(0,fx.time);
+        this.moveCreatureSwept(p,this.rhinoChargeSpeed(p),dt);this.resolveStatic(p,(p.r||18)*.72);
+        fx.spikeTick=(Number(fx.spikeTick)||0)-dt;if(fx.spikeTick<=0){fx.spikeTick=.18;this.spawnRhinoTrailSpike(fx.ownerId,fx.petId,"",p,fx.spikeDmg);}
+        if(!fx.hits)fx.hits=new Map();const rr=Math.max(20,(p.r||18)*.95);
+        for(const h of this.abilityTargetsAround(fx.ownerId,p.x,p.y,rr)){const key=`${h.ref.kind}:${h.ref.id}`,nextHit=fx.hits.get(key)||0;if(now<nextHit)continue;fx.hits.set(key,now+.34);this.petAbilityDamage(h.ref,fx.ramDmg,fx.ownerId,fx.petId);}
+        next.push(fx);continue;
+      }
+      if(fx.time<=0)continue;
       if(fx.type==="fennecOrbit"){
         if(!fx.hits)fx.hits=new Map();const orbit=Math.max(p.r+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
         for(let i=0;i<3;i++){const a=phase+i*TAU/3,bx=p.x+Math.cos(a)*orbit,by=p.y+Math.sin(a)*orbit;for(const h of this.abilityTargetsAround(fx.ownerId,bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.petAbilityDamage(h.ref,fx.damage,fx.ownerId,fx.petId);}}
@@ -3323,7 +3358,17 @@ export class WorldRoom extends Room {
   launchWildArcticShardVolley(animalId,a,target,damage){if(!a||!target)return;const base=angTo(a.x,a.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:a.x+Math.cos(base+i*.12)*(a.r+10),y:a.y+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:true,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId:animalId,petBlast:false,knock:0,sourcePetId:""});const q=this.state.projectiles.get(pid);if(q){q._targetRef={kind:target.ref.kind,id:target.ref.id};q._sourceAnimalId=animalId;}}}
   updateActiveWildAbilities(dt){
     const now=this.state.worldTime,next=[];
-    for(const fx of this.activeWildAbilities){fx.time-=dt;const a=this.state.animals.get(fx.animalId);if(!a||a.dead||a.hp<=0||fx.time<=0)continue;
+    for(const fx of this.activeWildAbilities){fx.time-=dt;const a=this.state.animals.get(fx.animalId);if(!a||a.dead||a.hp<=0)continue;
+      if(fx.type==="rhinoCharge"){
+        if(fx.time<=0)continue;
+        a.angle=Number(fx.angle)||Number(a.angle)||0;a._rhinoChargeUntil=now+Math.max(0,fx.time);
+        this.moveCreatureSwept(a,this.rhinoChargeSpeed(a),dt);this.resolveStatic(a,(a.r||18)*.72);
+        fx.spikeTick=(Number(fx.spikeTick)||0)-dt;if(fx.spikeTick<=0){fx.spikeTick=.18;this.spawnRhinoTrailSpike("","",fx.animalId,a,fx.spikeDmg);}
+        if(!fx.hits)fx.hits=new Map();const rr=Math.max(20,(a.r||18)*.95);
+        for(const h of this.wildAbilityTargetsAround(a.x,a.y,rr)){const key=`${h.ref.kind}:${h.ref.id}`,nextHit=fx.hits.get(key)||0;if(now<nextHit)continue;fx.hits.set(key,now+.34);this.damageTarget(h.ref,fx.ramDmg,"animal",fx.animalId);}
+        next.push(fx);continue;
+      }
+      if(fx.time<=0)continue;
       if(fx.type==="fennecOrbit"){
         if(!fx.hits)fx.hits=new Map();const orbit=Math.max((a.r||18)+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
         for(let i=0;i<3;i++){const q=phase+i*TAU/3,bx=a.x+Math.cos(q)*orbit,by=a.y+Math.sin(q)*orbit;for(const h of this.wildAbilityTargetsAround(bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.damageTarget(h.ref,fx.damage,"animal",fx.animalId);}}
@@ -3407,6 +3452,9 @@ export class WorldRoom extends Room {
       const a=angle,dmg=stats.damage||5,projScale=petProjectileStageSize(p.stage);this.addProjectile({x:p.x+Math.cos(a)*(p.r+7),y:p.y+Math.sin(a)*(p.r+7),vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.3,r:9*projScale,hostile:false,kind:"poison",color:"#65cc65",dmg,ownerId,petBlast:true,knock:0,sourcePetId:id});sendFx("poisonMuzzle",{angle:a,life:.5});
     }else if(elem==="Light"){
       const range=petAbilityRangeFor(p,155,3.15),dmg=stats.damage||16;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{});this.petDamageResourcesAround(ownerId,p,p.x,p.y,range,true);sendFx("lightRingBurst",{range,life:7});
+    }else if(p.type==="rhino"){
+      const t=this.petAbilityTarget(ownerId,id,p,430),ang=t?angTo(p.x,p.y,t.obj.x,t.obj.y):(Number(p.angle)||angle),ramDmg=stats.damage||22,spikeDmg=stats.spike||10;
+      p.angle=ang;p._rhinoChargeUntil=this.state.worldTime+4;this.activePetAbilities=this.activePetAbilities.filter(f=>!(f.type==="rhinoCharge"&&f.petId===id));this.activePetAbilities.push({type:"rhinoCharge",petId:id,ownerId,time:4,ramDmg,spikeDmg,angle:ang,spikeTick:0,hits:new Map()});sendFx("earthRingBurst",{angle:ang,range:Math.max(58,p.r*1.2),life:.65});
     }else if(elem==="Earth"){
       const range=petAbilityRangeFor(p,145,2.95),dmg=stats.damage||20;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:12});this.petDamageResourcesAround(ownerId,p,p.x,p.y,range,true);sendFx("earthRingBurst",{range,life:7});
     }else if(elem==="Combat"){
@@ -3521,6 +3569,9 @@ export class WorldRoom extends Room {
     }
     else if(a.type==="seal"){
       const dmg=petAbilityStats(a).damage||10,targets=this.wildAbilityTargetsAround(a.x,a.y,320);if(targets.length){for(const t of targets)this.createSpikePrison("","",id,t.ref,t.obj,dmg,a.stage);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"SPIKE PRISON",color:"#a9a9a2"});
+    }
+    else if(a.type==="rhino"){
+      const st=petAbilityStats(a),ang=angTo(a.x,a.y,target.x,target.y);a.angle=ang;a._rhinoChargeUntil=this.state.worldTime+4;this.activeWildAbilities=this.activeWildAbilities.filter(f=>!(f.type==="rhinoCharge"&&f.animalId===id));this.activeWildAbilities.push({type:"rhinoCharge",animalId:id,time:4,ramDmg:st.damage||22,spikeDmg:st.spike||10,angle:ang,spikeTick:0,hits:new Map()});this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Earth",fxType:"earthRingBurst",x:a.x,y:a.y,r:a.r,stage:a.stage,angle:ang,range:Math.max(58,a.r*1.2),life:.65});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"CHARGING TRAIL",color:"#6b4a2d"});
     }
     else if(a.type==="queenbee"){const st=petAbilityStats(a),range=Math.max(215,(a.r||18)*4.2);this.spawnQueenBeeSwarm("","",id,a,st,true);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Insect",fxType:"beeSwarm",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:.45,color:"#ffe27c"});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ROYAL SWARM",color:"#ffe27c"});}
     else if(a.type==="workerbee"){const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(d<185){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(95,Math.max(24,d-Math.max(8,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,8)){this.damageTarget(ref,dmg,"animal",id);this.applyAbilityFixedDot(ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.55,shockScale:.3});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"POISON CHARGE",color:"#90de68"});}
@@ -3814,6 +3865,7 @@ export class WorldRoom extends Room {
       a.recentHit=Math.max(0,(a.recentHit||0)-dt);
       a.attackAnim=Math.max(0,(a.attackAnim||0)-dt);
       a.tailPhase=(a.tailPhase||0)+dt*(2.2+(a.speed||60)*.02);
+      if(a.type==="rhino"&&(Number(a._rhinoChargeUntil)||0)>this.state.worldTime){this.resolveStatic(a,(a.r||18)*.72);continue;}
       if(!a.sleeping)this.moveCreatureSwept(a,Math.max(5,(Number(a.speed)||60)*.06),dt);
       if((Number(a._abilityStunUntil)||0)>this.state.worldTime){a.attackAnim=0;this.resolveStatic(a,(a.r||18)*.68);continue;}
 
@@ -4439,6 +4491,7 @@ export class WorldRoom extends Room {
       p.flash=Math.max(0,p.flash-dt);
       p.attackAnim=Math.max(0,p.attackAnim-dt);
       p.tailPhase=(p.tailPhase||0)+dt*(.34+Math.min(.55,Math.max(0,Number(p.speed)||0)*.003));
+      if(p.type==="rhino"&&(Number(p._rhinoChargeUntil)||0)>this.state.worldTime){this.resolveStatic(p,(p.r||18)*.72);const owner=this.state.players.get(p.ownerId);if(owner&&owner.ridingPetId===id){owner.x=p.x;owner.y=p.y;}continue;}
       if((Number(p._abilityStunUntil)||0)>this.state.worldTime){p.attackAnim=0;this.resolveStatic(p,(p.r||18)*.72);continue;}
 
       const owner=this.state.players.get(p.ownerId);
