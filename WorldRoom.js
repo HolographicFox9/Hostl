@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "756";
+const CUBE_SHARED_RULES_VERSION = "757";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -875,7 +875,7 @@ function preciseWeaponShape(p,poseKey,angle,attackT){
 }
 function precisePointSegmentDistance(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,wx=px-ax,wy=py-ay,d=vx*vx+vy*vy,t=d>1e-8?clamp((wx*vx+wy*vy)/d,0,1):0,qx=ax+vx*t,qy=ay+vy*t;return Math.hypot(px-qx,py-qy);}
 function preciseShapeTouchesCircle(shape,x,y,r=0){if(!shape)return false;for(const c of shape.circles||[])if(dist(c.x,c.y,x,y)<=Math.max(0,r)+(c.r||0))return true;for(const s of shape.segments||[])if(precisePointSegmentDistance(x,y,s.ax,s.ay,s.bx,s.by)<=Math.max(0,r)+(s.r||0))return true;return false;}
-function preciseShapeTouchesAnimal(shape,a){for(const h of animalTargetDamageCircles({kind:"animal"},a))if(preciseShapeTouchesCircle(shape,h.x,h.y,h.r))return true;return false;}
+function legacyCircle_preciseShapeTouchesAnimal(shape,a){for(const h of animalTargetDamageCircles({kind:"animal"},a))if(preciseShapeTouchesCircle(shape,h.x,h.y,h.r))return true;return false;}
 function preciseShapeTouchesResource(shape,r){
   if(!shape||!r)return false;
   if(r.type==="rock"){
@@ -902,7 +902,7 @@ function segmentCircleT(x0,y0,x1,y1,cx,cy,r){
   const qx=x0+dx*t,qy=y0+dy*t;
   return dist(qx,qy,cx,cy)<=r?t:null;
 }
-function animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){
+function legacyCircle_animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){
   let best=null;
   // Every animal damage test uses torso/body circles AND the explicit head.
   for(const h of animalTargetDamageCircles({kind:"animal"},a)){
@@ -1117,13 +1117,13 @@ function animalPhysicalCircles(a){
   // Already includes the copied visible torso+head hitboxes; do not add any extra hidden head hitbox.
   return animalPhysicalCirclesBase(a).map(h=>({...h}));
 }
-function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
+function legacyCircle_animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
   for(const h of animalTargetDamageCircles({kind:"animal"},a)){
     if(dist(px,py,h.x,h.y)<range+h.r&&facing(px,py,angle,h.x,h.y,maxFacing))return true;
   }
   return false;
 }
-function animalProjectileTouch(a,x,y,radius=0){
+function legacyCircle_animalProjectileTouch(a,x,y,radius=0){
   for(const h of animalTargetDamageCircles({kind:"animal"},a))if(dist(x,y,h.x,h.y)<radius+h.r)return true;
   return false;
 }
@@ -1139,17 +1139,15 @@ function animalTorsoHeadCopyPartCount(a){
   const hits=animalHitCircles(a),total=hits.length;
   if(!total)return 0;
   if(a.type==="snake")return total;
-  if(a.type==="rhino")return total; // Rhino profile already excludes the tail.
+  if(a.type==="rhino")return total<=2?total:total-1; // Cut at the Rhino torso seam; the separated tail is never physical.
   if(["queenbee","workerbee","dronebee"].includes(a.type))return total;
   return total<=2?total:total-1;
 }
 function expandCopiedAnimalCrossSection(a,h){
   const ang=Number(a?.angle)||0,sa=Math.sin(ang),ca=Math.cos(ang),type=String(a?.type||""),stage=String(a?.stage||"");
   let sizeMul=1;
-  if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.93;
-  if(stage==="bigmomma"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.94;
   if(["queenbee","workerbee","dronebee"].includes(type))sizeMul*=1.07;
-  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.74,side=sourceR*.26;
+  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.92,side=sourceR*.08;
   return[
     {x:h.x-sa*side,y:h.y+ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y},
     {x:h.x+sa*side,y:h.y-ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y}
@@ -1201,7 +1199,7 @@ function animalTargetDamageCircles(ref,target){
   const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(2,(target.r||16)*.78);
   return[{x:target.x,y:target.y,r:rr}];
 }
-function animalAttackContact(a,ref,target,extraGrace=0){
+function legacyCircle_animalAttackContact(a,ref,target,extraGrace=0){
   if(!a||!target)return false;
   if(ref?.kind==="player"&&(target.dead||target.health<=0))return false;
   if(ref?.kind==="pet"&&(target.dead||target.hp<=0))return false;
@@ -1213,10 +1211,10 @@ function animalAttackContact(a,ref,target,extraGrace=0){
   }
   return false;
 }
-function petAttackContact(a,ref,target){
+function legacyCircle_petAttackContact(a,ref,target){
   return animalAttackContact(a,ref,target);
 }
-function animalTargetOverlap(a,ref,target){
+function legacyCircle_animalTargetOverlap(a,ref,target){
   if(!a||!target)return 0;
   const source=animalPhysicalCircles(a);
   const targets=(ref?.kind==="animal"||ref?.kind==="pet")
@@ -1231,6 +1229,53 @@ function animalTargetOverlap(a,ref,target){
   }
   return Math.max(0,deepest);
 }
+
+// ---------- SEP TORSO + HEAD POLYGON HITBOXES ----------
+// Server-authoritative copy of the browser's invisible Sep geometry.  Broad-phase
+// radii may find nearby candidates, but final animal contact uses these polygons.
+const ANIMAL_SEP_PIECE_PROFILE=Object.freeze({
+  dog:{body:[-.07,.29,.36,.15],head:[.31,.18,.29,.18]},seal:{body:[-.08,.31,.34,.16],head:[.33,.18,.27,.18]},
+  cat:{body:[-.07,.29,.34,.16],head:[.31,.17,.27,.18]},dragon:{body:[-.08,.31,.28,.15],head:[.34,.18,.24,.18]},
+  fox:{body:[-.07,.30,.33,.16],head:[.32,.18,.27,.18]},wolf:{body:[-.07,.30,.36,.15],head:[.32,.18,.29,.17]},
+  bear:{body:[-.06,.29,.42,.15],head:[.30,.18,.33,.17]},rabbit:{body:[-.06,.27,.36,.17],head:[.29,.18,.34,.17]},
+  owl:{body:[-.05,.25,.43,.17],head:[.27,.18,.37,.17]},snake:{body:[-.10,.34,.18,.13],head:[.34,.16,.24,.16]},
+  deer:{body:[-.07,.29,.30,.15],head:[.31,.18,.25,.17]},boar:{body:[-.06,.29,.41,.15],head:[.30,.19,.31,.17]},
+  rhino:{body:[-.06,.30,.43,.14],head:[.31,.20,.36,.16]},saber:{body:[-.07,.30,.35,.15],head:[.32,.18,.29,.17]},
+  clouded:{body:[-.07,.30,.33,.15],head:[.32,.18,.28,.17]},fennec:{body:[-.07,.29,.30,.16],head:[.31,.18,.28,.17]},
+  queenbee:{body:[-.07,.28,.34,.16],head:[.30,.19,.29,.17]},workerbee:{body:[-.07,.28,.32,.16],head:[.30,.18,.27,.17]},dronebee:{body:[-.07,.28,.31,.16],head:[.30,.18,.26,.17]}
+});
+function sepHitboxDimensions(a){const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);if(d)return d;const r=Math.max(4,Number(a?.r)||18);if(["queenbee","workerbee","dronebee"].includes(a?.type))return{w:r*2.35,h:r*1.58};return{w:r*2.20,h:r*1.42};}
+function sepOctagon(cx,cy,hx,hy,clip=.16){const ix=hx*clamp(Number(clip)||.16,.06,.34),iy=hy*.28;return[[cx-hx+ix,cy-hy],[cx+hx-ix,cy-hy],[cx+hx,cy-hy+iy],[cx+hx,cy+hy-iy],[cx+hx-ix,cy+hy],[cx-hx+ix,cy+hy],[cx-hx,cy+hy-iy],[cx-hx,cy-hy+iy]];}
+const RHINO_SEP_HIT_LAYOUT=Object.freeze({
+  baby:{awake:{ref:[99,63],body:[14,6,64,51],head:[43,0,56,63]},sleep:{ref:[93,63],body:[10,0,83,63]}},
+  adult:{awake:{ref:[99,63],body:[14,6,64,51],head:[43,0,56,63]},sleep:{ref:[94,51],body:[10,0,84,51]}},
+  boss:{awake:{ref:[99,63],body:[14,6,64,51],head:[43,0,56,63]},sleep:{ref:[94,51],body:[11,0,83,51]}},
+  superboss:{awake:{ref:[99,63],body:[14,6,64,51],head:[43,0,56,63]},sleep:{ref:[93,53],body:[10,0,83,53]}},
+  bigmomma:{awake:{ref:[102,63],body:[14,6,67,53],head:[43,0,59,63]},sleep:{ref:[94,55],body:[12,0,82,55]}}
+});
+function rhinoExactSepLocalPolygon(a,role){if(a?.type!=="rhino")return null;const stage=["baby","adult","boss","superboss","bigmomma"].includes(a.stage)?a.stage:"adult",state=a.sleeping?"sleep":"awake",q=RHINO_SEP_HIT_LAYOUT[stage][state],d=sepHitboxDimensions(a),scale=Math.min(d.w/q.ref[0],d.h/q.ref[1]),left=-q.ref[0]*scale*.5,top=-q.ref[1]*scale*.5;let box=q[role];if(!box&&state==="sleep"&&role==="head"){const [x,y,w,h]=q.body,hw=w*.38;return sepOctagon(left+(x+w-hw*.5)*scale,top+(y+h*.5)*scale,hw*.5*scale,h*.43*scale,.16);}if(!box)return null;const[x,y,w,h]=box;return sepOctagon(left+(x+w*.5)*scale,top+(y+h*.5)*scale,w*.48*scale,h*.46*scale,.14);}
+function sepLocalPiecePolygon(a,role){const exactRhino=rhinoExactSepLocalPolygon(a,role);if(exactRhino)return exactRhino;const profile=ANIMAL_SEP_PIECE_PROFILE[a?.type]||{body:[-.07,.29,.34,.16],head:[.31,.18,.28,.17]};let[cx,hx,hy,clip]=profile[role]||profile.body;const sf=animalSleepCollisionScale(a),d=sepHitboxDimensions(a),len=a?.sleeping?sf.len:1,thick=a?.sleeping?sf.radius:1;cx*=len;hx*=len;hy*=thick;return sepOctagon(cx*d.w,0,hx*d.w,hy*d.h,clip);}
+function transformAnimalLocalPoly(a,poly){const ang=Number(a?.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),ax=Number(a?.x)||0,ay=Number(a?.y)||0;return poly.map(([lx,ly])=>[ax+lx*ca-ly*sa,ay+lx*sa+ly*ca]);}
+function animalSepHitPolygons(a,mode="bodyHead"){if(!a)return[];const roles=mode==="head"?["head"]:mode==="body"?["body"]:["body","head"];return roles.map(role=>({role,points:transformAnimalLocalPoly(a,sepLocalPiecePolygon(a,role))}));}
+function polygonCenter(poly){let x=0,y=0;if(!poly?.length)return{x:0,y:0};for(const p of poly){x+=p[0];y+=p[1];}return{x:x/poly.length,y:y/poly.length};}
+function polygonPointSegmentDistance(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,den=vx*vx+vy*vy,t=den>1e-9?clamp(((px-ax)*vx+(py-ay)*vy)/den,0,1):0;return Math.hypot(px-(ax+vx*t),py-(ay+vy*t));}
+function convexPolygonPenetration(polyA,polyB){if(!polyA?.length||!polyB?.length)return null;let minOverlap=Infinity,bx=0,by=0;const axes=poly=>{for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],ex=q[0]-p[0],ey=q[1]-p[1],len=Math.hypot(ex,ey);if(len<1e-8)continue;const ax=-ey/len,ay=ex/len;let amin=Infinity,amax=-Infinity,bmin=Infinity,bmax=-Infinity;for(const v of polyA){const d=v[0]*ax+v[1]*ay;amin=Math.min(amin,d);amax=Math.max(amax,d);}for(const v of polyB){const d=v[0]*ax+v[1]*ay;bmin=Math.min(bmin,d);bmax=Math.max(bmax,d);}const ov=Math.min(amax,bmax)-Math.max(amin,bmin);if(ov<=0)return false;if(ov<minOverlap){minOverlap=ov;bx=ax;by=ay;}}return true;};if(!axes(polyA)||!axes(polyB))return null;const ca=polygonCenter(polyA),cb=polygonCenter(polyB);if((cb.x-ca.x)*bx+(cb.y-ca.y)*by<0){bx=-bx;by=-by;}return{nx:bx,ny:by,overlap:minOverlap};}
+function polygonMinDistance(a,b){if(!a?.length||!b?.length)return Infinity;if(convexPolygonPenetration(a,b))return 0;let best=Infinity;for(const p of a)for(let i=0;i<b.length;i++)best=Math.min(best,polygonPointSegmentDistance(p[0],p[1],b[i][0],b[i][1],b[(i+1)%b.length][0],b[(i+1)%b.length][1]));for(const p of b)for(let i=0;i<a.length;i++)best=Math.min(best,polygonPointSegmentDistance(p[0],p[1],a[i][0],a[i][1],a[(i+1)%a.length][0],a[(i+1)%a.length][1]));return best;}
+function animalSepCirclePenetration(a,cx,cy,cr=0,mode="bodyHead"){let best=null;for(const piece of animalSepHitPolygons(a,mode)){const p=rockCirclePolyPenetration(cx,cy,Math.max(0,Number(cr)||0),piece.points);if(!p)continue;const c=polygonCenter(piece.points),rec={piece,h:{x:c.x,y:c.y,role:piece.role},d:dist(cx,cy,c.x,c.y),overlap:p.overlap,nx:-p.nx,ny:-p.ny};if(!best||rec.overlap>best.overlap)best=rec;}return best;}
+function animalSepPairPenetration(a,b){let best=null;for(const pa of animalSepHitPolygons(a))for(const pb of animalSepHitPolygons(b)){const p=convexPolygonPenetration(pa.points,pb.points);if(p&&(!best||p.overlap>best.overlap))best={...p,pa,pb};}return best;}
+function animalSepPolyPenetration(a,poly){let best=null;for(const pa of animalSepHitPolygons(a)){const p=convexPolygonPenetration(pa.points,poly);if(p&&(!best||p.overlap>best.overlap))best={...p,pa};}return best;}
+function animalSepSegmentT(a,x0,y0,x1,y1,radius=0,mode="bodyHead"){let best=null,len=Math.hypot(x1-x0,y1-y0),step=Math.max(2,Math.min(5,Math.max(1,Number(radius)||0)*.65+2)),steps=Math.max(1,Math.ceil(len/step));for(const piece of animalSepHitPolygons(a,mode)){for(let i=0;i<=steps;i++){const t=i/steps,x=x0+(x1-x0)*t,y=y0+(y1-y0)*t;if(rockCirclePolyPenetration(x,y,Math.max(0,Number(radius)||0),piece.points)){if(best==null||t<best)best=t;break;}}}return best;}
+function basicRockWorldPolygon(r){if(!r||r.type!=="rock")return null;const base=BASIC_ROCK_HITBOX_POLYS[biomeBaseId(worldBiomeAt(r.x,r.y))];if(!base)return null;const sc=Math.max(.01,Number(r.scale)||1);return base.map(([x,y])=>[r.x+x*sc,r.y+y*sc]);}
+function preciseShapeTouchesAnimal(shape,a){if(!shape||!a)return false;for(const piece of animalSepHitPolygons(a)){for(const c of shape.circles||[])if(rockCirclePolyPenetration(c.x,c.y,c.r||0,piece.points))return true;for(const q of shape.segments||[])if(animalSegmentAgainstPoly(q.ax,q.ay,q.bx,q.by,q.r||0,piece.points))return true;}return false;}
+function animalSegmentAgainstPoly(x0,y0,x1,y1,radius,poly){const len=Math.hypot(x1-x0,y1-y0),steps=Math.max(1,Math.ceil(len/3));for(let i=0;i<=steps;i++){const t=i/steps;if(rockCirclePolyPenetration(x0+(x1-x0)*t,y0+(y1-y0)*t,Math.max(0,radius||0),poly))return t;}return null;}
+function animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){return animalSepSegmentT(a,x0,y0,x1,y1,radius,"bodyHead");}
+function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){for(const piece of animalSepHitPolygons(a)){const c=polygonCenter(piece.points);if(rockCirclePolyPenetration(px,py,Math.max(0,range),piece.points)&&facing(px,py,angle,c.x,c.y,maxFacing))return true;}return false;}
+function animalProjectileTouch(a,x,y,radius=0){return !!animalSepCirclePenetration(a,x,y,radius,"bodyHead");}
+function animalAttackContact(a,ref,target,extraGrace=0){if(!a||!target)return false;if(ref?.kind==="player"&&(target.dead||target.health<=0))return false;if(ref?.kind==="pet"&&(target.dead||target.hp<=0))return false;const heads=animalSepHitPolygons(a,"head"),grace=2+Math.max(0,Number(extraGrace)||0);if(ref?.kind==="animal"||ref?.kind==="pet"){for(const h of heads)for(const q of animalSepHitPolygons(target))if(convexPolygonPenetration(h.points,q.points)||polygonMinDistance(h.points,q.points)<=grace)return true;return false;}const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(2,(Number(target.r)||PLAYER_R)*.78)+grace;for(const h of heads)if(rockCirclePolyPenetration(target.x,target.y,rr,h.points))return true;return false;}
+function petAttackContact(a,ref,target){return animalAttackContact(a,ref,target);}
+function animalTargetOverlap(a,ref,target){if(!a||!target)return 0;if(ref?.kind==="animal"||ref?.kind==="pet"){const h=animalSepPairPenetration(a,target);return h?Math.max(0,h.overlap+3):0;}const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(8,(target.r||16)*.82),h=animalSepCirclePenetration(a,target.x,target.y,rr);return h?Math.max(0,h.overlap+3):0;}
+// ---------- END SEP POLYGON HITBOXES ----------
+
 function typeHp(type, stage) {
   const base=ANIMAL_STAGE_HP[stage]??ANIMAL_STAGE_HP.adult;
   const b=animalBalance(type),babyMul=stage==="baby"?(b.babyHpMul||1):1,bigMul=stage==="bigmomma"?(BIG_MOMMA_HP_MUL[type]??1):1;
@@ -1763,12 +1808,7 @@ export class WorldRoom extends Room {
     const chestHit=(c)=>({x:c.x,y:c.y+8,r:c.r||18});
 
     if(isCreature){
-      const pushCreatureFrom=(cx,cy,cr)=>{
-        let best=null,bestOverlap=0;
-        for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,cx,cy),overlap=h.r+cr-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}
-        if(best&&best.overlap>0){const a=best.d>.1?angTo(cx,cy,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;return true;}
-        return false;
-      };
+      const pushCreatureFrom=(cx,cy,cr)=>{const hit=animalSepCirclePenetration(obj,cx,cy,cr);if(!hit||hit.overlap<=0)return false;obj.x+=hit.nx*hit.overlap;obj.y+=hit.ny*hit.overlap;return true;};
       const range=Math.max(260,(obj.r||18)+190);
       for(const solid of this.nearbySolids(obj.x,obj.y,range)){
         if(solid.kind==="water")continue;
@@ -1776,27 +1816,19 @@ export class WorldRoom extends Room {
           const r=this.state.resources.get(solid.id);if(!r||!r.alive)continue;
           if(r.type==="oceanRock"||BIOME_RESOURCE_INFO[r.type]?.biome==="ocean")continue;
           if(r.type==="log"){
-            let best=null,bestOverlap=0;
-            const body=animalPhysicalCircles(obj);
-            for(const h of body)for(const q of logParts(r)){const d=dist(h.x,h.y,q.x,q.y),overlap=h.r*.9+q.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,q,d,overlap};}}
-            if(best&&best.d>.1){const a=angTo(best.q.x,best.q.y,best.h.x,best.h.y);obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;obj._lastResourceContactId=solid.id;}
-          }else if(r.type==="rock"){
-            let best=null;for(const h of animalPhysicalCircles(obj)){const p=basicRockCirclePenetration(r,h.x,h.y,h.r*.9);if(p&&(!best||p.overlap>best.overlap))best=p;}
+            let best=null;for(const q of logParts(r)){const h=animalSepCirclePenetration(obj,q.x,q.y,q.r);if(h&&(!best||h.overlap>best.overlap))best=h;}
             if(best){obj.x+=best.nx*best.overlap;obj.y+=best.ny*best.overlap;obj._lastResourceContactId=solid.id;}
+          }else if(r.type==="rock"){
+            const poly=basicRockWorldPolygon(r),hit=poly?animalSepPolyPenetration(obj,poly):null;
+            if(hit&&hit.overlap>0){obj.x-=hit.nx*hit.overlap;obj.y-=hit.ny*hit.overlap;obj._lastResourceContactId=solid.id;}
           }else{const c=resourceCenter(r);if(pushCreatureFrom(c.x,c.y,r.solidR))obj._lastResourceContactId=solid.id;}
         }else if(solid.kind==="gold"){const g=this.state.gold.get(solid.id);if(!g||(!g.infinite&&g.goldLeft<=0))continue;const h=goldHit(g);pushCreatureFrom(h.x,h.y,h.r);}
         else if(solid.kind==="chest"){const c=this.state.chests.get(solid.id);if(!c||c.opened)continue;const h=chestHit(c);pushCreatureFrom(h.x,h.y,h.r);}
       }
-      // Creature-vs-wall collision uses the canonical torso+head copied circles as other solids.
-      for(const[,w]of this.state.walls){
-        let best=null,bestOverlap=0;
-        for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,w.x,w.y),overlap=h.r+w.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}
-        if(best&&best.overlap>0){const a=best.d>.1?angTo(w.x,w.y,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}
-      }
-      for(const[,t]of this.state.towers){if(!t||t.hp<=0)continue;const tr=towerSolidRadius(t);let best=null,bestOverlap=0;for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,t.x,t.y),overlap=h.r+tr-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}if(best&&best.overlap>0){const a=best.d>.1?angTo(t.x,t.y,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}}
+      for(const[,w]of this.state.walls)pushCreatureFrom(w.x,w.y,w.r);
+      for(const[,t]of this.state.towers){if(!t||t.hp<=0)continue;pushCreatureFrom(t.x,t.y,towerSolidRadius(t));}
       obj.x=clamp(obj.x,20,WORLD_W-20);obj.y=clamp(obj.y,20,WORLD_H-20);if(!obj.ownerId)keepObjectOnLandmass(obj,Math.max(22,(Number(obj.r)||18)*.78));return;
     }
-
     if(isPlayer){
       for(const solid of this.nearbySolids(obj.x,obj.y,260)){
         if(solid.kind==="water")continue;
@@ -1870,6 +1902,27 @@ export class WorldRoom extends Room {
     }else if(obj._blockingResourceId){
       const r=this.state.resources.get(obj._blockingResourceId);if(!this.resourceBlocksCreaturePath(obj,r))obj._blockingResourceId="";
     }
+  }
+
+  ensureAwakeWildMotion(a,startX,startY,dt,speedMul=.06){
+    if(!a||a.dead||a.sleeping||!(dt>0))return 0;
+    const sx=Number.isFinite(startX)?startX:a.x,sy=Number.isFinite(startY)?startY:a.y;
+    const baseSpeed=Math.max(6,(Number(a.speed)||60)*Math.max(.03,Number(speedMul)||.06));
+    const minMove=Math.max(.025,baseSpeed*dt*.07);
+    this.moveCreatureSwept(a,baseSpeed,dt);
+    let moved=dist(sx,sy,a.x,a.y);
+    if(moved>=minMove){a._awakeStallFrames=0;return moved;}
+    a._awakeStallFrames=(Number(a._awakeStallFrames)||0)+1;
+    if(!Number.isFinite(a._awakeStallSide))a._awakeStallSide=((String(a.id||a.netId||a.type).length&1)?1:-1);
+    const base=Number.isFinite(a.wanderA)?a.wanderA:(Number(a.angle)||0),side=a._awakeStallSide;
+    for(const off of [.62,1.18,1.82]){
+      a.angle=base+side*off;a.wanderA=a.angle;
+      this.moveCreatureSwept(a,baseSpeed*1.08,dt);
+      moved=dist(sx,sy,a.x,a.y);
+      if(moved>=minMove){a._awakeStallFrames=0;return moved;}
+    }
+    a._awakeStallSide*=-1;a.wanderA=(Number(a.angle)||0)+a._awakeStallSide*1.35;a.wanderT=Math.min(Number(a.wanderT)||0,.35);
+    return moved;
   }
 
   spawnClearOfCreatures(x,y) {
@@ -3854,7 +3907,21 @@ export class WorldRoom extends Room {
       if(a.dead){this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.clearWildMate(id);continue;}
       const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
       const forcedActive=this.enemyOwnerByPet.has(id)||this.animalAggro.has(id)||this.wildMateTargets.has(id)||a.tameFailedAggro||a.desperateAggro||(a.recentHit||0)>0;
-      if(!forcedActive&&!this.hasNearbyPlayerOrPet(a.x,a.y,1250))continue;
+      const nearbyActive=this.hasNearbyPlayerOrPet(a.x,a.y,1250);
+      if(!forcedActive&&!nearbyActive){
+        // Do not freeze off-screen wildlife. Keep a cheap authoritative wander
+        // running every server tick; only the expensive AI is skipped.
+        if(!a.sleeping){
+          a.wanderT=(Number(a.wanderT)||0)-dt;
+          if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.4,3.4);}
+          smoothTurn(a,Number.isFinite(a.wanderA)?a.wanderA:(a.angle||0),dt,2.2);
+          const sp=Math.max(10,(Number(a.speed)||60)*.18),dx=Math.cos(Number(a.angle)||0)*sp*dt,dy=Math.sin(Number(a.angle)||0)*sp*dt;
+          a.x=clamp(a.x+dx,20,WORLD_W-20);a.y=clamp(a.y+dy,20,WORLD_H-20);
+          a._farStaticAccum=(Number(a._farStaticAccum)||0)+dt;
+          if(a._farStaticAccum>=.14){a._farStaticAccum=0;this.resolveStatic(a,(a.r||18)*.68);}
+        }
+        continue;
+      }
       if(this.keepWildInHomeBiome(id,a,dt))continue;
       const moveStartX=a.x,moveStartY=a.y;
 
@@ -3866,7 +3933,7 @@ export class WorldRoom extends Room {
       a.attackAnim=Math.max(0,(a.attackAnim||0)-dt);
       a.tailPhase=(a.tailPhase||0)+dt*(2.2+(a.speed||60)*.02);
       if(a.type==="rhino"&&(Number(a._rhinoChargeUntil)||0)>this.state.worldTime){this.resolveStatic(a,(a.r||18)*.72);continue;}
-      if(!a.sleeping)this.moveCreatureSwept(a,Math.max(5,(Number(a.speed)||60)*.06),dt);
+      if(!a.sleeping)this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.06);
       if((Number(a._abilityStunUntil)||0)>this.state.worldTime){a.attackAnim=0;this.resolveStatic(a,(a.r||18)*.68);continue;}
 
       const enemyOwnerId=this.enemyOwnerByPet.get(id);
@@ -3885,7 +3952,7 @@ export class WorldRoom extends Room {
       if(this.wildAttackBlockingResource(id,a)){this.resolveStatic(a,(a.r||18)*.68);continue;}
       if(this.tryWildEatBerry(id,a,dt)){this.resolveStatic(a,(a.r||18)*.68);continue;}
 
-      if(this.updateWildMating(id,a,dt)){a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(!a.sleeping&&!a.dead&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10){this.moveCreatureSwept(a,Math.max(14,(Number(a.speed)||60)*.24),dt);this.resolveStatic(a,(a.r||18)*.68);}continue;}
+      if(this.updateWildMating(id,a,dt)){a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(!a.sleeping&&!a.dead&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10)this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.24);continue;}
       // Hive bee reproduction is handled by the 5-minute hatch cycle and the every-10-nights queen/drone brood event.
 
       const info=PET_TYPES[a.type]||{};
@@ -4038,8 +4105,7 @@ export class WorldRoom extends Room {
       a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);
       this.resolveStatic(a,(a.r||18)*.68);
       if(!a.sleeping&&!a.dead&&a.hp>0&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10){
-        this.moveCreatureSwept(a,Math.max(14,(Number(a.speed)||60)*.24),dt);
-        this.resolveStatic(a,(a.r||18)*.68);
+        this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.24);
       }
       this.carryEverythingTouchedByAnimal(id,a,a.x-moveStartX,a.y-moveStartY);
     }
@@ -4051,16 +4117,13 @@ export class WorldRoom extends Room {
       if(!obj||obj.dead)return;
       // A ridden mount is already the player's collision body.
       if(player.ridingPetId&&isPet&&player.ridingPetId===objId)return;
-      let hit=null,bestOverlap=0;
-      for(const h of animalPhysicalCircles(obj)){
-        const d=dist(player.x,player.y,h.x,h.y),overlap=PLAYER_R*.82+h.r-d;
-        if(overlap>bestOverlap){bestOverlap=overlap;hit={h,d,overlap};}
-      }
+      const hit=animalSepCirclePenetration(obj,player.x,player.y,PLAYER_R*.82);
       if(!hit||hit.overlap<=0)return;
 
       let mx=player.moveX||0,my=player.moveY||0,ml=Math.hypot(mx,my);
       if(ml>.05){mx/=ml;my/=ml;}else{mx=0;my=0;}
-      let nx,ny;if(hit.d>.10){nx=(player.x-hit.h.x)/hit.d;ny=(player.y-hit.h.y)/hit.d;}else if(ml>.05){nx=mx;ny=my;}else{const a=Number(player.angle)||0;nx=Math.cos(a);ny=Math.sin(a);}
+      // hit.n is the direction the animal must move away from the player; the player's escape normal is opposite.
+      let nx=-hit.nx,ny=-hit.ny;if(!Number.isFinite(nx)||!Number.isFinite(ny)){if(ml>.05){nx=mx;ny=my;}else{const a=Number(player.angle)||0;nx=Math.cos(a);ny=Math.sin(a);}}
       const movingInto=ml>.05&&(mx*(-nx)+my*(-ny))>.02;
       const correction=Math.min(hit.overlap+.45,8.5+Math.sqrt(Math.max(0,hit.overlap))*.55);
 
@@ -4251,49 +4314,12 @@ export class WorldRoom extends Room {
   }
 
   resolveCreaturePairPhysical(a,b){
-    if(!a||!b||a===b||a.dead||b.dead||a.hp<=0||b.hp<=0)return false;
-    let moved=false;
-    for(let pass=0;pass<2;pass++){
-      const ah=animalPhysicalCircles(a),bh=animalPhysicalCircles(b);
-      let best=null,bestOverlap=0;
-      for(const ca of ah)for(const cb of bh){
-        const dx=cb.x-ca.x,dy=cb.y-ca.y,rr=ca.r+cb.r,d2=dx*dx+dy*dy;
-        if(d2>=rr*rr)continue;
-        const d=Math.sqrt(Math.max(.0001,d2)),ov=rr-d;
-        if(ov>bestOverlap){bestOverlap=ov;best={dx,dy,d};}
-      }
-      if(!best||bestOverlap<=.01)break;
-      let nx=best.dx/best.d,ny=best.dy/best.d;
-      if(!Number.isFinite(nx)||!Number.isFinite(ny)){
-        const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;nx=dx/d;ny=dy/d;
-      }
-      const wa=animalWeight(a),wb=animalWeight(b),ia=1/Math.max(.2,wa),ib=1/Math.max(.2,wb),sum=ia+ib||1;
-      const correction=Math.min(bestOverlap+.35,16);
-      const ma=correction*(ia/sum),mb=correction*(ib/sum);
-      a.x-=nx*ma;a.y-=ny*ma;b.x+=nx*mb;b.y+=ny*mb;moved=true;
-    }
-    return moved;
+    if(!a||!b||a===b||a.dead||b.dead||a.hp<=0||b.hp<=0)return false;let moved=false;
+    for(let pass=0;pass<2;pass++){const hit=animalSepPairPenetration(a,b);if(!hit||hit.overlap<=.01)break;const wa=animalWeight(a),wb=animalWeight(b),ia=1/Math.max(.2,wa),ib=1/Math.max(.2,wb),sum=ia+ib||1,correction=Math.min(hit.overlap+.35,16),ma=correction*(ia/sum),mb=correction*(ib/sum);a.x-=hit.nx*ma;a.y-=hit.ny*ma;b.x+=hit.nx*mb;b.y+=hit.ny*mb;moved=true;}return moved;
   }
 
   resolveMountedCreaturePair(anchor,mover){
-    if(!anchor||!mover||anchor.dead||mover.dead)return false;
-    let best=null,bestOverlap=0;
-    for(const ca of animalPhysicalCircles(anchor))for(const cb of animalPhysicalCircles(mover)){
-      const dx=cb.x-ca.x,dy=cb.y-ca.y,rr=ca.r+cb.r,d2=dx*dx+dy*dy;
-      if(d2>=rr*rr)continue;
-      const d=Math.sqrt(Math.max(.0001,d2)),ov=rr-d;
-      if(ov>bestOverlap){bestOverlap=ov;best={dx,dy,d};}
-    }
-    if(!best||bestOverlap<=.01)return false;
-    let nx=best.dx/best.d,ny=best.dy/best.d;
-    if(!Number.isFinite(nx)||!Number.isFinite(ny)){const dx=mover.x-anchor.x,dy=mover.y-anchor.y,d=Math.hypot(dx,dy)||1;nx=dx/d;ny=dy/d;}
-    // Match the client solver exactly so online riding does not get corrected
-    // back and forth between two slightly different collision responses.
-    const mountShare=clamp(.16+(1-animalPushMobility(mover))*.10,.16,.28);
-    const correction=Math.min(bestOverlap+.08,5.5+Math.sqrt(Math.max(0,bestOverlap))*.55);
-    anchor.x-=nx*correction*mountShare;anchor.y-=ny*correction*mountShare;
-    mover.x+=nx*correction*(1-mountShare);mover.y+=ny*correction*(1-mountShare);
-    return true;
+    if(!anchor||!mover||anchor.dead||mover.dead)return false;const hit=animalSepPairPenetration(anchor,mover);if(!hit||hit.overlap<=.01)return false;const mountShare=clamp(.16+(1-animalPushMobility(mover))*.10,.16,.28),correction=Math.min(hit.overlap+.08,5.5+Math.sqrt(Math.max(0,hit.overlap))*.55);anchor.x-=hit.nx*correction*mountShare;anchor.y-=hit.ny*correction*mountShare;mover.x+=hit.nx*correction*(1-mountShare);mover.y+=hit.ny*correction*(1-mountShare);return true;
   }
 
   resolveAnimalAnimalCollisions(){
@@ -4783,22 +4809,8 @@ export class WorldRoom extends Room {
   }
 
   resolveEnemyCreatureContacts(en){
-    if(!en||en.dead)return;
-    const er=(en.r||17)*.90;
-    for(const rec of this.nearbyDynamic(en.x,en.y,er+180,CREATURE_DYNAMIC_KINDS)){
-      const obj=rec.obj;if(!obj||obj.dead||(obj.hp!=null&&obj.hp<=0))continue;
-      let best=null,bestOverlap=0;
-      for(const h of animalPhysicalCircles(obj)){
-        const dx=en.x-h.x,dy=en.y-h.y,d2=dx*dx+dy*dy,rr=er+h.r;
-        if(d2>=rr*rr)continue;const d=Math.sqrt(Math.max(.0001,d2)),overlap=rr-d;
-        if(overlap>bestOverlap){bestOverlap=overlap;best={dx,dy,d};}
-      }
-      if(!best||bestOverlap<=.01)continue;
-      let nx=best.dx/best.d,ny=best.dy/best.d;
-      if(!Number.isFinite(nx)||!Number.isFinite(ny)){const q=angTo(obj.x,obj.y,en.x,en.y);nx=Math.cos(q);ny=Math.sin(q);}
-      const correction=Math.min(bestOverlap+.04,7.5);
-      en.x+=nx*correction;en.y+=ny*correction;
-    }
+    if(!en||en.dead)return;const er=(en.r||17)*.90;
+    for(const rec of this.nearbyDynamic(en.x,en.y,er+180,CREATURE_DYNAMIC_KINDS)){const obj=rec.obj;if(!obj||obj.dead||(obj.hp!=null&&obj.hp<=0))continue;const hit=animalSepCirclePenetration(obj,en.x,en.y,er);if(!hit||hit.overlap<=.01)continue;const correction=Math.min(hit.overlap+.04,7.5);en.x-=hit.nx*correction;en.y-=hit.ny*correction;}
   }
 
   updateEnemies(dt){
@@ -4845,7 +4857,7 @@ export class WorldRoom extends Room {
       if(en.moonMarked){en.x=Number(en._moonAnchorX)||en.x;en.y=Number(en._moonAnchorY)||en.y;}else{this.resolveEnemyCreatureContacts(en);this.resolveStatic(en,en.r*.9);}
       // A non-riding guard is a separate body; never let it sit inside its cube.
       const gid=this.enemyPetByEnemy.get(id),guard=gid&&this.state.animals.get(gid);
-      if(guard&&en.ridingPetId!==gid){let best=null,bestOverlap=0;for(const h of animalPhysicalCircles(guard)){const d=dist(en.x,en.y,h.x,h.y),overlap=(en.r||18)+h.r+12-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}if(best&&best.d>.01){const a=angTo(en.x,en.y,best.h.x,best.h.y);guard.x+=Math.cos(a)*best.overlap;guard.y+=Math.sin(a)*best.overlap;this.resolveStatic(guard,(guard.r||18)*.68);}}
+      if(guard&&en.ridingPetId!==gid){const hit=animalSepCirclePenetration(guard,en.x,en.y,(en.r||18)+12);if(hit&&hit.overlap>0){guard.x+=hit.nx*hit.overlap;guard.y+=hit.ny*hit.overlap;this.resolveStatic(guard,(guard.r||18)*.68);}}
     }
   }
 
