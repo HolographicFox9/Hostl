@@ -1234,15 +1234,16 @@ function legacyCircle_animalTargetOverlap(a,ref,target){
 // Server-authoritative copy of the browser's invisible Sep geometry. Rhino uses the same Sep alpha hull. Broad-phase
 // radii may find nearby candidates, but final animal contact uses these polygons.
 const ANIMAL_SEP_PIECE_PROFILE=Object.freeze({
-  dog:{body:[-.07,.29,.36,.15],head:[.31,.18,.29,.18]},seal:{body:[-.08,.31,.34,.16],head:[.33,.18,.27,.18]},
-  cat:{body:[-.07,.29,.34,.16],head:[.31,.17,.27,.18]},dragon:{body:[-.08,.31,.28,.15],head:[.34,.18,.24,.18]},
-  fox:{body:[-.07,.30,.33,.16],head:[.32,.18,.27,.18]},wolf:{body:[-.07,.30,.36,.15],head:[.32,.18,.29,.17]},
-  bear:{body:[-.06,.29,.42,.15],head:[.30,.18,.33,.17]},rabbit:{body:[-.06,.27,.36,.17],head:[.29,.18,.34,.17]},
-  owl:{body:[-.05,.25,.43,.17],head:[.27,.18,.37,.17]},snake:{body:[-.10,.34,.18,.13],head:[.34,.16,.24,.16]},
-  deer:{body:[-.07,.29,.30,.15],head:[.31,.18,.25,.17]},boar:{body:[-.06,.29,.41,.15],head:[.30,.19,.31,.17]},
-  rhino:{body:[-.06,.30,.43,.14],head:[.31,.20,.36,.16]},saber:{body:[-.07,.30,.35,.15],head:[.32,.18,.29,.17]},
-  clouded:{body:[-.07,.30,.33,.15],head:[.32,.18,.28,.17]},fennec:{body:[-.07,.29,.30,.16],head:[.31,.18,.28,.17]},
-  queenbee:{body:[-.07,.28,.34,.16],head:[.30,.19,.29,.17]},workerbee:{body:[-.07,.28,.32,.16],head:[.30,.18,.27,.17]},dronebee:{body:[-.07,.28,.31,.16],head:[.30,.18,.26,.17]}
+  // Sep source orientation: LEFT=tail, MIDDLE=torso, RIGHT=head. Bounds are [left,right,halfHeight].
+  dog:{body:[-.20,.26,.17],head:[.15,.50,.19]},seal:{body:[-.19,.28,.18],head:[.18,.50,.19]},
+  cat:{body:[-.20,.26,.17],head:[.16,.50,.19]},dragon:{body:[-.21,.29,.16],head:[.19,.50,.19]},
+  fox:{body:[-.20,.27,.17],head:[.16,.50,.19]},wolf:{body:[-.21,.27,.18],head:[.15,.50,.19]},
+  bear:{body:[-.22,.28,.22],head:[.14,.50,.21]},rabbit:{body:[-.18,.25,.18],head:[.13,.50,.21]},
+  owl:{body:[-.17,.23,.23],head:[.11,.49,.23]},snake:{body:[-.29,.30,.14],head:[.24,.50,.17]},
+  deer:{body:[-.19,.26,.16],head:[.17,.50,.18]},boar:{body:[-.21,.28,.20],head:[.14,.50,.20]},
+  rhino:{body:[-.20,.29,.21],head:[.14,.50,.21]},saber:{body:[-.21,.27,.18],head:[.15,.50,.19]},
+  clouded:{body:[-.20,.27,.17],head:[.16,.50,.19]},fennec:{body:[-.19,.26,.17],head:[.16,.50,.19]},
+  queenbee:{body:[-.20,.24,.18],head:[.15,.48,.19]},workerbee:{body:[-.19,.24,.18],head:[.15,.47,.18]},dronebee:{body:[-.19,.23,.18],head:[.15,.46,.18]}
 });
 function sepHitboxDimensions(a){/* Exactly the visible animal stage size; collision adds no size multiplier. */const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);if(d)return d;const r=Math.max(4,Number(a?.r)||18);if(["queenbee","workerbee","dronebee"].includes(a?.type))return{w:r*2.35,h:r*1.58};return{w:r*2.20,h:r*1.42};}
 function sepPieceBox(cx,cy,hx,hy){return [[cx-hx,cy-hy],[cx+hx,cy-hy],[cx+hx,cy+hy],[cx-hx,cy+hy]];}
@@ -1256,9 +1257,11 @@ function rhinoExactSepLocalPolygon(a,role){
 }
 function sepLocalPiecePolygon(a,role){
   const exactRhino=rhinoExactSepLocalPolygon(a,role);if(exactRhino)return exactRhino;
-  const profile=ANIMAL_SEP_PIECE_PROFILE[a?.type]||{body:[-.07,.29,.34,.16],head:[.27,.16,.24,.16]};
-  const[cx,hx,hy]=profile[role]||profile.body,d=sepHitboxDimensions(a),safeHx=role==="head"?Math.min(hx,Math.max(.08,.48-cx)):hx;
-  return sepPieceBox(cx*d.w,0,safeHx*d.w,hy*d.h);
+  const profile=ANIMAL_SEP_PIECE_PROFILE[a?.type]||{body:[-.20,.26,.18],head:[.15,.50,.19]},bounds=profile[role]||profile.body,d=sepHitboxDimensions(a);
+  let[left,right,halfH]=bounds;
+  if(role==="head"){left=Math.max(.05,left);right=Math.max(left+.05,Math.min(.50,right));}
+  else{left=Math.max(-.32,left);right=Math.min(.34,right);}
+  return [[left*d.w,-halfH*d.h],[right*d.w,-halfH*d.h],[right*d.w,halfH*d.h],[left*d.w,halfH*d.h]];
 }
 function transformAnimalLocalPoly(a,poly){const ang=Number(a?.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),ax=Number(a?.x)||0,ay=Number(a?.y)||0;return poly.map(([lx,ly])=>[ax+lx*ca-ly*sa,ay+lx*sa+ly*ca]);}
 function animalSepHitPolygons(a,mode="bodyHead"){if(!a)return[];const roles=mode==="head"?["head"]:mode==="body"?["body"]:["body","head"],out=[];for(const role of roles){const local=sepLocalPiecePolygon(a,role);if(!local||local.length<3)continue;out.push({role,points:transformAnimalLocalPoly(a,local)});}return out;}
