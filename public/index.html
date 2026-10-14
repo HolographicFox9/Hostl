@@ -18440,6 +18440,8 @@ const ANIMAL_SEP_PIECE_PROFILE = Object.freeze({
   dronebee: {body:[-.07,.28,.31,.16],head:[ .30,.18,.26,.17]}
 });
 function sepHitboxDimensions(a){
+  // Use the exact same stage-dependent dimensions as the visible animal renderer.
+  // The collision system is not allowed to make its own stage size.
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
   if(d)return d;
   const r=Math.max(4,Number(a?.r)||18);
@@ -18463,23 +18465,23 @@ function rhinoExactSepLocalPolygon(a,role){
     else if(role==="head"){
       const headW=w*.38;
       const cx=left+(dx+w-headW*.5)*scale,cy=top+(dy+h*.5)*scale;
-      return sepOctagon(cx,cy,headW*.5*scale,h*.43*scale,.16);
+      return sepOctagon(cx,cy,headW*.5*scale,h*.50*scale,.16);
     }
   }
   if(!part)return null;
   const [sx0,sy0,sx1,sy1]=part.src,[dx,dy]=part.dst,w=sx1-sx0,h=sy1-sy0,cx=left+(dx+w*.5)*scale,cy=top+(dy+h*.5)*scale;
-  // Trim only transparent edge slack; never add the tail region.
-  return sepOctagon(cx,cy,w*.48*scale,h*.46*scale,.14);
+  // Use the full Sep piece bounds at the visible animal scale; the tail is never included.
+  return sepOctagon(cx,cy,w*.50*scale,h*.50*scale,.14);
 }
 function sepLocalPiecePolygon(a,role){
   const exactRhino=rhinoExactSepLocalPolygon(a,role);if(exactRhino)return exactRhino;
   const profile=ANIMAL_SEP_PIECE_PROFILE[a?.type]||{body:[-.07,.29,.34,.16],head:[.31,.18,.28,.17]};
-  let [cx,hx,hy,clip]=profile[role]||profile.body;
-  const sf=animalSleepCollisionScale(a), d=sepHitboxDimensions(a);
-  // Sleeping uses the matching tucked Sep pose dimensions; awake is unscaled.
-  const len=a?.sleeping?sf.len:1, thick=a?.sleeping?sf.radius:1;
-  cx*=len; hx*=len; hy*=thick;
-  // Sep body/head pieces intentionally overlap a little at their puzzle seam.
+  const [cx,hx,hy,clip]=profile[role]||profile.body;
+  const d=sepHitboxDimensions(a);
+  // IMPORTANT: hitbox size is the animal's real rendered stage size. There is
+  // no separate Baby/Adult/Boss/Superboss/BMB/MDB or sleep hitbox scaling.
+  // Only the Sep torso/head proportions choose which part of that visible size
+  // belongs to each invisible polygon; the tail is never included.
   return sepOctagon(cx*d.w,0,hx*d.w,hy*d.h,clip);
 }
 function transformAnimalLocalPoly(a,poly){
