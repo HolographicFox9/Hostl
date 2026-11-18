@@ -1062,54 +1062,8 @@ function consumeReviveAuthorization(userId, token) {
   return {ok:true,method:row.method,runId:row.runId};
 }
 
-// Official HOSTL promo codes. Add future codes here and redeploy.
-// Rewards are applied server-side so each account can only claim a code once.
-const PROMO_CODES = new Map([
-  ["HOSTLSTART", { goldCubits: 150, themes: ["Golden"], label: "+150 Gold Cubits and the Golden theme" }],
-  ["SCCTT", {
-    goldCubits: 14000,
-    speciesCards: { saber: 500 },
-    title: "#1 Tester",
-    testerRank: 1,
-    starterPets: [{ type: "saber", stage: "adult" }],
-    globalOnce: true,
-    label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
-  }],
-  ["SCCTT2", {
-    goldCubits: 14000,
-    speciesCards: { saber: 500 },
-    title: "#1 Tester",
-    testerRank: 1,
-    starterPets: [{ type: "saber", stage: "adult" }],
-    globalOnce: true,
-    label: "+14,000 Gold Cubits, +500 Saber Cards, Adult Saber starter access, and the #1 Tester title"
-  }],
-  ["OVCC", {
-    goldCubits: 10000,
-    speciesCards: { snake: 500 },
-    title: "Owner",
-    ownerRank: 1,
-    starterPets: [{ type: "snake", stage: "adult" }],
-    globalOnce: true,
-    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
-  }],
-  ["OVCC2", {
-    goldCubits: 10000,
-    speciesCards: { snake: 500 },
-    title: "Owner",
-    ownerRank: 1,
-    starterPets: [{ type: "snake", stage: "adult" }],
-    globalOnce: true,
-    label: "+10,000 Gold Cubits, +500 Viper Cards, Adult Viper starter access, and the Owner title"
-  }],
-  ["STC", {
-    speciesCards: { saber: 500 },
-    themes: ["celestialCrown"],
-    starterPets: [{ type: "saber", stage: "adult" }],
-    globalOnce: true,
-    label: "+500 Saber Cards, Adult Saber starter access, and the Celestial Crown theme"
-  }]
-]);
+// Promo / redeem codes temporarily disabled for this clean build.
+const PROMO_CODES = new Map();
 function normalizePromoCode(value) {
   return safeText(value, 32).toUpperCase().replace(/\s+/g, "");
 }
@@ -1574,38 +1528,8 @@ app.post("/api/friends/trade/:id/respond", requireAccount, async (req,res)=>{
 });
 
 app.post("/api/redeem-code", requireAccount, async (req, res) => {
-  const a = accountDb.byId[req.hostlUserId];
-  const code = normalizePromoCode(req.body?.code);
-  if (!code) return res.status(400).json({ ok:false, error:"missing_code" });
-  const reward = PROMO_CODES.get(code);
-  if (!reward) return res.status(404).json({ ok:false, error:"invalid_code" });
-  const redeemed = ensureRedeemedCodes(a);
-  if (redeemed.includes(code)) {
-    const repaired=repairSpecialPromoEntitlements(a);
-    if(repaired){a.updatedAt=new Date().toISOString();await saveAccounts();}
-    return res.status(409).json({ ok:false, error:"already_redeemed", repaired, account:publicAccount(a) });
-  }
-  if (!accountDb.globalCodeClaims || typeof accountDb.globalCodeClaims !== "object") accountDb.globalCodeClaims = {};
-  const existingGlobalClaim = accountDb.globalCodeClaims[code];
-  if (reward.globalOnce && existingGlobalClaim && existingGlobalClaim !== a.userId) return res.status(409).json({ ok:false, error:"code_already_claimed" });
-
-  applyPromoRewardThroughNormalSystems(a,reward);
-  // A newly redeemed OVCC already received these rewards above. Mark the repair
-  // versions now so a later login does not mistake the old broken-code repair for
-  // an unpaid reward and grant the 10,000 Cubits a second time.
-  if(code==="OVCC" || code==="OVCC2"){
-    if(!a.specialRewardRepairs || typeof a.specialRewardRepairs!=="object" || Array.isArray(a.specialRewardRepairs))a.specialRewardRepairs={};
-    a.specialRewardRepairs.ovccGoldCubits10000V1=Date.now();
-    a.specialRewardRepairs.ovccViperCards500V1=Date.now();
-    a.specialRewardRepairs.ovccViperNormalUnlockV4=a.specialRewardRepairs.ovccViperNormalUnlockV4||Date.now();
-  }
-  // Mark/repair special pet rewards idempotently. This also repairs older tester/owner claims.
-  repairSpecialPromoEntitlements(a);
-  if (reward.globalOnce) accountDb.globalCodeClaims[code]=a.userId;
-  redeemed.push(code);
-  a.updatedAt = new Date().toISOString();
-  await saveAccounts();
-  res.json({ ok:true, code, message:`Code redeemed: ${reward.label || "reward added"}.`, account:publicAccount(a) });
+  // Promo codes temporarily disabled in this clean HOSTL Game build.
+  return res.status(403).json({ ok:false, error:"codes_disabled", message:"Promo codes are turned off right now." });
 });
 
 async function rewardTesterKill(accountId) {

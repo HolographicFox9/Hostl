@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const THROW_AXE_RANGE=560, THROW_AXE_SPEED=590, THROW_AXE_RETURN_SPEED=680, THROW_AXE_LIFE=3.0;
 const THROW_AXE_RETURN_AT=THROW_AXE_LIFE-(THROW_AXE_RANGE/THROW_AXE_SPEED);
 const CREATURE_DYNAMIC_KINDS = new Set(["animal","pet"]);
-const CUBE_SHARED_RULES_VERSION = "757";
+const CUBE_SHARED_RULES_VERSION = "756";
 function biomeBaseId(id){return String(id||"forest").replace(/_edge$/g,"")||"forest";}
 let HOSTL_ACCOUNT_HOOKS = { resolveSession: () => null, refreshAccount: () => null, rewardTesterKill: async () => ({ granted:false }), rewardOwnerKill: async () => ({ granted:false }), rewardGameplayMaterial: async () => ({ granted:false }), grantWorldReward: async () => ({ granted:false }), recordAchievement: async () => ({ granted:false }), consumeReviveAuthorization: () => null, onPresenceJoin:()=>{}, onPresenceLeave:()=>{} };
 export function configureHostlAccountHooks(hooks={}) {
@@ -470,7 +470,7 @@ function chooseHostlRole(phaseName){
 
 const PET_TYPES = {
   dog:    { baseSpeed: 78, friendly: true,  flee: false, sizeMul: 1.15, color: "#c9a06a", abilityCd: 14, elem: "Stone", coats:["#c9a06a","#8b6914","#e8d5b7","#5c4033","#d2b48c"] },
-  seal:   { baseSpeed: 64, friendly: true,  flee: false, sizeMul: 1.42, color: "#8f979d", abilityCd: 10, elem: "Stone", coats:["#8f979d","#747d84","#a5afb6","#70675f"] },
+  seal:   { baseSpeed: 64, friendly: true,  flee: false, sizeMul: 1.42, color: "#8f979d", abilityCd: 15, elem: "Stone", coats:["#8f979d","#747d84","#a5afb6","#70675f"] },
   cat:    { baseSpeed: 72, friendly: true,  flee: true,  sizeMul: 1.00, color: "#e8b8a0", abilityCd: 12, elem: "Sound", coats:["#e8b8a0","#f5d0a9","#c4a882","#8b7355","#f0e6d2"] },
   dragon: { baseSpeed: 38, friendly: true,  flee: true,  sizeMul: 1.05, color: "#d4a050", abilityCd: 16, elem: "Fire", coats:["#d4a050","#c4783a","#e8b86d","#a06030"] },
   fox:    { baseSpeed: 92, friendly: true,  flee: false, sizeMul: 1.08, color: "#e07a40", abilityCd: 13, elem: "Lightning", coats:["#e07a40","#d4652a","#f09550","#c85820"] },
@@ -481,7 +481,6 @@ const PET_TYPES = {
   snake:  { baseSpeed: 68, friendly: false, flee: false, sizeMul: 1.10, color: "#5cb85c", abilityCd: 14, elem: "Poison", coats:["#5cb85c","#3a8a40","#7ec850","#2d6a30"] },
   deer:   { baseSpeed: 85, friendly: true,  flee: true,  sizeMul: 1.20, color: "#c9a06a", abilityCd: 15, elem: "Light", coats:["#c9a06a","#a07850","#e8d5b7","#8b6914"] },
   boar:   { baseSpeed: 55, friendly: false, flee: false, sizeMul: 1.40, color: "#6b4423", abilityCd: 16, elem: "Earth", coats:["#6b4423","#8a6040","#5c3a1e","#a07850"] },
-  rhino:  { baseSpeed: 44, friendly: false, flee: false, sizeMul: 1.48, color: "#6b625b", abilityCd: 18, elem: "Earth", coats:["#6b625b","#7b726b","#5b544f","#8a8178"] },
   saber:  { baseSpeed:100, friendly: false, flee: false, sizeMul: 1.45, color: "#d4a060", abilityCd: 11, elem: "Combat", coats:["#d4a060","#c49050","#e8c080","#a07040","#f0d0a0"] },
   clouded:{ baseSpeed:98,friendly:false,flee:false,sizeMul:1.28,color:"#c9ac7c",abilityCd:11,elem:"Wind",coats:["#c9ac7c","#b99669","#d6bc8d","#aa8b60"]},
 
@@ -504,7 +503,6 @@ const ANIMAL_BALANCE = {
   snake:  { hpMul:0.84, damageTaken:1.10, attack:9.0 },
   deer:   { hpMul:1.08, damageTaken:0.94, attack:6.0 },
   boar:   { hpMul:1.62, damageTaken:0.70, attack:9.0 },
-  rhino:  { hpMul:1.08, damageTaken:0.54, attack:10.5 },
   saber:  { hpMul:1.00, babyHpMul:1.78, damageTaken:0.98, attack:12.0 },
   clouded:{ hpMul:0.98, babyHpMul:1.52, damageTaken:0.96, attack:11.1 },
   queenbee:{ hpMul:3.20, damageTaken:0.45, attack:10.5 },
@@ -514,19 +512,14 @@ const ANIMAL_BALANCE = {
 const ANIMAL_STAGE_HP = { baby:28, adult:100, boss:320, superboss:900, bigmomma:5200 };
 const ANIMAL_STAGE_ATTACK = { baby:0.55, adult:1.15, boss:1.80, superboss:2.45, bigmomma:3.00 };
 const ANIMAL_STAGE_DAMAGE_TAKEN = { baby:1.04, adult:1.00, boss:0.96, superboss:0.92, bigmomma:0.58 };
-const BIG_MOMMA_HP_MUL = {bear:1.55,saber:1.45,wolf:1.25,boar:1.35,rhino:1.22,clouded:1.25,dragon:1.35,rabbit:.78,fennec:.88,owl:.90};
-const BIG_MOMMA_DEF_MUL = {bear:.68,saber:.72,boar:.75,rhino:.66,wolf:.82,clouded:.82,rabbit:1.08,fennec:1.02};
+const BIG_MOMMA_HP_MUL = {bear:1.55,saber:1.45,wolf:1.25,boar:1.35,clouded:1.25,dragon:1.35,rabbit:.78,fennec:.88,owl:.90};
+const BIG_MOMMA_DEF_MUL = {bear:.68,saber:.72,boar:.75,wolf:.82,clouded:.82,rabbit:1.08,fennec:1.02};
 const ANIMAL_RESOURCE_STAGE_PERCENT = Object.freeze({ baby:.08, adult:.13, boss:.18, superboss:.24, bigmomma:.34 });
 function animalBalance(type){ return ANIMAL_BALANCE[type]||{hpMul:1,babyHpMul:1,damageTaken:1,attack:7}; }
 function animalDamageTaken(type,stage,raw){raw=Math.max(0,Number(raw)||0);if(raw<=0)return 0;const speciesStage=stage==="bigmomma"?(BIG_MOMMA_DEF_MUL[type]??1):1;return Math.max(.1,raw*animalBalance(type).damageTaken*(ANIMAL_STAGE_DAMAGE_TAKEN[stage]??1)*speciesStage);}
 function queenBeeBiteDot(stage){return ({baby:8,adult:14,boss:22,superboss:32,bigmomma:48})[String(stage||"adult")]||14;}
 function dogWallStats(stage,level=1){const lv=Math.max(1,Number(level)||1),t={baby:{hp:90,base:10,per:1.5},adult:{hp:120,base:15,per:2},boss:{hp:165,base:22,per:2.8},superboss:{hp:220,base:30,per:3.8},bigmomma:{hp:280,base:40,per:5}}[stage]||{hp:120,base:15,per:2};const steps=stage==="superboss"?Math.floor((lv-1)/2):(lv-1);return{hp:t.hp,spikeDmg:t.base+steps*t.per};}
-const SEAL_SPIKE_PRISON_DURATION=10;
-const SEAL_POST_ABILITY_COOLDOWN=10;
-function abilityCooldownActive(o){return !!o&&((Number(o.abilityCd)||0)>0||(Number(o._abilityCooldownDelay)||0)>0);}
-function startDelayedAbilityCooldown(o,activeSeconds,cooldownSeconds){if(!o)return;const active=Math.max(0,Number(activeSeconds)||0),cool=Math.max(0,Number(cooldownSeconds)||0);o._abilityCooldownDelay=active;o._abilityCooldownQueued=cool;o.abilityCd=Math.max(Number(o.abilityCd)||0,cool);}
-function tickAbilityCooldownTimer(o,dt){if(!o||!(dt>0))return;let delay=Math.max(0,Number(o._abilityCooldownDelay)||0);if(delay>0){const queued=Math.max(0,Number(o._abilityCooldownQueued)||0),next=Math.max(0,delay-dt);o._abilityCooldownDelay=next;if(queued>0)o.abilityCd=Math.max(Number(o.abilityCd)||0,queued);if(next<=0){o.abilityCd=Math.max(Number(o.abilityCd)||0,queued);o._abilityCooldownQueued=0;}return;}o.abilityCd=Math.max(0,(Number(o.abilityCd)||0)-dt);}
-function spikePrisonParams(stage,targetR=PLAYER_R){const s=uploadedAnimalStageKey(stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[s]||1;return{duration:SEAL_SPIKE_PRISON_DURATION,count:8,ring:Math.max((targetR||PLAYER_R)+36,68*mul),wallR:clamp(12.5*mul,10,27),spin:1.2+mul*.18};}
+function spikePrisonParams(stage,targetR=PLAYER_R){const s=uploadedAnimalStageKey(stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[s]||1;return{duration:10,count:8,ring:Math.max((targetR||PLAYER_R)+36,68*mul),wallR:clamp(12.5*mul,10,27),spin:1.2+mul*.18};}
 const PET_ABILITY_DAMAGE_TABLE={
 cat:{baby:{damage:15,per:2},adult:{damage:19,per:2},boss:{damage:30,per:2},superboss:{damage:35,per:2},bigmomma:{damage:50,per:2}},
 dragon:{baby:{damage:11,per:3},adult:{damage:20,per:3},boss:{damage:35,per:3},superboss:{damage:40,per:3},bigmomma:{damage:48,per:3}},
@@ -544,7 +537,6 @@ fennec:{baby:{damage:15,per:0},adult:{damage:20,per:0},boss:{damage:25,per:0},su
 
 deer:{baby:{damage:16,per:2},adult:{damage:24,per:2},boss:{damage:34,per:2},superboss:{damage:40,per:2},bigmomma:{damage:60,per:2}},
 boar:{baby:{damage:20,per:1},adult:{damage:25,per:1},boss:{damage:30,per:1},superboss:{damage:49,per:1},bigmomma:{damage:57,per:1}},
-rhino:{baby:{damage:14,per:1,spike:7},adult:{damage:22,per:1,spike:10},boss:{damage:30,per:1,spike:14},superboss:{damage:40,per:1,spike:18},bigmomma:{damage:56,per:1,spike:24}},
 saber:{baby:{damage:34,per:1},adult:{damage:38,per:1},boss:{damage:47,per:1},superboss:{damage:50,per:1},bigmomma:{damage:65,per:1}}};
 function petStoneFruitStrengthMul(p){return 1+Math.max(0,Math.floor(Number(p?.stoneFruitStacks)||0))*.20;}
 function petStoneFruitMoveMul(p){return Math.max(.50,1-Math.max(0,Math.floor(Number(p?.stoneFruitStacks)||0))*.10);}
@@ -559,17 +551,17 @@ function towerDamageForTool(toolName,tower){const t=TOOL[toolName]||TOOL.Fist;co
 
 // Keep online wildlife/card rarity in sync with the browser game.
 // Bearded Dragon remains a starter species and is not part of normal wild rarity spawning.
-const ANIMAL_RARITY={dog:"Common",seal:"Common",cat:"Common",rabbit:"Common",wolf:"Uncommon",bear:"Uncommon",fox:"Uncommon",boar:"Rare",rhino:"Rare",deer:"Rare",owl:"Rare",snake:"Legendary",saber:"Legendary",clouded:"Rare",fennec:"Common",queenbee:"Rare",workerbee:"Uncommon",dronebee:"Common",dragon:"Starter"};
+const ANIMAL_RARITY={dog:"Common",seal:"Common",cat:"Common",rabbit:"Common",wolf:"Uncommon",bear:"Uncommon",fox:"Uncommon",boar:"Rare",deer:"Rare",owl:"Rare",snake:"Legendary",saber:"Legendary",clouded:"Rare",fennec:"Common",queenbee:"Rare",workerbee:"Uncommon",dronebee:"Common",dragon:"Starter"};
 const RARITY_WILD_WEIGHT={Common:5.0,Uncommon:2.5,Rare:1.15,Legendary:.32,Starter:.45};
 const RARITY_CARD_WEIGHT={Common:2.4,Uncommon:1.5,Rare:.82,Legendary:.28,Starter:.55};
 const RARITY_TAME_CHANCE={Common:.50,Uncommon:.40,Rare:.28,Legendary:.18,Starter:.42};
 function animalRarity(type){return ANIMAL_RARITY[type]||"Common";}
 function randomWildSpecies(speciesList=WILD_SPECIES){return weighted((speciesList&&speciesList.length?speciesList:WILD_SPECIES).map(v=>({v,w:RARITY_WILD_WEIGHT[animalRarity(v)]||1})));}
-const WILD_SPECIES = ["fox","wolf","bear","cat","dog","seal","rabbit","owl","snake","deer","boar","rhino","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
+const WILD_SPECIES = ["fox","wolf","bear","cat","dog","seal","rabbit","owl","snake","deer","boar","saber","clouded","fennec","queenbee","workerbee","dronebee","dragon"];
 const WILD_PREY = {
   fox:new Set(["rabbit"]), wolf:new Set(["rabbit","deer","boar"]), bear:new Set(["rabbit","deer","boar"]),
   cat:new Set(["rabbit","snake"]), dog:new Set(["rabbit"]), rabbit:new Set(), owl:new Set(["rabbit","snake"]),
-  snake:new Set(["rabbit"]), deer:new Set(), boar:new Set(), rhino:new Set(), saber:new Set(["rabbit","deer","boar","rhino","wolf"]), clouded:new Set(["rabbit","deer","boar","rhino","fox"]),
+  snake:new Set(["rabbit"]), deer:new Set(), boar:new Set(), saber:new Set(["rabbit","deer","boar","wolf"]), clouded:new Set(["rabbit","deer","boar","fox"]),
   fennec:new Set(), queenbee:new Set(), workerbee:new Set(), dronebee:new Set(), dragon:new Set(["rabbit","snake"]),
 };
 function wildCanPreyOn(predatorType,preyType){return !!predatorType&&!!preyType&&predatorType!==preyType&&!!WILD_PREY[predatorType]?.has(preyType);}
@@ -880,7 +872,7 @@ function preciseWeaponShape(p,poseKey,angle,attackT){
 }
 function precisePointSegmentDistance(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,wx=px-ax,wy=py-ay,d=vx*vx+vy*vy,t=d>1e-8?clamp((wx*vx+wy*vy)/d,0,1):0,qx=ax+vx*t,qy=ay+vy*t;return Math.hypot(px-qx,py-qy);}
 function preciseShapeTouchesCircle(shape,x,y,r=0){if(!shape)return false;for(const c of shape.circles||[])if(dist(c.x,c.y,x,y)<=Math.max(0,r)+(c.r||0))return true;for(const s of shape.segments||[])if(precisePointSegmentDistance(x,y,s.ax,s.ay,s.bx,s.by)<=Math.max(0,r)+(s.r||0))return true;return false;}
-function legacyCircle_preciseShapeTouchesAnimal(shape,a){for(const h of animalTargetDamageCircles({kind:"animal"},a))if(preciseShapeTouchesCircle(shape,h.x,h.y,h.r))return true;return false;}
+function preciseShapeTouchesAnimal(shape,a){for(const h of animalTargetDamageCircles({kind:"animal"},a))if(preciseShapeTouchesCircle(shape,h.x,h.y,h.r))return true;return false;}
 function preciseShapeTouchesResource(shape,r){
   if(!shape||!r)return false;
   if(r.type==="rock"){
@@ -907,7 +899,7 @@ function segmentCircleT(x0,y0,x1,y1,cx,cy,r){
   const qx=x0+dx*t,qy=y0+dy*t;
   return dist(qx,qy,cx,cy)<=r?t:null;
 }
-function legacyCircle_animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){
+function animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){
   let best=null;
   // Every animal damage test uses torso/body circles AND the explicit head.
   for(const h of animalTargetDamageCircles({kind:"animal"},a)){
@@ -931,14 +923,14 @@ function animalRadius(type, stage) {
   const mul=(PET_TYPES[type]?.sizeMul)||1,dietMul=animalDietSizeMultiplier(type); let base=22;
   if(stage==="adult") base=45; else if(stage==="boss") base=68; else if(stage==="superboss") base=96; else if(stage==="bigmomma") base=140;
   let extra=1;
-  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.16:(type==="rhino"?1.24:1.08);
+  if(["boss","superboss","bigmomma"].includes(stage)) extra=(type==="bear"||type==="saber"||type==="clouded")?1.28:(type==="wolf"||type==="boar")?1.16:1.08;
   return base*mul*dietMul*extra;
 }
 function uploadedAnimalVisibleDimensions(type,stage){
-  const speciesHeight={dog:1.06,seal:1.00,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,rhino:.98,saber:1.10,clouded:1.02,fennec:.92}[type];
+  const speciesHeight={dog:1.06,seal:1.00,cat:1.02,dragon:1.00,fox:1.06,wolf:1.10,bear:1.18,rabbit:.98,owl:1.48,snake:.68,deer:.98,boar:.92,saber:1.10,clouded:1.02,fennec:.92}[type];
   if(!speciesHeight)return null;
   const stageScale={baby:1.78,adult:1.52,boss:1.43,superboss:1.40,bigmomma:1.38}[stage]||1.45;
-  const lengthMul={dog:1.62,seal:1.92,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,rhino:1.72,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
+  const lengthMul={dog:1.62,seal:1.92,cat:1.58,dragon:1.92,fox:1.70,wolf:1.72,bear:1.42,rabbit:1.42,owl:1.05,snake:3.70,deer:1.78,boar:1.58,saber:1.66,clouded:1.64,fennec:1.73}[type]||1.55;
   const h=animalRadius(type,stage)*speciesHeight*stageScale;
   return{h,w:h*lengthMul};
 }
@@ -957,7 +949,7 @@ function petUpgradeMultiplier(p,stat){
 const ANIMAL_SLEEP_COLLISION_SCALE = Object.freeze({
   snake:{len:.50,radius:.76},seal:{len:.90,radius:.80},rabbit:{len:.72,radius:.84},cat:{len:.76,radius:.86},dog:{len:.82,radius:.90},
   fox:{len:.76,radius:.86},wolf:{len:.79,radius:.89},bear:{len:.72,radius:.88},deer:{len:.78,radius:.86},
-  boar:{len:.80,radius:.89},rhino:{len:.84,radius:.92},saber:{len:.80,radius:.88},clouded:{len:.78,radius:.87},fennec:{len:.76,radius:.85},
+  boar:{len:.80,radius:.89},saber:{len:.80,radius:.88},clouded:{len:.78,radius:.87},fennec:{len:.76,radius:.85},
   owl:{len:.86,radius:.90},dragon:{len:.82,radius:.90}
 });
 function animalSleepCollisionScale(a){
@@ -969,7 +961,7 @@ function animalWeight(aOrType,stageMaybe=null){
   const type=typeof aOrType==="string"?aOrType:(aOrType?.type||"dog");
   const stage=stageMaybe||(typeof aOrType==="object"?aOrType?.stage:null)||"adult";
   const stageMass={baby:.78,adult:1.35,boss:2.10,superboss:3.25,bigmomma:5.10}[stage]||1.35;
-  const speciesMass={rabbit:.58,cat:.72,fox:.82,dragon:.88,dog:1,owl:.72,deer:1.05,snake:.78,wolf:1.28,boar:1.42,rhino:2.00,saber:1.38,clouded:1.30,bear:1.75}[type]||1;
+  const speciesMass={rabbit:.58,cat:.72,fox:.82,dragon:.88,dog:1,owl:.72,deer:1.05,snake:.78,wolf:1.28,boar:1.42,saber:1.38,clouded:1.30,bear:1.75}[type]||1;
   const d=uploadedAnimalVisibleDimensions(type,stage);
   let sizeMass=1;
   if(d){
@@ -1008,7 +1000,6 @@ function animalHitboxFit(type,stage){
     rabbit:{len:1.02,body:1.00,head:1.08},
     snake:{len:.84,body:.74,head:.82},
     boar:{len:1.03,body:1.04,head:1.06},
-    rhino:{len:1.02,body:1.08,head:1.12},
     saber:{len:.88,body:.88,head:.90},
     clouded:{len:.92,body:.90,head:.93},
     deer:{len:.82,body:.74,head:.78},
@@ -1050,32 +1041,17 @@ function copiedBeeTorsoHeadCircles(a){
   return pair.map(([forward,rad])=>({x:(Number(a.x)||0)+ca*forward*r,y:(Number(a.y)||0)+sa*forward*r,r:rad*r}));
 }
 
-const RHINO_REF_COLLISION_PROFILES=Object.freeze({
-  awake:[[-.338,.238],[-.204,.381],[-.069,.450],[.066,.450],[.200,.381],[.335,.349],[.470,.206]],
-  bigmommaAwake:[[-.343,.238],[-.208,.397],[-.072,.450],[.064,.450],[.199,.397],[.335,.365],[.471,.206]],
-  sleep:{
-    baby:[[-.371,.270],[-.231,.413],[-.091,.450],[.048,.450],[.188,.450],[.328,.413],[.468,.317]],
-    adult:[[-.372,.294],[-.232,.450],[-.092,.450],[.048,.450],[.188,.450],[.328,.431],[.468,.314]],
-    boss:[[-.362,.314],[-.223,.450],[-.085,.450],[.053,.450],[.191,.450],[.330,.450],[.468,.353]],
-    superboss:[[-.371,.302],[-.231,.450],[-.091,.450],[.048,.450],[.188,.450],[.328,.450],[.468,.377]],
-    bigmomma:[[-.351,.291],[-.215,.450],[-.078,.450],[.059,.450],[.195,.450],[.332,.436],[.468,.345]]
-  }
-});
-const RHINO_REF_COLLISION_DIMS=Object.freeze({baby:{awake:[99,63],sleep:[93,63]},adult:{awake:[99,63],sleep:[94,51]},boss:{awake:[99,63],sleep:[94,51]},superboss:{awake:[99,63],sleep:[93,53]},bigmomma:{awake:[102,63],sleep:[94,55]}});
-function rhinoRefCollisionSpec(a,dims){if(!a||a.type!=="rhino"||!dims)return null;const stage=["baby","adult","boss","superboss","bigmomma"].includes(a.stage)?a.stage:"adult",state=a.sleeping?"sleep":"awake",ref=RHINO_REF_COLLISION_DIMS[stage][state],scale=Math.min(dims.w/ref[0],dims.h/ref[1]);return{cfg:a.sleeping?RHINO_REF_COLLISION_PROFILES.sleep[stage]:(stage==="bigmomma"?RHINO_REF_COLLISION_PROFILES.bigmommaAwake:RHINO_REF_COLLISION_PROFILES.awake),w:ref[0]*scale,h:ref[1]*scale};}
-
 function animalHitCircles(a) {
   const beeCopy=copiedBeeTorsoHeadCircles(a); if(beeCopy)return beeCopy;
   const ang=a?.angle||0,ca=Math.cos(ang),sa=Math.sin(ang);
   // 739: body/head copies keep the renderer's exact scale; no extra fit/enlargement.
   const fit={len:1,body:1,head:1};
   const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);
-  const rhinoRef=a?.type==="rhino"?rhinoRefCollisionSpec(a,d):null;
-  const sleepFit=rhinoRef?{len:1,radius:1}:animalSleepCollisionScale(a);
+  const sleepFit=animalSleepCollisionScale(a);
 
   if(d){
     // Per-species Ref-silhouette copies. These stay inside the art instead of using oversized generic bubbles.
-    const cfg=rhinoRef?.cfg||({
+    const cfg={
       dog:[[-.40,.105],[-.27,.165],[-.11,.215],[.08,.225],[.27,.175],[.41,.120]],
       seal:[[-.40,.125],[-.27,.185],[-.10,.235],[.09,.245],[.28,.190],[.41,.135]],
       cat:[[-.40,.100],[-.27,.155],[-.10,.205],[.09,.215],[.28,.165],[.41,.110]],
@@ -1088,21 +1064,15 @@ function animalHitCircles(a) {
       bear:[[-.37,.145],[-.24,.215],[-.07,.275],[.11,.285],[.29,.225],[.41,.155]],
       deer:[[-.40,.075],[-.26,.115],[-.09,.155],[.10,.165],[.28,.125],[.41,.085]],
       boar:[[-.38,.135],[-.24,.205],[-.07,.255],[.11,.265],[.29,.210],[.41,.145]],
-      rhino:[[-.338,.238],[-.204,.381],[-.069,.450],[.066,.450],[.200,.381],[.335,.349],[.470,.206]],
       saber:[[-.40,.105],[-.27,.160],[-.10,.210],[.09,.220],[.28,.170],[.41,.115]],
       clouded:[[-.40,.095],[-.27,.150],[-.10,.200],[.09,.210],[.28,.160],[.41,.105]],
       fennec:[[-.40,.080],[-.26,.125],[-.08,.165],[.10,.175],[.27,.135],[.40,.090]]
-    }[a.type]);
+    }[a.type];
 
-    if(!cfg){
-      const r=Math.max(4,Number(a?.r)||18),generic=[[-.22,.30],[.08,.34],[.37,.27],[.61,.19]];
-      return generic.map(([f,rad])=>({x:a.x+ca*f*r,y:a.y+sa*f*r,r:r*rad}));
-    }
     return cfg.map(([xf,rf],i)=>{
       const headish=i>=cfg.length-2;
-      const collisionW=rhinoRef?.w||d.w,collisionH=rhinoRef?.h||d.h;
-      const forward=collisionW*xf*(headish?fit.head:fit.len)*sleepFit.len;
-      const rr=collisionH*rf*sleepFit.radius;
+      const forward=d.w*xf*(headish?fit.head:fit.len)*sleepFit.len;
+      const rr=d.h*rf*sleepFit.radius;
       return{x:a.x+ca*forward,y:a.y+sa*forward,r:rr};
     });
   }
@@ -1122,13 +1092,13 @@ function animalPhysicalCircles(a){
   // Already includes the copied visible torso+head hitboxes; do not add any extra hidden head hitbox.
   return animalPhysicalCirclesBase(a).map(h=>({...h}));
 }
-function legacyCircle_animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
+function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){
   for(const h of animalTargetDamageCircles({kind:"animal"},a)){
     if(dist(px,py,h.x,h.y)<range+h.r&&facing(px,py,angle,h.x,h.y,maxFacing))return true;
   }
   return false;
 }
-function legacyCircle_animalProjectileTouch(a,x,y,radius=0){
+function animalProjectileTouch(a,x,y,radius=0){
   for(const h of animalTargetDamageCircles({kind:"animal"},a))if(dist(x,y,h.x,h.y)<radius+h.r)return true;
   return false;
 }
@@ -1144,15 +1114,16 @@ function animalTorsoHeadCopyPartCount(a){
   const hits=animalHitCircles(a),total=hits.length;
   if(!total)return 0;
   if(a.type==="snake")return total;
-  if(a.type==="rhino")return total<=2?total:total-1; // Cut at the Rhino torso seam; the separated tail is never physical.
   if(["queenbee","workerbee","dronebee"].includes(a.type))return total;
   return total<=2?total:total-1;
 }
 function expandCopiedAnimalCrossSection(a,h){
   const ang=Number(a?.angle)||0,sa=Math.sin(ang),ca=Math.cos(ang),type=String(a?.type||""),stage=String(a?.stage||"");
   let sizeMul=1;
+  if(stage==="baby"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.93;
+  if(stage==="bigmomma"&&!["queenbee","workerbee","dronebee"].includes(type))sizeMul*=0.94;
   if(["queenbee","workerbee","dronebee"].includes(type))sizeMul*=1.07;
-  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.92,side=sourceR*.08;
+  const sourceR=Math.max(1,Number(h?.r)||1)*sizeMul,rr=sourceR*.74,side=sourceR*.26;
   return[
     {x:h.x-sa*side,y:h.y+ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y},
     {x:h.x+sa*side,y:h.y-ca*side,r:rr,_copyCenterX:h.x,_copyCenterY:h.y}
@@ -1204,7 +1175,7 @@ function animalTargetDamageCircles(ref,target){
   const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(2,(target.r||16)*.78);
   return[{x:target.x,y:target.y,r:rr}];
 }
-function legacyCircle_animalAttackContact(a,ref,target,extraGrace=0){
+function animalAttackContact(a,ref,target,extraGrace=0){
   if(!a||!target)return false;
   if(ref?.kind==="player"&&(target.dead||target.health<=0))return false;
   if(ref?.kind==="pet"&&(target.dead||target.hp<=0))return false;
@@ -1216,10 +1187,10 @@ function legacyCircle_animalAttackContact(a,ref,target,extraGrace=0){
   }
   return false;
 }
-function legacyCircle_petAttackContact(a,ref,target){
+function petAttackContact(a,ref,target){
   return animalAttackContact(a,ref,target);
 }
-function legacyCircle_animalTargetOverlap(a,ref,target){
+function animalTargetOverlap(a,ref,target){
   if(!a||!target)return 0;
   const source=animalPhysicalCircles(a);
   const targets=(ref?.kind==="animal"||ref?.kind==="pet")
@@ -1234,69 +1205,6 @@ function legacyCircle_animalTargetOverlap(a,ref,target){
   }
   return Math.max(0,deepest);
 }
-
-// ---------- SEP TORSO + HEAD POLYGON HITBOXES ----------
-// Server-authoritative copy of the browser's invisible Sep geometry. Rhino uses the same Sep alpha hull. Broad-phase
-// radii may find nearby candidates, but final animal contact uses these polygons.
-const ANIMAL_SEP_PIECE_PROFILE=Object.freeze({
-  // Sep source orientation: LEFT=tail, MIDDLE=torso, RIGHT=head. Bounds are [left,right,halfHeight].
-  dog:{body:[-.20,.26,.17],head:[.15,.50,.19]},seal:{body:[-.19,.28,.18],head:[.18,.50,.19]},
-  cat:{body:[-.20,.26,.17],head:[.16,.50,.19]},dragon:{body:[-.21,.29,.16],head:[.19,.50,.19]},
-  fox:{body:[-.20,.27,.17],head:[.16,.50,.19]},wolf:{body:[-.21,.27,.18],head:[.15,.50,.19]},
-  bear:{body:[-.22,.28,.22],head:[.14,.50,.21]},rabbit:{body:[-.18,.25,.18],head:[.13,.50,.21]},
-  owl:{body:[-.17,.23,.23],head:[.11,.49,.23]},snake:{body:[-.29,.30,.14],head:[.24,.50,.17]},
-  deer:{body:[-.19,.26,.16],head:[.17,.50,.18]},boar:{body:[-.21,.28,.20],head:[.14,.50,.20]},
-  rhino:{body:[-.20,.29,.21],head:[.14,.50,.21]},saber:{body:[-.21,.27,.18],head:[.15,.50,.19]},
-  clouded:{body:[-.20,.27,.17],head:[.16,.50,.19]},fennec:{body:[-.19,.26,.17],head:[.16,.50,.19]},
-  queenbee:{body:[-.20,.24,.18],head:[.15,.48,.19]},workerbee:{body:[-.19,.24,.18],head:[.15,.47,.18]},dronebee:{body:[-.19,.23,.18],head:[.15,.46,.18]}
-});
-const ANIMAL_SEP_EXACT_X=Object.freeze({"rabbit":{"baby":{"awake":{"body":[-0.44594594594594594,0.2567567567567568],"head":[-0.25675675675675674,0.5]},"sleep":{"body":[-0.44594594594594594,0.2567567567567568],"head":[-0.25675675675675674,0.5]}},"adult":{"awake":{"body":[-0.44029850746268656,0.33582089552238803],"head":[-0.35074626865671643,0.5]},"sleep":{"body":[-0.44666666666666666,0.2466666666666667],"head":[-0.26,0.5]}},"boss":{"awake":{"body":[-0.3888888888888889,0.33333333333333337],"head":[-0.2777777777777778,0.5]},"sleep":{"body":[-0.3888888888888889,0.33333333333333337],"head":[-0.2777777777777778,0.5]}},"bigmomma":{"awake":{"body":[-0.44594594594594594,0.2567567567567568],"head":[-0.25675675675675674,0.5]},"sleep":{"body":[-0.44594594594594594,0.2567567567567568],"head":[-0.25675675675675674,0.5]}},"superboss":{"awake":{"body":[-0.4393939393939394,0.3484848484848485],"head":[-0.3484848484848485,0.5]},"sleep":{"body":[-0.44666666666666666,0.2466666666666667],"head":[-0.26,0.5]}}},"boar":{"baby":{"awake":{"body":[-0.3489937102644476,0.34132075709807774],"head":[0.006949686969354496,0.5]},"sleep":{"body":[-0.3757602344201075,0.34708931077199434],"head":[-0.014335461824056595,0.5]}},"adult":{"awake":{"body":[-0.35397564856194175,0.31356424372632463],"head":[0.021515540850208126,0.5]},"sleep":{"body":[-0.3905533894247213,0.2989602571995348],"head":[-0.007490252411245679,0.5]}},"boss":{"awake":{"body":[-0.3506917186055076,0.33186042491217216],"head":[0.011914107638259841,0.5]},"sleep":{"body":[-0.379332987860021,0.3227296282271295],"head":[-0.006362223063722361,0.5]}},"superboss":{"awake":{"body":[-0.3491705511534305,0.34033550071660157],"head":[0.00635600684205484,0.5]},"sleep":{"body":[-0.3678253099992136,0.3371063700049808],"head":[-0.0043449124970508235,0.5]}},"bigmomma":{"awake":{"body":[-0.3540616822893636,0.3130849129592601],"head":[0.021208277537987263,0.5]},"sleep":{"body":[-0.3540616822893636,0.3130849129592601],"head":[0.021208277537987263,0.5]}}},"fennec":{"superboss":{"sleep":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]},"awake":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]}},"boss":{"sleep":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]},"awake":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]}},"baby":{"sleep":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]},"awake":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]}},"adult":{"sleep":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]},"awake":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]}},"bigmomma":{"sleep":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]},"awake":{"body":[-0.18627450980392157,0.2549019607843137],"head":[-0.10784313725490197,0.5]}}},"saber":{"baby":{"awake":{"body":[-0.10717166176237103,0.27002171773943195],"head":[0.09021969227743254,0.5]},"sleep":{"body":[-0.10717166176237103,0.27002171773943195],"head":[0.09021969227743254,0.5]}},"adult":{"awake":{"body":[-0.11971537758252043,0.2454335384700843],"head":[0.071372915274024,0.5]},"sleep":{"body":[-0.11971537758252043,0.2454335384700843],"head":[0.071372915274024,0.5]}},"boss":{"awake":{"body":[-0.12510371198057374,0.23487133074454702],"head":[0.06327700986003348,0.5]},"sleep":{"body":[-0.12510371198057374,0.23487133074454702],"head":[0.06327700986003348,0.5]}},"superboss":{"awake":{"body":[-0.13096034839693216,0.22339115786870012],"head":[0.05447748648819151,0.5]},"sleep":{"body":[-0.13096034839693216,0.22339115786870012],"head":[0.05447748648819151,0.5]}},"bigmomma":{"awake":{"body":[-0.13649766038320021,0.21253692442298078],"head":[0.046157744100863374,0.5]},"sleep":{"body":[-0.13649766038320021,0.21253692442298078],"head":[0.046157744100863374,0.5]}}},"clouded":{"baby":{"awake":{"body":[-0.10573559381397968,0.2708751822443084],"head":[0.11003099663608118,0.5003723739048276]},"sleep":{"body":[-0.5,0.13237388486540558],"head":[-0.14651921307523486,0.4988264437874098]}},"adult":{"awake":{"body":[-0.10566124488154183,0.27690620411397726],"head":[0.11014603403900747,0.5005610204498192]},"sleep":{"body":[-0.5,0.12588799886678603],"head":[-0.14651921307523486,0.4988264437874098]}},"boss":{"awake":{"body":[-0.10566124488154183,0.2710205510525078],"head":[0.11014603403900747,0.5005610204498192]},"sleep":{"body":[-0.5,0.13237380283531763],"head":[-0.14651925892795065,0.4988263142219377]}},"superboss":{"awake":{"body":[-0.1065956598059572,0.27697357188323446],"head":[0.10780970559979608,0.4992470240928687]},"sleep":{"body":[-0.5,0.12588816124435642],"head":[-0.14651912136976764,0.4988267029184549]}},"bigmomma":{"awake":{"body":[-0.10566121393565803,0.27102061155863877],"head":[0.11210796642823229,0.500561098969226]},"sleep":{"body":[-0.5,0.12588816124435642],"head":[-0.14327617752912325,0.4988267029184549]}}},"deer":{"adult":{"awake":{"body":[-0.3973383601034966,0.33269996804941626],"head":[-0.3174904179617718,0.5]},"sleep":{"body":[-0.4069087334386273,0.32618499073218254],"head":[-0.33709028351759784,0.5]}},"boss":{"awake":{"body":[-0.3344826787157759,0.32758660642112036],"head":[-0.5,0.5]},"sleep":{"body":[-0.34471237885624456,0.31784813802377854],"head":[-0.5,0.5]}},"superboss":{"awake":{"body":[-0.11290303282555886,0.4501471012463555],"head":[-0.5,0.5]},"sleep":{"body":[-0.14244171494720953,0.41569804708641456],"head":[-0.5,0.5]}},"bigmomma":{"awake":{"body":[-0.192622797850924,0.3606561660174128],"head":[-0.5,0.5]},"sleep":{"body":[-0.1931550429705678,0.3591658796824102],"head":[-0.5,0.5]}}},"fox":{"baby":{"awake":{"body":[-0.20663265306122447,0.31887755102040816],"head":[0.012755102040816313,0.5]},"sleep":{"body":[-0.25271739130434784,0.3070652173913043],"head":[-0.019021739130434756,0.5]}},"adult":{"awake":{"body":[-0.20812182741116753,0.31472081218274117],"head":[0.010152284263959421,0.5]},"sleep":{"body":[-0.254054054054054,0.3027027027027027],"head":[-0.021621621621621623,0.5]}},"boss":{"awake":{"body":[-0.2117794486215539,0.30451127819548873],"head":[0.003759398496240629,0.5]},"sleep":{"body":[-0.2579787234042553,0.29255319148936165],"head":[-0.026595744680851074,0.5]}},"superboss":{"awake":{"body":[-0.2095959595959596,0.31313131313131315],"head":[0.010101010101010055,0.5]},"sleep":{"body":[-0.2553763440860215,0.30107526881720426],"head":[-0.021505376344086002,0.5]}},"bigmomma":{"awake":{"body":[-0.2088607594936709,0.31265822784810127],"head":[0.008860759493670933,0.5]},"sleep":{"body":[-0.2553763440860215,0.30107526881720426],"head":[-0.021505376344086002,0.5]}}},"bear":{"baby":{"awake":{"body":[-0.4050632911392405,0.32594936708860756],"head":[-0.028481012658227833,0.5]},"sleep":{"body":[-0.39655172413793105,0.3275862068965517],"head":[-0.023510971786833867,0.5]}},"adult":{"awake":{"body":[-0.4050632911392405,0.32594936708860756],"head":[-0.028481012658227833,0.5]},"sleep":{"body":[-0.39655172413793105,0.3275862068965517],"head":[-0.023510971786833867,0.5]}},"boss":{"awake":{"body":[-0.4059561128526646,0.31818181818181823],"head":[-0.0329153605015674,0.5]},"sleep":{"body":[-0.39751552795031053,0.3198757763975155],"head":[-0.02795031055900621,0.5]}},"superboss":{"awake":{"body":[-0.4059561128526646,0.31818181818181823],"head":[-0.0329153605015674,0.5]},"sleep":{"body":[-0.4059561128526646,0.31818181818181823],"head":[-0.0329153605015674,0.5]}},"bigmomma":{"awake":{"body":[-0.40740740740740744,0.3055555555555556],"head":[-0.04012345679012347,0.5]},"sleep":{"body":[-0.4046153846153846,0.3061538461538461],"head":[-0.038461538461538436,0.5]}}},"owl":{"baby":{"awake":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]},"sleep":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]}},"adult":{"awake":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]},"sleep":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]}},"boss":{"awake":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]},"sleep":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]}},"superboss":{"awake":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]},"sleep":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]}},"bigmomma":{"awake":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]},"sleep":{"body":[-0.2516914468256545,0.24492565952303658],"head":[0.10525209836246718,0.4932342126973821]}}},"seal":{"baby":{"awake":{"body":[-0.27496650215646384,0.33583870627599144],"head":[0.11080520843245523,0.49904981460207254]},"sleep":{"body":[-0.3146784547642463,0.5012511263431694],"head":null}},"adult":{"awake":{"body":[-0.27496650215646384,0.33583870627599144],"head":[0.11080520843245523,0.49904981460207254]},"sleep":{"body":[-0.312544289621435,0.5194509180861686],"head":null}},"boss":{"awake":{"body":[-0.27496650215646384,0.33583870627599144],"head":[0.11080520843245523,0.49904981460207254]},"sleep":{"body":[-0.29839731626507415,0.5008133228269536],"head":null}},"superboss":{"awake":{"body":[-0.2979573487963309,0.34184438001528783],"head":[0.12296484121131301,0.5005921773895994]},"sleep":{"body":[-0.3131954104101685,0.49952585598715016],"head":null}},"bigmomma":{"awake":{"body":[-0.3316311239969424,0.34184438001528783],"head":[0.12296484121131301,0.5005921773895994]},"sleep":{"body":[-0.3399737632278158,0.5001639798261512],"head":null}}},"snake":{"baby":{"awake":{"body":[-0.5,0.20999999999999996],"head":[0.242,0.5]},"sleep":{"body":[-0.5,0.05500000000000005],"head":[0.07399999999999995,0.5]}},"adult":{"awake":{"body":[-0.5,0.20599999999999996],"head":[0.268,0.5]},"sleep":{"body":[-0.5,0.027000000000000024],"head":[0.11599999999999999,0.5]}},"boss":{"awake":{"body":[-0.5,0.21099999999999997],"head":[0.242,0.5]},"sleep":{"body":[-0.5,0.007000000000000006],"head":[0.128,0.5]}},"superboss":{"awake":{"body":[-0.5,0.242],"head":[0.248,0.5]},"sleep":{"body":[-0.5,0.0030000000000000027],"head":[0.14300000000000002,0.5]}},"bigmomma":{"awake":{"body":[-0.5,0.248],"head":[0.248,0.5]},"sleep":{"body":[-0.5,0.014000000000000012],"head":[0.16100000000000003,0.5]}}},"wolf":{"baby":{"awake":{"body":[-0.23100947007858152,0.29286721740882526],"head":[-0.013802135804956706,0.5]},"sleep":{"body":[-0.35637663885578064,0.2634088200238379],"head":[-0.11978545887961861,0.5]}},"adult":{"awake":{"body":[-0.23034725717161547,0.2930548565676899],"head":[-0.013336688475088121,0.5]},"sleep":{"body":[-0.349938195302843,0.29283065512979],"head":[-0.142768850432633,0.5]}},"boss":{"awake":{"body":[-0.22587741737439881,0.3062007571881715],"head":[-0.021845901974828663,0.5]},"sleep":{"body":[-0.3533884900839518,0.2792918846575009],"head":[-0.12051344445796319,0.5]}},"superboss":{"awake":{"body":[-0.22520956859537927,0.3063790635861787],"head":[-0.021365773870374194,0.5]},"sleep":{"body":[-0.35787671232876717,0.27813111545988245],"head":[-0.12377690802348329,0.5]}},"bigmomma":{"awake":{"body":[-0.22193293063945013,0.3196209123099354],"head":[-0.03113934596958967,0.5]},"sleep":{"body":[-0.33227410886985353,0.3861563967946947],"head":[-0.20461453440176847,0.5]}}}});
-function sepHitboxDimensions(a){/* Exactly the visible animal stage size; collision adds no size multiplier. */const d=uploadedAnimalVisibleDimensions(a?.type,a?.stage);if(d)return d;const r=Math.max(4,Number(a?.r)||18);if(["queenbee","workerbee","dronebee"].includes(a?.type))return{w:r*2.35,h:r*1.58};return{w:r*2.20,h:r*1.42};}
-function sepPieceBox(cx,cy,hx,hy){return [[cx-hx,cy-hy],[cx+hx,cy-hy],[cx+hx,cy+hy],[cx-hx,cy+hy]];}
-const RHINO_SEP_ALPHA_HULLS=Object.freeze({"baby":{"awake":{"body":[[20.0,-17.25],[24.0,-12.75],[26.75,-7.5],[28.0,-1.5],[27.75,3.0],[26.5,7.5],[23.5,12.75],[19.5,17.0],[14.0,20.75],[7.25,23.5],[1.0,24.75],[-5.5,25.0],[-12.75,24.0],[-24.25,19.0],[-29.0,15.0],[-32.25,10.75],[-35.25,2.25],[-35.25,-2.75],[-34.0,-7.75],[-30.25,-14.25],[-21.25,-21.5],[-11.25,-25.0],[0.5,-25.5],[11.25,-22.75]],"head":[[7.25,-31.5],[34.0,-19.75],[41.5,-14.25],[45.5,-10.25],[48.75,-5.25],[49.25,3.5],[43.75,11.25],[31.0,20.5],[8.25,31.25],[0.75,31.25],[-5.25,27.5],[-6.25,-27.75],[0.0,-31.5]]},"sleep":{"body":[[10.0,-31.25],[13.5,-30.0],[38.25,-9.25],[45.75,2.75],[46.25,12.25],[44.25,16.0],[41.0,19.0],[28.0,25.0],[-1.75,31.0],[-4.75,30.75],[-22.75,22.75],[-31.25,15.75],[-35.75,7.0],[-36.0,-2.0],[-32.0,-11.0],[-24.75,-17.75],[0.75,-30.25],[4.75,-31.5]]}},"adult":{"awake":{"body":[[20.0,-17.25],[24.0,-12.75],[26.75,-7.5],[28.0,-1.5],[27.75,3.0],[26.5,7.5],[23.5,12.75],[19.5,17.0],[14.0,20.75],[1.25,25.25],[-10.5,24.5],[-17.5,22.5],[-23.5,19.5],[-28.0,16.0],[-32.25,10.75],[-35.25,2.25],[-34.5,-6.5],[-30.25,-14.25],[-21.25,-21.5],[-11.25,-25.0],[0.5,-25.5],[11.25,-22.75]],"head":[[7.25,-31.5],[34.0,-19.75],[41.5,-14.25],[45.5,-10.25],[48.75,-5.25],[49.25,3.5],[43.75,11.25],[31.0,20.5],[8.25,31.25],[0.75,31.25],[-5.25,27.5],[-6.25,-27.75],[0.0,-31.5]]},"sleep":{"body":[[-36.25,-5.5],[-34.0,-11.0],[-28.0,-18.0],[-22.75,-21.5],[-15.0,-24.5],[-9.5,-25.5],[-1.0,-25.5],[24.75,-22.5],[28.25,-21.5],[34.0,-18.0],[41.5,-9.75],[46.5,-0.5],[46.75,8.0],[44.5,12.0],[40.0,15.75],[24.25,22.25],[-0.25,25.25],[-12.0,24.5],[-23.75,20.25],[-31.75,13.5],[-35.25,7.75],[-36.5,3.75]]}},"boss":{"awake":{"body":[[20.0,-17.25],[24.0,-12.75],[26.75,-7.5],[28.0,-1.5],[27.75,3.0],[26.5,7.5],[23.5,12.75],[19.5,17.0],[14.0,20.75],[1.25,25.25],[-10.5,24.5],[-17.5,22.5],[-23.5,19.5],[-28.0,16.0],[-32.25,10.75],[-35.25,2.25],[-35.25,-2.75],[-34.0,-7.75],[-30.25,-14.25],[-21.25,-21.5],[-11.25,-25.0],[0.5,-25.5],[11.25,-22.75]],"head":[[7.25,-31.5],[34.0,-19.75],[41.5,-14.25],[45.5,-10.25],[48.75,-5.25],[49.25,3.5],[43.75,11.25],[31.0,20.5],[8.25,31.25],[0.75,31.25],[-5.25,27.5],[-6.25,-27.75],[0.0,-31.5]]},"sleep":{"body":[[-35.75,-4.75],[-33.5,-10.75],[-28.5,-17.0],[-23.0,-21.0],[-15.25,-24.25],[-8.75,-25.5],[-0.25,-25.5],[25.25,-21.5],[32.25,-18.75],[40.0,-11.0],[46.25,0.75],[46.75,9.75],[44.75,13.75],[40.75,17.25],[26.5,22.5],[20.75,23.75],[0.5,25.25],[-11.5,24.5],[-23.5,20.0],[-30.5,14.25],[-35.25,6.0]]}},"superboss":{"awake":{"body":[[20.0,-17.25],[24.0,-12.75],[26.75,-7.5],[28.0,-1.5],[27.75,3.0],[26.5,7.5],[23.5,12.75],[19.5,17.0],[14.0,20.75],[1.25,25.25],[-10.5,24.5],[-17.5,22.5],[-23.5,19.5],[-28.0,16.0],[-32.25,10.75],[-35.25,2.25],[-35.25,-2.75],[-34.0,-7.75],[-30.25,-14.25],[-21.25,-21.5],[-11.25,-25.0],[0.5,-25.5],[11.25,-22.75]],"head":[[7.25,-31.5],[34.0,-19.75],[41.5,-14.25],[45.5,-10.25],[48.75,-5.25],[49.25,3.5],[43.75,11.25],[31.0,20.5],[8.25,31.25],[0.75,31.25],[-5.25,27.5],[-6.25,-27.75],[0.0,-31.5]]},"sleep":{"body":[[-35.25,-4.75],[-30.5,-13.5],[-23.25,-19.5],[-13.0,-23.5],[6.75,-26.5],[29.5,-18.25],[34.25,-15.25],[39.25,-9.75],[44.5,-0.5],[46.25,4.5],[46.25,12.75],[44.25,16.5],[40.0,20.0],[26.25,24.5],[18.75,25.75],[-11.25,25.75],[-22.0,22.0],[-27.5,18.25],[-31.5,14.0],[-35.5,5.5],[-36.0,-0.5]]}},"bigmomma":{"awake":{"body":[[20.0,-17.5],[27.0,-8.75],[29.0,-2.0],[29.0,3.5],[27.75,8.5],[25.25,13.25],[20.0,19.0],[14.75,22.5],[1.5,27.25],[-10.5,26.5],[-17.5,24.5],[-24.5,21.0],[-30.75,15.5],[-33.25,12.0],[-36.25,3.25],[-36.25,-1.75],[-34.75,-7.5],[-30.75,-14.0],[-22.0,-21.0],[-11.25,-24.75],[0.75,-25.25],[11.0,-22.75]],"head":[[5.5,-31.5],[33.25,-19.75],[39.25,-16.0],[46.5,-9.5],[49.25,-5.75],[50.75,-2.25],[50.75,4.25],[45.5,12.0],[33.0,21.25],[8.0,31.25],[2.75,31.25],[-3.0,28.25],[-6.75,23.5],[-8.0,-23.5],[-2.5,-29.5]]},"sleep":{"body":[[-34.25,-5.25],[-29.25,-14.5],[-20.75,-21.25],[-11.5,-24.75],[4.75,-27.5],[8.5,-27.25],[30.5,-19.0],[37.75,-13.25],[42.25,-6.75],[46.0,1.25],[46.75,11.75],[45.0,15.25],[41.0,18.75],[28.0,23.25],[3.0,26.75],[-10.75,25.75],[-17.25,23.75],[-23.0,20.75],[-30.5,13.75],[-33.0,9.5],[-34.75,3.75]]}}});
-const BEE_SEP_ALPHA_HULLS=Object.freeze({"queenbee":{"baby":{"awake":{"body":[[-1.3926,-0.08245],[-1.31543,-0.36541],[-0.518,-1.13712],[-0.47941,-1.14998],[0.76819,-0.67409],[0.87109,-0.5712],[0.97398,-0.42972],[1.02543,-0.32682],[1.06402,-0.21107],[1.07688,-0.14676],[1.07688,0.08476],[0.96112,0.4063],[0.87109,0.53492],[0.74247,0.66354],[0.25372,0.92078],[-0.36365,1.08798],[-0.40224,1.08798],[-0.60803,1.01081],[-0.72379,0.9465],[-1.21254,0.47061],[-1.28971,0.35486],[-1.36688,0.16193],[-1.3926,-0.01814]],"head":[[0.20138,-0.1693],[0.40717,-0.7095],[0.54865,-0.85098],[0.85733,-0.9796],[0.99881,-0.9796],[1.25605,-0.91529],[1.46184,-0.81239],[1.88628,-0.36223],[1.93773,-0.19502],[1.93773,0.01077],[1.92487,0.07508],[1.89914,0.15225],[1.82197,0.30659],[1.75766,0.39663],[1.5776,0.57669],[1.16602,0.80821],[0.99881,0.84679],[0.85733,0.84679],[0.54865,0.71817],[0.40717,0.57669],[0.20138,0.03649]]},"sleep":{"body":[[-1.64565,-0.02202],[-1.55445,-0.3564],[-0.61212,-1.26833],[-0.56652,-1.28353],[0.90778,-0.72117],[1.02937,-0.59958],[1.15096,-0.43239],[1.21176,-0.3108],[1.25736,-0.17401],[1.27256,-0.09801],[1.27256,0.17557],[1.13576,0.55554],[1.02937,0.70753],[0.87738,0.85952],[0.29982,1.1635],[-0.42973,1.36109],[-0.47533,1.36109],[-0.71851,1.2699],[-0.8553,1.1939],[-1.43286,0.63154],[-1.52406,0.49475],[-1.61525,0.26676],[-1.64565,0.05398]],"head":[[0.23797,-0.12465],[0.48115,-0.76301],[0.64834,-0.93019],[1.01311,-1.08218],[1.1803,-1.08218],[1.48428,-1.00619],[1.72747,-0.8846],[2.22903,-0.35263],[2.28983,-0.15505],[2.28983,0.08814],[2.27463,0.16413],[2.24423,0.25533],[2.15304,0.43771],[2.07704,0.54411],[1.86426,0.75689],[1.37789,1.03047],[1.1803,1.07607],[1.01311,1.07607],[0.64834,0.92408],[0.48115,0.75689],[0.23797,0.11853]]}},"adult":{"awake":{"body":[[-1.37081,-0.08245],[-1.29364,-0.36541],[-0.4962,-1.13712],[-0.45761,-1.14998],[0.78999,-0.67409],[0.89288,-0.5712],[0.99578,-0.42972],[1.04723,-0.32682],[1.08581,-0.21107],[1.09867,-0.14676],[1.09867,0.08476],[0.98292,0.4063],[0.89288,0.53492],[0.76427,0.66354],[0.27551,0.92078],[-0.34186,1.08798],[-0.38044,1.08798],[-0.58623,1.01081],[-0.70199,0.9465],[-1.19074,0.47061],[-1.26791,0.35486],[-1.34508,0.16193],[-1.37081,-0.01814]],"head":[[-0.1374,-0.43297],[0.63431,-0.89599],[0.71148,-0.93458],[0.8401,-0.97317],[1.05875,-0.97317],[1.67612,-0.66448],[1.75329,-0.58731],[1.85619,-0.44583],[1.95908,-0.15],[1.95908,-0.02139],[1.94622,0.05579],[1.90764,0.17154],[1.44461,0.68602],[1.05875,0.84036],[0.82724,0.84036],[0.60859,0.75033],[-0.03451,0.39019],[-0.06023,0.36447],[-0.1374,0.00434]]},"sleep":{"body":[[-1.56426,0.00366],[-1.47619,-0.31923],[-0.56622,-1.19985],[-0.52219,-1.21452],[0.90147,-0.67148],[1.01889,-0.55406],[1.1363,-0.39261],[1.19501,-0.2752],[1.23904,-0.14311],[1.25372,-0.06972],[1.25372,0.19446],[1.12163,0.56139],[1.01889,0.70816],[0.87212,0.85493],[0.31439,1.14847],[-0.3901,1.33927],[-0.43413,1.33927],[-0.66896,1.2512],[-0.80105,1.17782],[-1.35878,0.63477],[-1.44684,0.50268],[-1.5349,0.28253],[-1.56426,0.07705]],"head":[[-0.02857,-0.411],[0.71996,-0.92469],[1.86476,-0.70454],[2.04088,-0.52841],[2.18765,-0.2789],[2.21701,-0.19084],[2.23168,-0.11746],[2.23168,0.1027],[2.21701,0.17608],[2.04088,0.52833],[1.6446,0.88057],[1.18962,1.0567],[0.96947,1.0567],[0.08885,0.543],[0.05949,0.51365],[-0.02857,0.1027]]}},"boss":{"awake":{"body":[[-1.41399,-0.22724],[-1.28947,-0.47628],[-0.48009,-1.06152],[-0.18125,-1.08642],[-0.05673,-1.08642],[0.77755,-0.6008],[0.86471,-0.51363],[0.96433,-0.37666],[1.03904,-0.21479],[1.06394,-0.11517],[1.06394,0.13387],[1.05149,0.19612],[0.87716,0.54478],[0.71529,0.70665],[0.59077,0.79382],[-0.30577,1.09266],[-0.38048,1.09266],[-0.56726,1.01795],[-0.64197,0.98059],[-1.23966,0.59459],[-1.30192,0.53233],[-1.41399,0.27084]],"head":[[-0.18606,-0.42339],[-0.16116,-0.44829],[0.72293,-0.87166],[0.82254,-0.89656],[1.02177,-0.89656],[1.24591,-0.8343],[1.48249,-0.70978],[1.58211,-0.63507],[1.73153,-0.48565],[1.79379,-0.39848],[1.8685,-0.24906],[1.89341,-0.14945],[1.89341,0.07469],[1.8436,0.23656],[1.71908,0.43579],[1.54475,0.61012],[1.38288,0.72219],[1.03422,0.85916],[0.79764,0.85916],[0.68557,0.8218],[0.08788,0.57276],[-0.07399,0.4856],[-0.0989,0.4607],[-0.18606,0.04978]]},"sleep":{"body":[[-1.66665,-0.22383],[-1.51988,-0.51737],[-0.56588,-1.20719],[-0.21363,-1.23654],[-0.06687,-1.23654],[0.91649,-0.66414],[1.01923,-0.5614],[1.13664,-0.39995],[1.22471,-0.20915],[1.25406,-0.09174],[1.25406,0.2018],[1.23938,0.27519],[1.03391,0.68614],[0.84311,0.87694],[0.69634,0.97968],[-0.3604,1.33193],[-0.44847,1.33193],[-0.66862,1.24387],[-0.75668,1.19984],[-1.46118,0.74485],[-1.53456,0.67147],[-1.66665,0.36325]],"head":[[-0.09842,-0.46971],[0.95832,-1.01275],[1.2225,-1.01275],[1.91232,-0.67518],[2.01506,-0.57244],[2.13248,-0.411],[2.24989,-0.07343],[2.24989,0.07334],[2.23521,0.1614],[2.19118,0.2935],[2.13248,0.41091],[2.04441,0.543],[1.82426,0.76316],[1.63346,0.89525],[1.20783,1.0567],[0.973,1.0567],[0.82623,1.01267],[0.22447,0.71913],[0.03367,0.61639],[0.00432,0.58704],[-0.09842,0.1027]]}},"superboss":{"awake":{"body":[[-1.37092,-0.29156],[-1.24386,-0.54569],[-0.41791,-1.14291],[-0.11295,-1.16833],[0.01412,-1.16833],[0.86547,-0.67276],[0.95442,-0.58381],[1.05607,-0.44404],[1.13231,-0.27885],[1.15773,-0.1772],[1.15773,0.07694],[1.14502,0.14047],[0.96712,0.49626],[0.80194,0.66145],[0.67487,0.7504],[-0.24002,1.05536],[-0.31626,1.05536],[-0.50686,0.97912],[-0.5831,0.941],[-1.19303,0.54709],[-1.25656,0.48356],[-1.37092,0.21671]],"head":[[-0.12845,-0.54255],[-0.10304,-0.56796],[0.12568,-0.68232],[0.9135,-0.97458],[1.1041,-0.97458],[1.37095,-0.92375],[1.71403,-0.68232],[1.81568,-0.58067],[1.91734,-0.44089],[1.98087,-0.30112],[2.00629,-0.19946],[2.00629,-0.00886],[1.99358,0.05467],[1.95546,0.16903],[1.90463,0.27069],[1.80298,0.41046],[1.57426,0.63918],[1.12952,0.81708],[0.88809,0.81708],[0.17651,0.58836],[-0.00139,0.4867],[-0.0268,0.46129],[-0.12845,-0.00886]]},"sleep":{"body":[[-1.58348,-0.22383],[-1.43671,-0.51737],[-0.48271,-1.20719],[-0.13046,-1.23654],[0.0163,-1.23654],[0.99966,-0.66414],[1.1024,-0.5614],[1.21981,-0.39995],[1.30788,-0.20915],[1.33723,-0.09174],[1.33723,0.2018],[1.32255,0.27519],[1.11708,0.68614],[0.92628,0.87694],[0.77951,0.97968],[-0.27723,1.33193],[-0.3653,1.33193],[-0.58545,1.24387],[-0.67351,1.19983],[-1.37801,0.74485],[-1.45139,0.67146],[-1.58348,0.36325]],"head":[[0.00574,-0.52841],[0.93039,-0.9834],[1.03312,-1.01275],[1.31199,-1.01275],[1.60553,-0.95405],[1.72294,-0.89534],[1.97245,-0.68986],[2.10454,-0.55777],[2.3247,-0.0881],[2.3247,0.07334],[2.31002,0.1614],[2.26599,0.2935],[1.78165,0.88057],[1.64956,0.95396],[1.28263,1.0567],[1.0478,1.0567],[0.90103,1.01267],[0.35798,0.77784],[0.15251,0.6751],[0.12315,0.64574],[0.00574,0.1027]]}},"bigmomma":{"awake":{"body":[[-1.2435,-0.27336],[-1.12419,-0.51199],[-0.34866,-1.07276],[-0.06231,-1.09662],[0.057,-1.09662],[0.85639,-0.6313],[0.93991,-0.54778],[1.03536,-0.41654],[1.10695,-0.26143],[1.13081,-0.16598],[1.13081,0.07264],[1.11888,0.1323],[0.95184,0.46637],[0.79674,0.62148],[0.67742,0.705],[-0.18162,0.99135],[-0.25321,0.99135],[-0.43218,0.91976],[-0.50377,0.88397],[-1.07647,0.5141],[-1.13612,0.45444],[-1.2435,0.20389]],"head":[[-0.07687,-0.52096],[-0.053,-0.54483],[0.17369,-0.65221],[0.9015,-0.9147],[1.08046,-0.9147],[1.27136,-0.90276],[1.31909,-0.89083],[1.41454,-0.84311],[1.65316,-0.64028],[1.74861,-0.54483],[1.84406,-0.41358],[1.90372,-0.28234],[1.92758,-0.18689],[1.91565,0.05173],[1.87986,0.15911],[1.83213,0.25456],[1.73668,0.38581],[1.52192,0.60057],[1.10433,0.76761],[0.87763,0.76761],[0.22142,0.57671],[0.04245,0.48126],[0.01858,0.4574],[-0.07687,0.00401]]},"sleep":{"body":[[-1.51278,-0.20557],[-1.36763,-0.49587],[-0.42416,-1.17808],[-0.07581,-1.20711],[0.06934,-1.20711],[1.04185,-0.64102],[1.14345,-0.53942],[1.25957,-0.37975],[1.34666,-0.19106],[1.37569,-0.07494],[1.37569,0.21536],[1.36117,0.28793],[1.15796,0.69435],[0.96927,0.88305],[0.82412,0.98465],[-0.22095,1.33301],[-0.30804,1.33301],[-0.52577,1.24592],[-0.61286,1.20237],[-1.30958,0.75241],[-1.38215,0.67984],[-1.51278,0.37502]],"head":[[-0.09351,-0.5068],[-0.06448,-0.53583],[0.2113,-0.66646],[1.09671,-0.98579],[1.31444,-0.98579],[1.54667,-0.97127],[1.60473,-0.95676],[1.72085,-0.8987],[2.01115,-0.65195],[2.12727,-0.53583],[2.24339,-0.37616],[2.31597,-0.2165],[2.345,-0.10038],[2.33048,0.18992],[2.28694,0.32056],[2.22888,0.43668],[2.11276,0.59634],[1.85149,0.85761],[1.34347,1.06082],[1.06768,1.06082],[0.26936,0.82858],[0.05164,0.71246],[0.02261,0.68343],[-0.09351,0.13186]]}}},"workerbee":{"baby":{"awake":{"body":[[-1.19642,-0.15514],[-1.18527,-0.21091],[-1.09604,-0.41166],[-0.99567,-0.54549],[-0.9176,-0.62356],[-0.44917,-1.00277],[-0.17035,-1.03622],[-0.10343,-1.03622],[-0.04766,-1.02507],[0.77766,-0.48973],[0.88919,-0.31128],[0.9338,-0.16629],[0.92264,0.12368],[0.88919,0.22406],[0.83342,0.33559],[0.7442,0.45827],[0.34269,0.7371],[0.20885,0.78171],[-0.27072,0.91554],[-0.53839,0.84863],[-0.61647,0.80401],[-1.01797,0.42481],[-1.15181,0.21291],[-1.19642,0.05677]],"head":[[0.18577,-0.17469],[0.30845,-0.55389],[0.35307,-0.6208],[0.69881,-0.85502],[0.94417,-0.85502],[1.12262,-0.79925],[1.31222,-0.69888],[1.40145,-0.63196],[1.54643,-0.48697],[1.68027,-0.2193],[1.68027,0.03722],[1.64681,0.1376],[1.6022,0.22682],[1.52413,0.33835],[1.37914,0.48334],[1.15608,0.62833],[1.02224,0.68409],[0.87726,0.71755],[0.75457,0.71755],[0.68766,0.7064],[0.62074,0.68409],[0.35307,0.47219],[0.30845,0.40527],[0.18577,0.03722]]},"sleep":{"body":[[-1.44018,-0.09158],[-1.427,-0.15748],[-1.21612,-0.53968],[-0.54397,-1.1064],[-0.24084,-1.13276],[-0.1354,-1.13276],[-0.08268,-1.11958],[0.72127,-0.6583],[0.90578,-0.47379],[0.98486,-0.35517],[1.07712,-0.10476],[1.07712,0.17201],[1.0244,0.35652],[0.9585,0.48832],[0.90578,0.5674],[0.76081,0.72555],[0.68173,0.79145],[0.56311,0.87053],[-0.35945,1.17366],[-0.45171,1.17366],[-0.66258,1.09458],[-0.75484,1.04186],[-1.38746,0.34334],[-1.44018,0.15883]],"head":[[0.20635,-0.20693],[0.35132,-0.58914],[0.44358,-0.70776],[0.70717,-0.89227],[0.78625,-0.91863],[0.85215,-0.93181],[1.02348,-0.93181],[1.27389,-0.86591],[1.48476,-0.76047],[1.722,-0.57596],[1.86697,-0.39145],[1.97241,-0.1015],[1.97241,0.06984],[1.95923,0.13573],[1.91969,0.25435],[1.76153,0.50476],[1.61656,0.64974],[1.43205,0.78153],[1.24753,0.87379],[0.98394,0.93969],[0.8785,0.93969],[0.54902,0.80789],[0.33814,0.57066],[0.20635,0.21481]]}},"adult":{"awake":{"body":[[-1.16637,-0.13283],[-0.99907,-0.50088],[-0.84293,-0.65702],[-0.41912,-1.00277],[-0.39681,-1.01392],[-0.14029,-1.03622],[-0.06222,-1.03622],[0.01585,-1.01392],[0.71848,-0.59011],[0.7854,-0.52319],[0.87463,-0.40051],[0.94154,-0.26667],[0.96385,-0.1886],[0.975,0.05677],[0.91924,0.23521],[0.87463,0.32444],[0.79656,0.43597],[0.66272,0.5698],[-0.24067,0.91554],[-0.32989,0.91554],[-0.58641,0.80401],[-1.01023,0.39136],[-1.12175,0.20175],[-1.16637,0.02331]],"head":[[0.0593,-0.13007],[0.12622,-0.4312],[0.19314,-0.56504],[0.2489,-0.64311],[0.36043,-0.75464],[0.57234,-0.85502],[0.8177,-0.85502],[1.05191,-0.77695],[1.15229,-0.72118],[1.25267,-0.65426],[1.31959,-0.5985],[1.39766,-0.52043],[1.48688,-0.39774],[1.54264,-0.27506],[1.54264,0.09299],[1.48688,0.21567],[1.41996,0.31604],[0.75078,0.71755],[0.6281,0.71755],[0.36043,0.60602],[0.23775,0.48334],[0.15968,0.36066],[0.12622,0.28259],[0.0593,-0.01854]]},"sleep":{"body":[[-1.33096,-0.05409],[-1.14006,-0.47408],[-0.94916,-0.66498],[-0.47826,-1.04679],[-0.45281,-1.05952],[-0.16009,-1.08497],[-0.071,-1.08497],[0.57807,-0.75407],[0.73079,-0.65226],[0.80715,-0.58862],[0.89624,-0.49953],[1.1126,-0.04137],[1.1126,0.14954],[1.04896,0.36589],[0.99805,0.46771],[0.90897,0.59498],[0.75624,0.7477],[0.42534,0.9386],[-0.27463,1.14223],[-0.37645,1.14223],[-0.66917,1.01496],[-1.15279,0.54407],[-1.28006,0.32771],[-1.33096,0.12408]],"head":[[0.12159,-0.05094],[0.17249,-0.33094],[0.23613,-0.48366],[0.46521,-0.76365],[0.54157,-0.81456],[0.77066,-0.89092],[0.92338,-0.89092],[1.33064,-0.75092],[1.547,-0.5982],[1.64881,-0.49638],[1.75063,-0.35639],[1.81426,-0.21639],[1.81426,0.19087],[1.75063,0.34359],[1.66154,0.47086],[1.47064,0.66176],[1.0761,0.87812],[0.78338,0.9163],[0.70702,0.90357],[0.56703,0.85266],[0.45249,0.7763],[0.33794,0.66176],[0.19795,0.41995],[0.12159,0.07632]]}},"boss":{"awake":{"body":[[-1.21532,-0.21864],[-1.10734,-0.413],[-1.01016,-0.49938],[-0.39471,-0.92048],[-0.14637,-0.94207],[-0.07079,-0.94207],[0.0048,-0.92048],[0.79301,-0.3914],[0.8362,-0.32662],[0.89019,-0.21864],[0.92258,-0.11067],[0.92258,0.14847],[0.87939,0.28884],[0.8362,0.37522],[0.76062,0.48319],[0.63105,0.61276],[-0.24355,0.94748],[-0.32992,0.94748],[-1.06415,0.52638],[-1.11814,0.47239],[-1.22611,0.23485]],"head":[[0.02222,-0.06481],[0.087,-0.35634],[0.15179,-0.48591],[0.20577,-0.56149],[0.31375,-0.66946],[0.57289,-0.77744],[0.69166,-0.77744],[0.98319,-0.69106],[1.08037,-0.63707],[1.17754,-0.57229],[1.24233,-0.5183],[1.31791,-0.44272],[1.40429,-0.32394],[1.46907,-0.17278],[1.46907,0.10795],[1.40429,0.26992],[1.33951,0.36709],[0.69166,0.7558],[0.57289,0.7558],[0.31375,0.64783],[0.19498,0.52905],[0.11939,0.41028],[0.087,0.3347],[0.02222,0.04317]]},"sleep":{"body":[[-1.43248,-0.21954],[-1.30521,-0.44863],[-1.07613,-0.69044],[-0.46524,-1.04679],[-0.17252,-1.07224],[-0.08343,-1.07224],[0.00565,-1.04679],[0.71836,-0.63953],[0.79472,-0.5759],[0.88381,-0.48681],[1.0238,-0.28318],[1.06198,-0.19409],[1.08744,-0.105],[1.08744,0.21317],[1.03653,0.37862],[0.98562,0.48043],[0.89653,0.6077],[0.74381,0.76043],[0.26019,1.00224],[-0.28706,1.15496],[-0.38888,1.15496],[-1.26703,0.64588],[-1.31794,0.59498],[-1.44521,0.31499]],"head":[[0.09283,-0.03822],[0.14374,-0.31821],[0.20737,-0.47093],[0.43646,-0.75092],[0.51282,-0.80183],[0.7419,-0.87819],[0.89462,-0.87819],[1.30188,-0.7382],[1.51824,-0.58547],[1.62006,-0.48366],[1.72187,-0.34366],[1.78551,-0.20367],[1.78551,0.20359],[1.72187,0.35632],[1.63278,0.48358],[1.44188,0.67449],[1.04735,0.89084],[0.75463,0.92902],[0.67827,0.9163],[0.53827,0.86539],[0.42373,0.78903],[0.30919,0.67449],[0.16919,0.43268],[0.09283,0.08905]]}},"superboss":{"awake":{"body":[[-1.18877,-0.28587],[-1.08961,-0.47319],[-0.99044,-0.57235],[-0.35137,-1.01309],[-0.08693,-1.03513],[-0.02081,-1.03513],[0.71742,-0.62745],[0.83863,-0.50624],[0.91576,-0.39606],[0.95983,-0.30791],[0.99288,-0.20874],[1.0039,-0.15365],[1.0039,0.03366],[0.84964,0.39727],[0.57418,0.63968],[0.2877,0.76088],[-0.18609,0.8931],[-0.28526,0.8931],[-0.4285,0.83801],[-0.51665,0.79394],[-1.04553,0.45236],[-1.08961,0.40829],[-1.18877,0.1769]],"head":[[0.07042,-0.21704],[0.13653,-0.45944],[0.26875,-0.66879],[0.33486,-0.7349],[0.50014,-0.83407],[0.56625,-0.85611],[0.81967,-0.85611],[1.28245,-0.62472],[1.40365,-0.50352],[1.54689,-0.21704],[1.54689,0.01435],[1.4918,0.16861],[1.3706,0.34491],[1.1943,0.5212],[1.04004,0.62037],[0.74254,0.6975],[0.62134,0.6975],[0.56625,0.68648],[0.50014,0.66444],[0.33486,0.56528],[0.26875,0.49916],[0.13653,0.28981],[0.07042,0.04741]]},"sleep":{"body":[[-1.36036,-0.23227],[-0.39312,-1.07224],[-0.1004,-1.0977],[0.00141,-1.0977],[0.24322,-1.02134],[0.39594,-0.94498],[0.84138,-0.6268],[0.98138,-0.48681],[1.07047,-0.35954],[1.17228,-0.07955],[1.17228,0.13681],[0.99411,0.5568],[0.90502,0.65861],[0.03959,1.18041],[-0.11313,1.18041],[-0.44403,1.11678],[-0.59675,1.06587],[-0.87674,0.91315],[-1.23309,0.58225],[-1.37309,0.26408]],"head":[[0.14497,-0.12731],[0.27224,-0.50911],[0.36133,-0.63638],[0.51405,-0.77638],[0.60314,-0.82728],[0.71768,-0.86546],[0.78131,-0.87819],[0.93404,-0.87819],[1.36675,-0.72547],[1.5322,-0.61093],[1.68492,-0.4582],[1.85037,-0.12731],[1.85037,0.13996],[1.74856,0.38177],[1.64674,0.52176],[1.5322,0.63631],[1.27766,0.82721],[0.79404,0.92902],[0.71768,0.9163],[0.64132,0.89084],[0.45042,0.7763],[0.37405,0.69994],[0.17042,0.30541],[0.14497,0.17814]]}},"bigmomma":{"awake":{"body":[[-1.07828,-0.23704],[-0.97482,-0.44396],[-0.9024,-0.51638],[-0.06438,-0.95091],[0.07012,-0.95091],[0.515,-0.71296],[0.70122,-0.5888],[0.83572,-0.45431],[0.90814,-0.35085],[0.93918,-0.28877],[0.98056,-0.15427],[0.98056,0.06299],[0.97022,0.11472],[0.93918,0.20783],[0.81503,0.41475],[0.71157,0.51821],[0.50465,0.65271],[0.43223,0.68375],[0.30808,0.72513],[-0.21957,0.84928],[-0.3851,0.78721],[-0.42649,0.76652],[-0.98517,0.38371],[-1.07828,0.1768]],"head":[[0.10406,-0.16206],[0.21786,-0.51382],[0.25925,-0.5759],[0.42478,-0.73109],[0.6317,-0.80351],[0.74551,-0.80351],[1.22142,-0.59659],[1.37661,-0.4414],[1.41799,-0.37932],[1.50076,-0.16206],[1.50076,-0.01722],[1.41799,0.2104],[1.34557,0.31385],[1.21107,0.44835],[0.88,0.63458],[0.74551,0.66562],[0.6317,0.66562],[0.56962,0.65527],[0.50755,0.63458],[0.39374,0.5725],[0.31098,0.50008],[0.25925,0.43801],[0.21786,0.37593],[0.10406,0.02417]]},"sleep":{"body":[[-1.2992,-0.10274],[-1.03488,-0.76982],[-0.90902,-0.98379],[-0.73281,-1.10965],[-0.50626,-1.17258],[-0.09091,-1.17258],[1.04187,-0.35447],[1.11739,-0.24119],[1.18032,-0.10274],[1.20549,-0.00205],[1.21808,0.12381],[1.19291,0.3252],[1.15515,0.43847],[1.09221,0.56434],[0.89083,0.80348],[0.71462,0.92934],[0.32444,1.1559],[0.24893,1.19366],[-0.07832,1.25659],[-0.75798,1.18107],[-0.89643,1.10555],[-0.98454,1.01745],[-1.18592,0.65244],[-1.2992,0.40071]],"head":[[0.13917,-0.08704],[0.27762,-0.51498],[0.32797,-0.5905],[0.70556,-0.85481],[0.76849,-0.8674],[0.91953,-0.8674],[1.14608,-0.84222],[1.28453,-0.79188],[1.59919,-0.52756],[1.6873,-0.42687],[1.80058,-0.22549],[1.82575,-0.14997],[1.82575,0.1521],[1.78799,0.26538],[1.73764,0.36607],[1.4985,0.64297],[1.32229,0.78142],[1.2216,0.83177],[0.90694,0.91987],[0.78108,0.91987],[0.47901,0.79401],[0.34056,0.65556],[0.16435,0.29055],[0.13917,0.13951]]}}},"dronebee":{"baby":{"awake":{"body":[[-1.0713,-0.13637],[-1.0615,-0.18539],[-0.94385,-0.42068],[-0.89483,-0.47951],[-0.8164,-0.55794],[-0.41444,-0.88146],[-0.16935,-0.91087],[-0.11052,-0.91087],[-0.06151,-0.90107],[0.66398,-0.43049],[0.76202,-0.27363],[0.80123,-0.14618],[0.79143,0.10872],[0.76202,0.19696],[0.713,0.29499],[0.63457,0.40284],[0.28163,0.64793],[0.16398,0.68715],[-0.25758,0.80479],[-0.5615,0.70676],[-0.91444,0.37343],[-0.99287,0.26558],[-1.03208,0.18715],[-1.0713,0.0499]],"head":[[0.1535,-0.22218],[0.25153,-0.48688],[0.29075,-0.54571],[0.52604,-0.73198],[0.58486,-0.75159],[0.81035,-0.75159],[0.96721,-0.70257],[1.21231,-0.55551],[1.33976,-0.42806],[1.46721,-0.14375],[1.46721,-0.0163],[1.4574,0.03272],[1.42799,0.12095],[1.38878,0.19938],[1.32015,0.29742],[1.1927,0.42487],[1.06525,0.51311],[0.87898,0.60134],[0.64369,0.63075],[0.58486,0.62095],[0.52604,0.60134],[0.29075,0.41507],[0.25153,0.35624],[0.1535,0.09154]]},"sleep":{"body":[[-1.26596,-0.0805],[-1.25438,-0.13843],[-1.06901,-0.4744],[-0.96474,-0.57867],[-0.47816,-0.97256],[-0.11902,-0.99574],[-0.07268,-0.98415],[0.63402,-0.57867],[0.79621,-0.41647],[0.86572,-0.31221],[0.90048,-0.24269],[0.94682,-0.09209],[0.90048,0.3134],[0.73828,0.56827],[0.66877,0.63778],[0.59926,0.69571],[0.49499,0.76522],[-0.31597,1.03168],[-0.39707,1.03168],[-0.58243,0.96217],[-0.66353,0.91583],[-1.21962,0.30181],[-1.25438,0.19754],[-1.26596,0.13962]],"head":[[0.18139,-0.1819],[0.22773,-0.35568],[0.30882,-0.51787],[0.44785,-0.68007],[0.62163,-0.78433],[0.69114,-0.8075],[0.74906,-0.81909],[0.89967,-0.81909],[1.11979,-0.76116],[1.30515,-0.66848],[1.59479,-0.41361],[1.64113,-0.34409],[1.73381,-0.08922],[1.73381,0.06139],[1.72222,0.11931],[1.54844,0.4437],[1.42101,0.57114],[1.25881,0.68699],[1.09662,0.76809],[0.86492,0.82601],[0.77223,0.82601],[0.4826,0.71016],[0.29724,0.50163],[0.18139,0.18883]]}},"adult":{"awake":{"body":[[-1.05469,-0.13637],[-1.04488,-0.18539],[-0.92724,-0.42068],[-0.87822,-0.47951],[-0.79979,-0.55794],[-0.39783,-0.88146],[-0.15273,-0.91087],[-0.09391,-0.91087],[-0.04489,-0.90107],[0.68059,-0.43049],[0.77863,-0.27363],[0.81784,-0.14618],[0.80804,0.10872],[0.77863,0.19696],[0.72961,0.29499],[0.65118,0.40284],[0.29824,0.64793],[0.1806,0.68715],[-0.24097,0.80479],[-0.54489,0.70676],[-0.89782,0.37343],[-0.97625,0.26558],[-1.01547,0.18715],[-1.05469,0.0499]],"head":[[0.03252,-0.22218],[0.13056,-0.48688],[0.16977,-0.54571],[0.40506,-0.73198],[0.46389,-0.75159],[0.68937,-0.75159],[0.84624,-0.70257],[1.09133,-0.55551],[1.21878,-0.42806],[1.34623,-0.14375],[1.34623,-0.0163],[1.33643,0.03272],[1.30702,0.12095],[1.2678,0.19938],[1.19917,0.29742],[1.07172,0.42487],[0.94427,0.51311],[0.758,0.60134],[0.52271,0.63075],[0.46389,0.62095],[0.40506,0.60134],[0.16977,0.41507],[0.13056,0.35624],[0.03252,0.09154]]},"sleep":{"body":[[-1.20352,-0.06993],[-1.19233,-0.12586],[-1.01334,-0.45029],[-0.44278,-0.93135],[-0.17429,-0.95372],[-0.09598,-0.95372],[-0.05123,-0.94254],[0.6312,-0.55098],[0.85495,-0.29367],[0.88851,-0.22655],[0.93326,-0.08111],[0.93326,0.15382],[0.88851,0.31044],[0.78782,0.48944],[0.73189,0.55656],[0.66476,0.62369],[0.59764,0.67963],[-0.28616,1.00406],[-0.36447,1.00406],[-0.54347,0.93693],[-0.62178,0.89218],[-1.01334,0.523],[-1.19233,0.19857],[-1.20352,0.14263]],"head":[[0.0845,-0.16784],[0.20756,-0.49227],[0.50962,-0.74958],[0.57675,-0.77196],[0.63268,-0.78315],[0.76693,-0.78315],[1.28155,-0.5594],[1.43817,-0.40278],[1.58361,-0.07834],[1.58361,0.06709],[1.57242,0.12303],[1.53886,0.22371],[1.49411,0.31321],[1.28155,0.55933],[1.12493,0.67121],[0.9683,0.74952],[0.75574,0.80546],[0.64387,0.80546],[0.4425,0.73833],[0.37537,0.69358],[0.29706,0.62646],[0.24113,0.55933],[0.19638,0.49221],[0.0845,0.19015]]}},"boss":{"awake":{"body":[[-1.07779,-0.19219],[-0.99237,-0.35355],[-0.35645,-0.80913],[-0.13815,-0.82811],[-0.08121,-0.82811],[-0.03375,-0.81862],[0.46929,-0.54337],[0.54522,-0.48642],[0.66861,-0.36304],[0.76352,-0.21118],[0.80149,-0.08779],[0.81098,0.00712],[0.79199,0.15898],[0.76352,0.24441],[0.71606,0.33932],[0.64962,0.43423],[0.45031,0.60508],[0.29845,0.68101],[0.18455,0.71897],[-0.29951,0.83287],[-0.45137,0.77592],[-0.48933,0.75694],[-0.98288,0.43423],[-1.07779,0.23492]],"head":[[0.01004,-0.09493],[0.11444,-0.41764],[0.15241,-0.47458],[0.30427,-0.61695],[0.49409,-0.68339],[0.5985,-0.68339],[0.80731,-0.62644],[1.0351,-0.49357],[1.16798,-0.36069],[1.29136,-0.09493],[1.29136,0.03795],[1.21543,0.24676],[1.14899,0.34167],[0.94968,0.522],[0.72189,0.6359],[0.5985,0.66437],[0.49409,0.66437],[0.43715,0.65488],[0.3802,0.6359],[0.27579,0.57895],[0.19986,0.51251],[0.15241,0.45556],[0.11444,0.39862],[0.01004,0.07591]]},"sleep":{"body":[[-1.27039,-0.19299],[-1.1697,-0.38317],[-0.94595,-0.6181],[-0.16284,-0.94254],[-0.08453,-0.94254],[-0.03978,-0.93135],[0.79927,-0.38317],[0.86639,-0.28248],[0.92233,-0.15942],[0.94471,-0.06993],[0.95589,0.04195],[0.93352,0.22095],[0.89996,0.32163],[0.84402,0.4335],[0.66502,0.64606],[0.5084,0.75794],[0.35178,0.83625],[0.21753,0.881],[-0.26353,1.01525],[-0.53202,0.94812],[-0.57677,0.92575],[-0.93477,0.702],[-1.18089,0.51182],[-1.27039,0.31044]],"head":[[0.07041,-0.07834],[0.19348,-0.45871],[0.23822,-0.52584],[0.50672,-0.7384],[0.57384,-0.76077],[0.62978,-0.77196],[0.76403,-0.77196],[1.16677,-0.62652],[1.36814,-0.4699],[1.44646,-0.3804],[1.49121,-0.31328],[1.54714,-0.2014],[1.56952,-0.13428],[1.56952,0.13422],[1.53595,0.2349],[1.49121,0.3244],[1.41289,0.43627],[1.27865,0.57052],[0.9654,0.76071],[0.75284,0.81664],[0.64097,0.81664],[0.37247,0.70477],[0.24941,0.58171],[0.07041,0.12303]]}},"superboss":{"awake":{"body":[[-1.04497,-0.26098],[-0.9578,-0.42563],[-0.30886,-0.89054],[-0.0861,-0.90991],[-0.02798,-0.90991],[0.02045,-0.90023],[0.53378,-0.61934],[0.61127,-0.56123],[0.73718,-0.43532],[0.83403,-0.28035],[0.87278,-0.15444],[0.88246,-0.05758],[0.86309,0.09739],[0.83403,0.18456],[0.78561,0.28142],[0.71781,0.37827],[0.51441,0.55261],[0.35944,0.6301],[0.24321,0.66884],[-0.25075,0.78507],[-0.40572,0.72695],[-0.44446,0.70758],[-0.94811,0.37827],[-1.04497,0.17487]],"head":[[0.0619,-0.22952],[0.15876,-0.49104],[0.1975,-0.54915],[0.35247,-0.69443],[0.49775,-0.75255],[0.71083,-0.75255],[0.8658,-0.70412],[1.09826,-0.56852],[1.23386,-0.43292],[1.35977,-0.16173],[1.35977,-0.02613],[1.28228,0.18696],[1.21449,0.28381],[1.02077,0.47752],[0.65272,0.61312],[0.54618,0.61312],[0.48807,0.60344],[0.42995,0.58407],[0.32341,0.52595],[0.24593,0.45815],[0.1975,0.40004],[0.15876,0.34193],[0.0619,0.08041]]},"sleep":{"body":[[-1.20699,-0.21536],[-1.1063,-0.40555],[-1.02799,-0.48386],[-0.09945,-0.96491],[-0.02113,-0.96491],[0.11311,-0.93135],[0.3033,-0.85304],[0.70604,-0.56217],[0.86266,-0.40555],[0.92979,-0.30486],[0.98573,-0.1818],[1.01929,0.01957],[1.0081,0.14263],[0.99691,0.19857],[0.90741,0.41113],[0.81792,0.53419],[0.72842,0.62369],[0.33686,0.91456],[0.19143,0.99287],[-0.11063,1.03762],[-0.21132,1.02643],[-0.72594,0.84744],[-1.11749,0.48944],[-1.20699,0.28807]],"head":[[0.12743,-0.07834],[0.25049,-0.45871],[0.29524,-0.52584],[0.63086,-0.76077],[0.6868,-0.77196],[0.82105,-0.77196],[1.04479,-0.71602],[1.22379,-0.62652],[1.42516,-0.4699],[1.50348,-0.3804],[1.60416,-0.2014],[1.62654,-0.13428],[1.63772,-0.07834],[1.63772,0.07828],[1.62654,0.13422],[1.54822,0.3244],[1.46991,0.43627],[1.33567,0.57052],[1.19023,0.69358],[1.10073,0.73833],[0.80986,0.81664],[0.69799,0.81664],[0.30643,0.58171],[0.12743,0.12303]]}},"bigmomma":{"awake":{"body":[[-0.94784,-0.23565],[-0.86599,-0.39026],[-0.80233,-0.45392],[-0.06569,-0.83588],[0.05254,-0.83588],[0.4436,-0.62671],[0.6073,-0.51758],[0.72553,-0.39935],[0.78919,-0.30841],[0.81647,-0.25384],[0.85285,-0.13561],[0.85285,0.05537],[0.84376,0.10084],[0.81647,0.18269],[0.70734,0.36458],[0.6164,0.45553],[0.51636,0.52828],[0.37085,0.60104],[0.26171,0.63741],[-0.2021,0.74655],[-0.34761,0.69198],[-0.38399,0.67379],[-0.87509,0.3373],[-0.94784,0.1736]],"head":[[0.10056,-0.14246],[0.2006,-0.45167],[0.23698,-0.50623],[0.38249,-0.64265],[0.56438,-0.70631],[0.66442,-0.70631],[1.08276,-0.52442],[1.21008,-0.3971],[1.31922,-0.17883],[1.31922,0.03034],[1.25556,0.18494],[1.19189,0.27589],[1.07367,0.39412],[0.78265,0.55782],[0.66442,0.5851],[0.56438,0.5851],[0.50981,0.576],[0.45525,0.55782],[0.35521,0.50325],[0.28245,0.43959],[0.23698,0.38502],[0.2006,0.33046],[0.10056,0.02124]]},"sleep":{"body":[[-1.1531,-0.1235],[-0.93182,-0.6767],[-0.82119,-0.86478],[-0.66629,-0.97542],[-0.46714,-1.03074],[-0.10204,-1.03074],[0.89371,-0.31159],[0.96009,-0.21202],[1.01541,-0.09031],[1.03754,-0.0018],[1.0486,0.10884],[1.02647,0.28586],[0.99328,0.38543],[0.93796,0.49607],[0.76094,0.70628],[0.60605,0.81692],[0.26307,1.01607],[0.19669,1.04926],[-0.09097,1.10458],[-0.68842,1.0382],[-0.81012,0.97181],[-0.88757,0.89437],[-1.06459,0.57352],[-1.1531,0.37437]],"head":[[0.12234,-0.07651],[0.24404,-0.45268],[0.2883,-0.51906],[0.55383,-0.72928],[0.62021,-0.75141],[0.67553,-0.76247],[0.8083,-0.76247],[1.12915,-0.69609],[1.40574,-0.46375],[1.48319,-0.37524],[1.52744,-0.30885],[1.58276,-0.19821],[1.60489,-0.13183],[1.60489,0.1337],[1.5717,0.23328],[1.52744,0.32179],[1.45,0.43242],[1.31723,0.56519],[1.07383,0.73115],[0.79723,0.8086],[0.68659,0.8086],[0.42106,0.69796],[0.29936,0.57625],[0.12234,0.12264]]}}}});
-const SEAL_SEP_ALPHA_HULLS=Object.freeze({"baby":{"awake":{"body":[[-0.27497,0.00485],[-0.25518,-0.06318],[-0.22056,-0.10973],[-0.13648,-0.18134],[-0.07961,-0.21714],[0.00447,-0.24579],[0.11081,-0.24221],[0.20478,-0.2064],[0.28144,-0.14195],[0.321,-0.07392],[0.33337,0.04065],[0.31853,0.09436],[0.28144,0.15523],[0.2394,0.19819],[0.17263,0.23758],[0.07618,0.26264],[-0.05982,0.24474],[-0.11917,0.21609]],"head":[[0.11326,-0.029],[0.11818,-0.06103],[0.13292,-0.1073],[0.14521,-0.13221],[0.16978,-0.1678],[0.18698,-0.1856],[0.20664,-0.19984],[0.3983,-0.29949],[0.47939,-0.24255],[0.49659,-0.029],[0.47939,0.23794],[0.40322,0.29489],[0.23121,0.21658],[0.18698,0.18811],[0.16732,0.16676],[0.13783,0.12049],[0.12801,0.09557],[0.11572,0.0493]]},"sleep":{"main":[[-0.31468,-0.01675],[-0.30438,-0.05841],[-0.17311,-0.36252],[-0.14995,-0.40418],[-0.12421,-0.43751],[-0.09847,-0.46251],[-0.06758,-0.48334],[-0.0264,-0.5],[0.04824,-0.49167],[0.43176,-0.27504],[0.49868,-0.16256],[0.47036,0.11656],[0.38028,0.39151],[-0.04699,0.49149],[-0.0959,0.46649],[-0.12421,0.4415],[-0.14995,0.40817],[-0.30953,0.0624]]}},"adult":{"awake":{"body":[[-0.27497,0.00485],[-0.26013,-0.05244],[-0.22056,-0.10973],[-0.1167,-0.19566],[-0.03757,-0.23505],[0.08855,-0.24579],[0.18252,-0.21714],[0.27154,-0.15269],[0.321,-0.07392],[0.33337,0.04065],[0.30864,0.11584],[0.2666,0.17313],[0.19488,0.22684],[0.11822,0.25548],[-0.02768,0.25548],[-0.11917,0.21609],[-0.2082,0.14448],[-0.26013,0.08004]],"head":[[0.11081,-0.02738],[0.11575,-0.0596],[0.13059,-0.10615],[0.14295,-0.13121],[0.16768,-0.16702],[0.21467,-0.2064],[0.45454,-0.27801],[0.47927,-0.24221],[0.49658,-0.02738],[0.47927,0.24116],[0.45454,0.27338],[0.40013,0.29486],[0.21467,0.21251],[0.18499,0.19103],[0.16274,0.16597],[0.14295,0.13732],[0.13059,0.11226],[0.11328,0.05139]]},"sleep":{"main":[[-0.31254,0.00992],[-0.29974,-0.05382],[-0.14871,-0.36402],[-0.10263,-0.44476],[-0.03351,-0.4915],[0.04585,-0.5],[0.08169,-0.48725],[0.49641,-0.24929],[0.50665,0.0779],[0.45289,0.36686],[0.05865,0.49008],[-0.02327,0.49008],[-0.04375,0.48159],[-0.07447,0.46034],[-0.10519,0.43059],[-0.13847,0.3796],[-0.29206,0.10765],[-0.30742,0.06516]]}},"boss":{"awake":{"body":[[-0.27497,-0.01527],[-0.24282,-0.11937],[-0.19831,-0.17309],[-0.08208,-0.25705],[0.002,-0.29063],[0.12564,-0.28055],[0.19983,-0.24361],[0.27402,-0.17309],[0.33089,-0.05556],[0.31606,0.08211],[0.2938,0.12913],[0.22209,0.21644],[0.15284,0.26345],[0.09844,0.2836],[-0.03262,0.27688],[-0.14638,0.21308],[-0.21562,0.15263],[-0.25271,0.09555]],"head":[[0.11326,-0.04558],[0.12309,-0.09258],[0.13046,-0.11273],[0.14766,-0.1463],[0.15749,-0.15973],[0.18452,-0.18995],[0.20172,-0.20338],[0.3983,-0.29738],[0.45482,-0.28059],[0.48185,-0.22016],[0.47939,0.20958],[0.45482,0.23979],[0.22875,0.18608],[0.20909,0.176],[0.17961,0.1525],[0.15504,0.12229],[0.12801,0.07193],[0.11818,0.04171]]},"sleep":{"main":[[-0.296,-0.05448],[-0.28883,-0.10089],[-0.27208,-0.16122],[-0.15004,-0.41647],[-0.10936,-0.46751],[-0.08543,-0.48608],[-0.05193,-0.5],[0.03421,-0.48608],[0.48885,-0.12409],[0.49603,-0.04984],[0.43142,0.22861],[0.33092,0.48385],[-0.03279,0.47921],[-0.08065,0.46529],[-0.11893,0.43744],[-0.15243,0.39104],[-0.27925,0.11259],[-0.29122,0.06154]]}},"superboss":{"awake":{"body":[[-0.29796,-0.01465],[-0.2715,-0.08472],[-0.19934,-0.18345],[-0.11756,-0.24079],[-0.01414,-0.27901],[0.1374,-0.27264],[0.22158,-0.22804],[0.27931,-0.17071],[0.32501,-0.09427],[0.33944,-0.00509],[0.31539,0.08409],[0.25766,0.17009],[0.20715,0.21468],[0.12778,0.25608],[-0.03338,0.25608],[-0.12718,0.21786],[-0.21618,0.14779],[-0.26909,0.08409]],"head":[[0.12296,-0.04659],[0.13259,-0.09436],[0.14702,-0.12938],[0.17588,-0.17078],[0.19993,-0.19307],[0.21437,-0.20262],[0.2312,-0.21218],[0.4573,-0.27268],[0.48135,-0.24083],[0.49819,-0.04978],[0.48135,0.19223],[0.4573,0.2177],[0.23842,0.16994],[0.22399,0.16357],[0.19512,0.14446],[0.17829,0.12854],[0.14221,0.07441],[0.12537,0.02028]]},"sleep":{"main":[[-0.3132,0.00245],[-0.3011,-0.06997],[-0.28417,-0.11977],[-0.13662,-0.40042],[-0.10518,-0.44568],[-0.05438,-0.48642],[-0.03261,-0.49547],[0.04479,-0.49547],[0.48018,-0.26009],[0.49711,-0.19672],[0.39794,0.37816],[0.02786,0.49585],[-0.06648,0.48227],[-0.09792,0.45964],[-0.12937,0.42795],[-0.16081,0.37363],[-0.3011,0.07488],[-0.30836,0.04772]]}},"bigmomma":{"awake":{"body":[[-0.33163,0.00451],[-0.30517,-0.07515],[-0.2258,-0.19623],[-0.13921,-0.25358],[-0.04781,-0.28544],[0.12296,-0.28863],[0.20234,-0.25039],[0.24563,-0.21535],[0.30336,-0.14206],[0.33944,-0.00505],[0.3202,0.07461],[0.27931,0.15427],[0.21196,0.23074],[0.12056,0.28491],[-0.043,0.28491],[-0.14402,0.25304],[-0.23783,0.18932],[-0.30277,0.1001]],"head":[[0.12296,-0.04659],[0.13259,-0.09436],[0.14702,-0.12938],[0.16626,-0.15804],[0.1855,-0.18033],[0.20955,-0.19944],[0.2312,-0.21218],[0.40438,-0.2886],[0.47894,-0.25039],[0.48376,-0.21536],[0.48135,0.19223],[0.4573,0.2177],[0.40438,0.23999],[0.20955,0.15402],[0.18791,0.1381],[0.15423,0.0967],[0.14221,0.07441],[0.12537,0.02028]]},"sleep":{"main":[[-0.33997,0.00177],[-0.31879,-0.08829],[-0.29291,-0.15691],[-0.26231,-0.22124],[-0.11405,-0.44854],[-0.07405,-0.48285],[-0.02698,-0.5],[0.04127,-0.49142],[0.48369,-0.24697],[0.46722,0.09183],[0.40132,0.35344],[0.02244,0.49068],[-0.07405,0.4821],[-0.1117,0.45637],[-0.12817,0.43921],[-0.26231,0.23336],[-0.30703,0.14758],[-0.33056,0.08325]]}}});
-const SEAL_SEP_HIT_FRAME=Object.freeze({"baby":{"awakeRefH":69.82324,"awake":{"refW":101.09606,"refH":69.82324,"head":{"x":61.75,"y":14,"sw":39.25,"sh":41.75}},"sleep":{"refW":97.12848,"refH":59.76176}},"adult":{"awakeRefH":69.82324,"awake":{"refW":101.09606,"refH":69.82324,"head":{"x":61.75,"y":14,"sw":39.25,"sh":41.75}},"sleep":{"refW":97.35633,"refH":58.58298}},"boss":{"awakeRefH":74.02324,"awake":{"refW":101.09606,"refH":74.02324,"head":{"x":61.75,"y":14.75,"sw":39.25,"sh":42}},"sleep":{"refW":104.16528,"refH":53.61931}},"superboss":{"awakeRefH":78.04337,"awake":{"refW":103.93845,"refH":78.04337,"head":{"x":64.75,"y":16.25,"sw":39.25,"sh":41.75}},"sleep":{"refW":103.04886,"refH":55.22925}},"bigmomma":{"awakeRefH":78.04336,"awake":{"refW":103.93845,"refH":78.04336,"head":{"x":64.75,"y":16.25,"sw":39.25,"sh":41.75}},"sleep":{"refW":106.23258,"refH":58.04336}}});
-function sealSepHitboxFrame(a,stage,state){const stageSpec=SEAL_SEP_HIT_FRAME?.[stage]||SEAL_SEP_HIT_FRAME?.adult,spec=stageSpec?.[state];if(!stageSpec||!spec)return null;const r=Math.max(8,Number(a?.r)||18),drawMul=({baby:1.45,adult:1.62,boss:1.78,superboss:1.90,bigmomma:2.05}[stage]||1.62),scale=(r*drawMul)/Math.max(1,Number(stageSpec.awakeRefH)||Number(spec.refH)||1);return{w:Number(spec.refW)*scale,h:Number(spec.refH)*scale,scale,spec};}
-function sealExactSepLocalPolygon(a,role){if(a?.type!=="seal")return null;const stage=["baby","adult","boss","superboss","bigmomma"].includes(a.stage)?a.stage:"adult",state=a.sleeping?"sleep":"awake",rawState=SEAL_SEP_ALPHA_HULLS?.[stage]?.[state],raw=state==="sleep"?(role==="body"?rawState?.main:null):rawState?.[role];if(!raw?.length)return null;const frame=sealSepHitboxFrame(a,stage,state);if(!frame)return null;return raw.map(([x,y])=>[x*frame.w,y*frame.h]);}
-function rhinoExactSepLocalPolygon(a,role){
-  if(a?.type!=="rhino")return null;
-  const stage=["baby","adult","boss","superboss","bigmomma"].includes(a.stage)?a.stage:"adult",state=a.sleeping?"sleep":"awake",raw=RHINO_SEP_ALPHA_HULLS?.[stage]?.[state]?.[role];
-  if(!raw?.length)return null;
-  const q=RHINO_SEP_HIT_LAYOUT[stage][state],d=sepHitboxDimensions(a),scale=Math.min(d.w/q.ref[0],d.h/q.ref[1]);
-  return raw.map(([x,y])=>[x*scale,y*scale]);
-}
-function beeExactSepLocalPolygon(a,role){if(!["queenbee","workerbee","dronebee"].includes(String(a?.type||"")))return null;const stage=["baby","adult","boss","superboss","bigmomma"].includes(a?.stage)?a.stage:"adult",state=a?.sleeping?"sleep":"awake",raw=BEE_SEP_ALPHA_HULLS?.[a.type]?.[stage]?.[state]?.[role];if(!raw?.length)return null;const r=Math.max(8,Number(a?.r)||18);return raw.map(([x,y])=>[x*r,y*r]);}
-function sepLocalPiecePolygon(a,role){
-  const exactBee=beeExactSepLocalPolygon(a,role);if(exactBee)return exactBee;
-  const exactSeal=sealExactSepLocalPolygon(a,role);if(exactSeal)return exactSeal;
-  const exactRhino=rhinoExactSepLocalPolygon(a,role);if(exactRhino)return exactRhino;
-  const profile=ANIMAL_SEP_PIECE_PROFILE[a?.type]||{body:[-.20,.26,.18],head:[.15,.50,.19]};
-  const stage=["baby","adult","boss","superboss","bigmomma"].includes(a?.stage)?a.stage:"adult",state=a?.sleeping?"sleep":"awake",exactState=ANIMAL_SEP_EXACT_X[a?.type]?.[stage]?.[state];
-  if(exactState&&Object.prototype.hasOwnProperty.call(exactState,role)){const xr=exactState[role];if(!xr)return null;const halfH=(profile[role]||profile.body)[2],d=sepHitboxDimensions(a),left=xr[0],right=xr[1];return [[left*d.w,-halfH*d.h],[right*d.w,-halfH*d.h],[right*d.w,halfH*d.h],[left*d.w,halfH*d.h]];}
-  const bounds=profile[role]||profile.body,d=sepHitboxDimensions(a),[left,right,halfH]=bounds;return [[left*d.w,-halfH*d.h],[right*d.w,-halfH*d.h],[right*d.w,halfH*d.h],[left*d.w,halfH*d.h]];
-}
-function transformAnimalLocalPoly(a,poly){const ang=Number(a?.angle)||0,ca=Math.cos(ang),sa=Math.sin(ang),ax=Number(a?.x)||0,ay=Number(a?.y)||0;return poly.map(([lx,ly])=>[ax+lx*ca-ly*sa,ay+lx*sa+ly*ca]);}
-function animalSepHitPolygons(a,mode="bodyHead"){if(!a)return[];const roles=mode==="head"?["head"]:mode==="body"?["body"]:["body","head"],out=[];for(const role of roles){const local=sepLocalPiecePolygon(a,role);if(!local||local.length<3)continue;out.push({role,points:transformAnimalLocalPoly(a,local)});}return out;}
-function polygonCenter(poly){let x=0,y=0;if(!poly?.length)return{x:0,y:0};for(const p of poly){x+=p[0];y+=p[1];}return{x:x/poly.length,y:y/poly.length};}
-function polygonPointSegmentDistance(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,den=vx*vx+vy*vy,t=den>1e-9?clamp(((px-ax)*vx+(py-ay)*vy)/den,0,1):0;return Math.hypot(px-(ax+vx*t),py-(ay+vy*t));}
-function convexPolygonPenetration(polyA,polyB){if(!polyA?.length||!polyB?.length)return null;let minOverlap=Infinity,bx=0,by=0;const axes=poly=>{for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],ex=q[0]-p[0],ey=q[1]-p[1],len=Math.hypot(ex,ey);if(len<1e-8)continue;const ax=-ey/len,ay=ex/len;let amin=Infinity,amax=-Infinity,bmin=Infinity,bmax=-Infinity;for(const v of polyA){const d=v[0]*ax+v[1]*ay;amin=Math.min(amin,d);amax=Math.max(amax,d);}for(const v of polyB){const d=v[0]*ax+v[1]*ay;bmin=Math.min(bmin,d);bmax=Math.max(bmax,d);}const ov=Math.min(amax,bmax)-Math.max(amin,bmin);if(ov<=0)return false;if(ov<minOverlap){minOverlap=ov;bx=ax;by=ay;}}return true;};if(!axes(polyA)||!axes(polyB))return null;const ca=polygonCenter(polyA),cb=polygonCenter(polyB);if((cb.x-ca.x)*bx+(cb.y-ca.y)*by<0){bx=-bx;by=-by;}return{nx:bx,ny:by,overlap:minOverlap};}
-function polygonMinDistance(a,b){if(!a?.length||!b?.length)return Infinity;if(convexPolygonPenetration(a,b))return 0;let best=Infinity;for(const p of a)for(let i=0;i<b.length;i++)best=Math.min(best,polygonPointSegmentDistance(p[0],p[1],b[i][0],b[i][1],b[(i+1)%b.length][0],b[(i+1)%b.length][1]));for(const p of b)for(let i=0;i<a.length;i++)best=Math.min(best,polygonPointSegmentDistance(p[0],p[1],a[i][0],a[i][1],a[(i+1)%a.length][0],a[(i+1)%a.length][1]));return best;}
-function animalSepCirclePenetration(a,cx,cy,cr=0,mode="bodyHead"){let best=null;for(const piece of animalSepHitPolygons(a,mode)){const p=rockCirclePolyPenetration(cx,cy,Math.max(0,Number(cr)||0),piece.points);if(!p)continue;const c=polygonCenter(piece.points),rec={piece,h:{x:c.x,y:c.y,role:piece.role},d:dist(cx,cy,c.x,c.y),overlap:p.overlap,nx:-p.nx,ny:-p.ny};if(!best||rec.overlap>best.overlap)best=rec;}return best;}
-function animalSepPairPenetration(a,b){let best=null;for(const pa of animalSepHitPolygons(a))for(const pb of animalSepHitPolygons(b)){const p=convexPolygonPenetration(pa.points,pb.points);if(p&&(!best||p.overlap>best.overlap))best={...p,pa,pb};}return best;}
-function animalSepPolyPenetration(a,poly){let best=null;for(const pa of animalSepHitPolygons(a)){const p=convexPolygonPenetration(pa.points,poly);if(p&&(!best||p.overlap>best.overlap))best={...p,pa};}return best;}
-function animalSepSegmentT(a,x0,y0,x1,y1,radius=0,mode="bodyHead"){let best=null,len=Math.hypot(x1-x0,y1-y0),step=Math.max(2,Math.min(5,Math.max(1,Number(radius)||0)*.65+2)),steps=Math.max(1,Math.ceil(len/step));for(const piece of animalSepHitPolygons(a,mode)){for(let i=0;i<=steps;i++){const t=i/steps,x=x0+(x1-x0)*t,y=y0+(y1-y0)*t;if(rockCirclePolyPenetration(x,y,Math.max(0,Number(radius)||0),piece.points)){if(best==null||t<best)best=t;break;}}}return best;}
-function basicRockWorldPolygon(r){if(!r||r.type!=="rock")return null;const base=BASIC_ROCK_HITBOX_POLYS[biomeBaseId(worldBiomeAt(r.x,r.y))];if(!base)return null;const sc=Math.max(.01,Number(r.scale)||1);return base.map(([x,y])=>[r.x+x*sc,r.y+y*sc]);}
-function preciseShapeTouchesAnimal(shape,a){if(!shape||!a)return false;for(const piece of animalSepHitPolygons(a)){for(const c of shape.circles||[])if(rockCirclePolyPenetration(c.x,c.y,c.r||0,piece.points))return true;for(const q of shape.segments||[])if(animalSegmentAgainstPoly(q.ax,q.ay,q.bx,q.by,q.r||0,piece.points))return true;}return false;}
-function animalSegmentAgainstPoly(x0,y0,x1,y1,radius,poly){const len=Math.hypot(x1-x0,y1-y0),steps=Math.max(1,Math.ceil(len/3));for(let i=0;i<=steps;i++){const t=i/steps;if(rockCirclePolyPenetration(x0+(x1-x0)*t,y0+(y1-y0)*t,Math.max(0,radius||0),poly))return t;}return null;}
-function animalProjectileSegmentT(a,x0,y0,x1,y1,radius=0){return animalSepSegmentT(a,x0,y0,x1,y1,radius,"bodyHead");}
-function animalMeleeTouch(a,px,py,range,angle,maxFacing=1.05){for(const piece of animalSepHitPolygons(a)){const c=polygonCenter(piece.points);if(rockCirclePolyPenetration(px,py,Math.max(0,range),piece.points)&&facing(px,py,angle,c.x,c.y,maxFacing))return true;}return false;}
-function animalProjectileTouch(a,x,y,radius=0){return !!animalSepCirclePenetration(a,x,y,radius,"bodyHead");}
-function animalAttackContact(a,ref,target,extraGrace=0){if(!a||!target)return false;if(ref?.kind==="player"&&(target.dead||target.health<=0))return false;if(ref?.kind==="pet"&&(target.dead||target.hp<=0))return false;const heads=animalSepHitPolygons(a,"head"),grace=Math.max(0,Number(extraGrace)||0);if(ref?.kind==="animal"||ref?.kind==="pet"){for(const h of heads)for(const q of animalSepHitPolygons(target))if(convexPolygonPenetration(h.points,q.points)||polygonMinDistance(h.points,q.points)<=grace)return true;return false;}const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(2,(Number(target.r)||PLAYER_R)*.78)+grace;for(const h of heads)if(rockCirclePolyPenetration(target.x,target.y,rr,h.points))return true;return false;}
-function petAttackContact(a,ref,target){return animalAttackContact(a,ref,target);}
-function animalTargetOverlap(a,ref,target){if(!a||!target)return 0;if(ref?.kind==="animal"||ref?.kind==="pet"){const h=animalSepPairPenetration(a,target);return h?Math.max(0,h.overlap+3):0;}const rr=ref?.kind==="player"?PLAYER_R*.82:Math.max(8,(target.r||16)*.82),h=animalSepCirclePenetration(a,target.x,target.y,rr);return h?Math.max(0,h.overlap+3):0;}
-// ---------- END SEP POLYGON HITBOXES ----------
-
 function typeHp(type, stage) {
   const base=ANIMAL_STAGE_HP[stage]??ANIMAL_STAGE_HP.adult;
   const b=animalBalance(type),babyMul=stage==="baby"?(b.babyHpMul||1):1,bigMul=stage==="bigmomma"?(BIG_MOMMA_HP_MUL[type]??1):1;
@@ -1324,7 +1232,6 @@ const ANIMAL_SPECIES_SPEED_PROFILE=Object.freeze({
   snake:{baby:1.28,adult:1.25,boss:1.22,superboss:1.20,bigmomma:1.18,massBlend:.18},
   deer:{baby:1.14,adult:1.10,boss:1.07,superboss:1.04,bigmomma:1,massBlend:.50},
   boar:{baby:1.03,adult:.98,boss:.93,superboss:.88,bigmomma:.84,massBlend:.85},
-  rhino:{baby:.96,adult:.90,boss:.84,superboss:.78,bigmomma:.72,massBlend:.95},
   saber:{baby:1.15,adult:1.12,boss:1.08,superboss:1.04,bigmomma:1,massBlend:.55},
   clouded:{baby:1.18,adult:1.14,boss:1.10,superboss:1.06,bigmomma:1.02,massBlend:.50},
   queenbee:{baby:1.08,adult:1.02,boss:.99,superboss:.96,bigmomma:.92,massBlend:.26},
@@ -1407,7 +1314,7 @@ const BIOME_ZONES={
 };
 const BIOME_ORDER=["forest","rainforest","arctic","desert","mountains"];
 const BIOME_PROFILES={
-  forest:{id:"forest",name:"Forest",species:["dog","cat","boar","rhino","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"]},
+  forest:{id:"forest",name:"Forest",species:["dog","cat","boar","fox","bear","owl","deer","wolf","saber","rabbit","snake","queenbee","workerbee","dronebee"]},
   rainforest:{id:"rainforest",name:"Rain Forest",species:["snake","dragon","clouded","saber","queenbee","workerbee","dronebee"]},
   arctic:{id:"arctic",name:"Arctic",species:["rabbit","seal"]},
   desert:{id:"desert",name:"Desert",species:["fennec","snake","dragon","boar"]},
@@ -1643,11 +1550,15 @@ export class WorldRoom extends Room {
     this.state.worldReady = true;
     this.rebuildDynamicGrid();
 
-    // Keep combat/physics at 20 TPS, but send state patches at 10 Hz. The client
-    // interpolates moving entities, cutting multiplayer bandwidth substantially.
+    // Adaptive simulation for free-tier hosts (Render etc.):
+    // - 0 players  → almost idle (very low CPU)
+    // - 1+ players → normal 20 TPS combat + 10 Hz patches
+    this._simPlayers = 0;
+    this._idleMode = false;
     if (typeof this.setPatchRate === "function") this.setPatchRate(100);
     else this.patchRate = 100;
-    this.setSimulationInterval((delta)=>this.update(delta/1000),1000/20);
+    this.setSimulationInterval((delta)=>this.update(delta/1000), 1000/20);
+    this._applyEfficiencyMode();
 
     this.onMessage("input",(client,input={})=>this.handleInput(client,input));
     this.onMessage("resourceHit",(client,data={})=>this.handleResourceHit(client,data));
@@ -1829,7 +1740,12 @@ export class WorldRoom extends Room {
     const chestHit=(c)=>({x:c.x,y:c.y+8,r:c.r||18});
 
     if(isCreature){
-      const pushCreatureFrom=(cx,cy,cr)=>{const hit=animalSepCirclePenetration(obj,cx,cy,cr);if(!hit||hit.overlap<=0)return false;obj.x+=hit.nx*hit.overlap;obj.y+=hit.ny*hit.overlap;return true;};
+      const pushCreatureFrom=(cx,cy,cr)=>{
+        let best=null,bestOverlap=0;
+        for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,cx,cy),overlap=h.r+cr-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}
+        if(best&&best.overlap>0){const a=best.d>.1?angTo(cx,cy,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;return true;}
+        return false;
+      };
       const range=Math.max(260,(obj.r||18)+190);
       for(const solid of this.nearbySolids(obj.x,obj.y,range)){
         if(solid.kind==="water")continue;
@@ -1837,19 +1753,27 @@ export class WorldRoom extends Room {
           const r=this.state.resources.get(solid.id);if(!r||!r.alive)continue;
           if(r.type==="oceanRock"||BIOME_RESOURCE_INFO[r.type]?.biome==="ocean")continue;
           if(r.type==="log"){
-            let best=null;for(const q of logParts(r)){const h=animalSepCirclePenetration(obj,q.x,q.y,q.r);if(h&&(!best||h.overlap>best.overlap))best=h;}
-            if(best){obj.x+=best.nx*best.overlap;obj.y+=best.ny*best.overlap;obj._lastResourceContactId=solid.id;}
+            let best=null,bestOverlap=0;
+            const body=animalPhysicalCircles(obj);
+            for(const h of body)for(const q of logParts(r)){const d=dist(h.x,h.y,q.x,q.y),overlap=h.r*.9+q.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,q,d,overlap};}}
+            if(best&&best.d>.1){const a=angTo(best.q.x,best.q.y,best.h.x,best.h.y);obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;obj._lastResourceContactId=solid.id;}
           }else if(r.type==="rock"){
-            const poly=basicRockWorldPolygon(r),hit=poly?animalSepPolyPenetration(obj,poly):null;
-            if(hit&&hit.overlap>0){obj.x-=hit.nx*hit.overlap;obj.y-=hit.ny*hit.overlap;obj._lastResourceContactId=solid.id;}
+            let best=null;for(const h of animalPhysicalCircles(obj)){const p=basicRockCirclePenetration(r,h.x,h.y,h.r*.9);if(p&&(!best||p.overlap>best.overlap))best=p;}
+            if(best){obj.x+=best.nx*best.overlap;obj.y+=best.ny*best.overlap;obj._lastResourceContactId=solid.id;}
           }else{const c=resourceCenter(r);if(pushCreatureFrom(c.x,c.y,r.solidR))obj._lastResourceContactId=solid.id;}
         }else if(solid.kind==="gold"){const g=this.state.gold.get(solid.id);if(!g||(!g.infinite&&g.goldLeft<=0))continue;const h=goldHit(g);pushCreatureFrom(h.x,h.y,h.r);}
         else if(solid.kind==="chest"){const c=this.state.chests.get(solid.id);if(!c||c.opened)continue;const h=chestHit(c);pushCreatureFrom(h.x,h.y,h.r);}
       }
-      for(const[,w]of this.state.walls)pushCreatureFrom(w.x,w.y,w.r);
-      for(const[,t]of this.state.towers){if(!t||t.hp<=0)continue;pushCreatureFrom(t.x,t.y,towerSolidRadius(t));}
+      // Creature-vs-wall collision uses the canonical torso+head copied circles as other solids.
+      for(const[,w]of this.state.walls){
+        let best=null,bestOverlap=0;
+        for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,w.x,w.y),overlap=h.r+w.r-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}
+        if(best&&best.overlap>0){const a=best.d>.1?angTo(w.x,w.y,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}
+      }
+      for(const[,t]of this.state.towers){if(!t||t.hp<=0)continue;const tr=towerSolidRadius(t);let best=null,bestOverlap=0;for(const h of animalPhysicalCircles(obj)){const d=dist(h.x,h.y,t.x,t.y),overlap=h.r+tr-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}if(best&&best.overlap>0){const a=best.d>.1?angTo(t.x,t.y,best.h.x,best.h.y):(Number(obj.angle)||0)+Math.PI;obj.x+=Math.cos(a)*best.overlap;obj.y+=Math.sin(a)*best.overlap;}}
       obj.x=clamp(obj.x,20,WORLD_W-20);obj.y=clamp(obj.y,20,WORLD_H-20);if(!obj.ownerId)keepObjectOnLandmass(obj,Math.max(22,(Number(obj.r)||18)*.78));return;
     }
+
     if(isPlayer){
       for(const solid of this.nearbySolids(obj.x,obj.y,260)){
         if(solid.kind==="water")continue;
@@ -1923,27 +1847,6 @@ export class WorldRoom extends Room {
     }else if(obj._blockingResourceId){
       const r=this.state.resources.get(obj._blockingResourceId);if(!this.resourceBlocksCreaturePath(obj,r))obj._blockingResourceId="";
     }
-  }
-
-  ensureAwakeWildMotion(a,startX,startY,dt,speedMul=.06){
-    if(!a||a.dead||a.sleeping||!(dt>0))return 0;
-    const sx=Number.isFinite(startX)?startX:a.x,sy=Number.isFinite(startY)?startY:a.y;
-    const baseSpeed=Math.max(6,(Number(a.speed)||60)*Math.max(.03,Number(speedMul)||.06));
-    const minMove=Math.max(.025,baseSpeed*dt*.07);
-    this.moveCreatureSwept(a,baseSpeed,dt);
-    let moved=dist(sx,sy,a.x,a.y);
-    if(moved>=minMove){a._awakeStallFrames=0;return moved;}
-    a._awakeStallFrames=(Number(a._awakeStallFrames)||0)+1;
-    if(!Number.isFinite(a._awakeStallSide))a._awakeStallSide=((String(a.id||a.netId||a.type).length&1)?1:-1);
-    const base=Number.isFinite(a.wanderA)?a.wanderA:(Number(a.angle)||0),side=a._awakeStallSide;
-    for(const off of [.62,1.18,1.82]){
-      a.angle=base+side*off;a.wanderA=a.angle;
-      this.moveCreatureSwept(a,baseSpeed*1.08,dt);
-      moved=dist(sx,sy,a.x,a.y);
-      if(moved>=minMove){a._awakeStallFrames=0;return moved;}
-    }
-    a._awakeStallSide*=-1;a.wanderA=(Number(a.angle)||0)+a._awakeStallSide*1.35;a.wanderT=Math.min(Number(a.wanderT)||0,.35);
-    return moved;
   }
 
   spawnClearOfCreatures(x,y) {
@@ -3401,21 +3304,9 @@ export class WorldRoom extends Room {
   launchArcticShardVolley(ownerId,petId,p,target,damage){if(!p||!target)return;const base=angTo(p.x,p.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(p.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:p.x+Math.cos(base+i*.12)*(p.r+10),y:p.y+Math.sin(base+i*.12)*(p.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:false,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId,petBlast:true,knock:0,sourcePetId:petId});const q=this.state.projectiles.get(pid);if(q)q._targetRef={kind:target.ref.kind,id:target.ref.id};}}
   createSpikePrison(ownerId,sourcePetId,sourceAnimalId,targetRef,targetObj,spikeDmg,stage){if(!targetObj||!targetRef)return;const params=spikePrisonParams(stage,targetObj.r||PLAYER_R),spin=(sourceAnimalId?-1:1)*params.spin;for(let i=0;i<params.count;i++){const aa=i/params.count*TAU,wx=targetObj.x+Math.cos(aa)*params.ring,wy=targetObj.y+Math.sin(aa)*params.ring,wid=this.addWall(wx,wy,params.wallR,params.duration,ownerId||"",{hp:999,kind:"stoneSpike",spiked:true,spikeDmg,sourcePetId:sourcePetId||""});if(sourceAnimalId)this.hostileWildWalls.set(wid,sourceAnimalId);this.orbitSpikeWalls.set(wid,{cx:targetObj.x,cy:targetObj.y,radius:params.ring,angle:aa,speed:spin});}this.broadcast("abilityEvent",{petId:sourcePetId||"",ownerId:ownerId||"",wildAnimalId:sourceAnimalId||"",elem:"Stone",fxType:"earthRingBurst",x:targetObj.x,y:targetObj.y,targetX:targetObj.x,targetY:targetObj.y,r:targetObj.r||PLAYER_R,stage,range:params.ring+params.wallR,life:.9});}
   petAbilityTargetsAll(ownerId,p,x,y,range){const refs=[];for(const[id,en]of this.state.enemies)if(!en.dead&&dist(x,y,en.x,en.y)<=range+(en.r||16)*.25)refs.push({ref:{kind:"enemy",id},obj:en});for(const[id,a]of this.state.animals)if(!a.dead&&a.hp>0&&dist(x,y,a.x,a.y)<=range+(a.r||18)*.25)refs.push({ref:{kind:"animal",id},obj:a});for(const[id,pl]of this.state.players)if(id!==ownerId&&!pl.dead&&dist(x,y,pl.x,pl.y)<=range+PLAYER_R*.25)refs.push({ref:{kind:"player",id},obj:pl});for(const[id,q]of this.state.pets)if(q.ownerId!==ownerId&&!q.dead&&dist(x,y,q.x,q.y)<=range+(q.r||18)*.25)refs.push({ref:{kind:"pet",id},obj:q});return refs;}
-  rhinoChargeSpeed(source){const base=Math.max(1,Number(source?.speed)||animalSpeed("rhino",source?.stage||"adult",!!source?.ownerId)||44);return Math.max(190,base*3.65)*petStoneFruitMoveMul(source);}
-  spawnRhinoTrailSpike(ownerId,sourcePetId,sourceAnimalId,source,damage){if(!source)return"";const a=Number(source.angle)||0,back=(Number(source.r)||18)*.64,wx=source.x-Math.cos(a)*back,wy=source.y-Math.sin(a)*back,wallR=clamp((Number(source.r)||18)*.22,8,17),wid=this.addWall(wx,wy,wallR,5,ownerId||"",{hp:9999,kind:"earthSpike",spiked:true,spikeDmg:Math.max(1,Number(damage)||10),sourcePetId:sourcePetId||""});if(sourceAnimalId)this.hostileWildWalls.set(wid,sourceAnimalId);return wid;}
   updateActivePetAbilities(dt){
     const now=this.state.worldTime,next=[];
-    for(const fx of this.activePetAbilities){fx.time-=dt;const p=this.state.pets.get(fx.petId);if(!p||p.dead)continue;
-      if(fx.type==="rhinoCharge"){
-        if(fx.time<=0)continue;
-        p.angle=Number(fx.angle)||Number(p.angle)||0;p._rhinoChargeUntil=now+Math.max(0,fx.time);
-        this.moveCreatureSwept(p,this.rhinoChargeSpeed(p),dt);this.resolveStatic(p,(p.r||18)*.72);
-        fx.spikeTick=(Number(fx.spikeTick)||0)-dt;if(fx.spikeTick<=0){fx.spikeTick=.18;this.spawnRhinoTrailSpike(fx.ownerId,fx.petId,"",p,fx.spikeDmg);}
-        if(!fx.hits)fx.hits=new Map();const rr=Math.max(20,(p.r||18)*.95);
-        for(const h of this.abilityTargetsAround(fx.ownerId,p.x,p.y,rr)){const key=`${h.ref.kind}:${h.ref.id}`,nextHit=fx.hits.get(key)||0;if(now<nextHit)continue;fx.hits.set(key,now+.34);this.petAbilityDamage(h.ref,fx.ramDmg,fx.ownerId,fx.petId);}
-        next.push(fx);continue;
-      }
-      if(fx.time<=0)continue;
+    for(const fx of this.activePetAbilities){fx.time-=dt;const p=this.state.pets.get(fx.petId);if(!p||p.dead||fx.time<=0)continue;
       if(fx.type==="fennecOrbit"){
         if(!fx.hits)fx.hits=new Map();const orbit=Math.max(p.r+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
         for(let i=0;i<3;i++){const a=phase+i*TAU/3,bx=p.x+Math.cos(a)*orbit,by=p.y+Math.sin(a)*orbit;for(const h of this.abilityTargetsAround(fx.ownerId,bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.petAbilityDamage(h.ref,fx.damage,fx.ownerId,fx.petId);}}
@@ -3432,17 +3323,7 @@ export class WorldRoom extends Room {
   launchWildArcticShardVolley(animalId,a,target,damage){if(!a||!target)return;const base=angTo(a.x,a.y,target.obj.x,target.obj.y),ps=petProjectileStageSize(a.stage);for(let i=0;i<3;i++){const pid=this.addProjectile({x:a.x+Math.cos(base+i*.12)*(a.r+10),y:a.y+Math.sin(base+i*.12)*(a.r+10),vx:Math.cos(base+i*.04)*560,vy:Math.sin(base+i*.04)*560,life:1.8,r:13*ps,hostile:true,kind:"iceShard",color:"#bfeeff",dmg:damage,ownerId:animalId,petBlast:false,knock:0,sourcePetId:""});const q=this.state.projectiles.get(pid);if(q){q._targetRef={kind:target.ref.kind,id:target.ref.id};q._sourceAnimalId=animalId;}}}
   updateActiveWildAbilities(dt){
     const now=this.state.worldTime,next=[];
-    for(const fx of this.activeWildAbilities){fx.time-=dt;const a=this.state.animals.get(fx.animalId);if(!a||a.dead||a.hp<=0)continue;
-      if(fx.type==="rhinoCharge"){
-        if(fx.time<=0)continue;
-        a.angle=Number(fx.angle)||Number(a.angle)||0;a._rhinoChargeUntil=now+Math.max(0,fx.time);
-        this.moveCreatureSwept(a,this.rhinoChargeSpeed(a),dt);this.resolveStatic(a,(a.r||18)*.72);
-        fx.spikeTick=(Number(fx.spikeTick)||0)-dt;if(fx.spikeTick<=0){fx.spikeTick=.18;this.spawnRhinoTrailSpike("","",fx.animalId,a,fx.spikeDmg);}
-        if(!fx.hits)fx.hits=new Map();const rr=Math.max(20,(a.r||18)*.95);
-        for(const h of this.wildAbilityTargetsAround(a.x,a.y,rr)){const key=`${h.ref.kind}:${h.ref.id}`,nextHit=fx.hits.get(key)||0;if(now<nextHit)continue;fx.hits.set(key,now+.34);this.damageTarget(h.ref,fx.ramDmg,"animal",fx.animalId);}
-        next.push(fx);continue;
-      }
-      if(fx.time<=0)continue;
+    for(const fx of this.activeWildAbilities){fx.time-=dt;const a=this.state.animals.get(fx.animalId);if(!a||a.dead||a.hp<=0||fx.time<=0)continue;
       if(fx.type==="fennecOrbit"){
         if(!fx.hits)fx.hits=new Map();const orbit=Math.max((a.r||18)+24,fx.orbitR||46),phase=(fx.phase=(fx.phase||0)+dt*6.5);
         for(let i=0;i<3;i++){const q=phase+i*TAU/3,bx=a.x+Math.cos(q)*orbit,by=a.y+Math.sin(q)*orbit;for(const h of this.wildAbilityTargetsAround(bx,by,15)){const key=`${i}:${h.ref.kind}:${h.ref.id}`,n=fx.hits.get(key)||0;if(now<n)continue;fx.hits.set(key,now+.75);this.damageTarget(h.ref,fx.damage,"animal",fx.animalId);}}
@@ -3465,7 +3346,7 @@ export class WorldRoom extends Room {
   healPetTeam(ownerId,amount){const heal=Math.max(0,Number(amount)||0),owner=this.state.players.get(ownerId);if(owner&&!owner.dead)owner.health=clamp(owner.health+heal,0,owner.maxHealth);for(const[,q]of this.state.pets)if(q.ownerId===ownerId&&!q.dead)q.hp=clamp(q.hp+heal,0,q.maxHp);}
 
   handlePetAbility(client,data,inherited=false){
-    const id=String(data?.id||""),p=this.ownedPet(client,id);if(!p||p.dead||p.larvaPet||(!inherited&&abilityCooldownActive(p))||(!inherited&&p.bredChild&&!this.isOlderSiblingLeaderPet(id,p)))return;
+    const id=String(data?.id||""),p=this.ownedPet(client,id);if(!p||p.dead||p.larvaPet||(!inherited&&p.abilityCd>0)||(!inherited&&p.bredChild&&!this.isOlderSiblingLeaderPet(id,p)))return;
     const info=PET_TYPES[p.type],ownerId=client.sessionId,owner=this.state.players.get(ownerId),stats=petAbilityStats(p);p.abilityCd=inherited?0:info.abilityCd;
     const angle=Number.isFinite(p.angle)?p.angle:(owner?.angle||0),elem=info.elem;
     const sendFx=(fxType,extra={})=>this.broadcast("abilityEvent",{petId:id,ownerId,elem,x:p.x,y:p.y,r:p.r,stage:p.stage,fxType,...extra,inherited});
@@ -3490,7 +3371,7 @@ export class WorldRoom extends Room {
     }else if(p.type==="walrus"){
       const t=this.petAbilityTarget(ownerId,id,p,300),dmg=stats.damage||2;if(t){const stage=uploadedAnimalStageKey(p.stage),mul={baby:.72,adult:1,boss:1.2,superboss:1.45,bigmomma:1.75}[stage]||1,ring=Math.max((t.obj.r||PLAYER_R)+34,62*mul),wallR=clamp(13*mul,11,27);for(let i=0;i<6;i++){const a=i/6*TAU,wx=t.obj.x+Math.cos(a)*ring,wy=t.obj.y+Math.sin(a)*ring;this.addWall(wx,wy,wallR,4,ownerId,{hp:999,kind:"stoneSpike",spiked:true,spikeDmg:dmg,sourcePetId:id});}sendFx("earthRingBurst",{targetX:t.obj.x,targetY:t.obj.y,range:ring+wallR,life:.8});}
     }else if(p.type==="seal"){
-      const dmg=stats.damage||10,targets=this.petAbilityTargetsAll(ownerId,p,p.x,p.y,320);if(targets.length){if(!inherited)startDelayedAbilityCooldown(p,SEAL_SPIKE_PRISON_DURATION,SEAL_POST_ABILITY_COOLDOWN);for(const t of targets)this.createSpikePrison(ownerId,id,"",t.ref,t.obj,dmg,p.stage);sendFx("earthRingBurst",{targetX:p.x,targetY:p.y,range:petAbilityRangeFor(p,90,1.9),life:.9});}
+      const dmg=stats.damage||10,targets=this.petAbilityTargetsAll(ownerId,p,p.x,p.y,320);if(targets.length){for(const t of targets)this.createSpikePrison(ownerId,id,"",t.ref,t.obj,dmg,p.stage);sendFx("earthRingBurst",{targetX:p.x,targetY:p.y,range:petAbilityRangeFor(p,90,1.9),life:.9});}
     }else if(p.type==="queenbee"){const range=petAbilityRangeFor(p,220,4.4);this.spawnQueenBeeSwarm(ownerId,id,"",p,stats,false);sendFx("beeSwarm",{range,life:.45,color:"#ffe27c"});
     }else if(p.type==="workerbee"){const t=this.petAbilityTarget(ownerId,id,p,180),dmg=stats.damage||14,dot=stats.dot||10;if(t){this.petAbilityDamage(t.ref,dmg,ownerId,id);this.applyAbilityFixedDot(t.ref,dot,5,ownerId,id,"");const aa=angTo(p.x,p.y,t.obj.x,t.obj.y),dash=Math.min(95,Math.max(24,t.d-18)),ox=p.x,oy=p.y;p.x=clamp(p.x+Math.cos(aa)*dash,20,WORLD_W-20);p.y=clamp(p.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);sendFx("pounce",{fromX:ox,fromY:oy,targetX:p.x,targetY:p.y,angle:aa,life:.55,shockScale:.36});}
     }else if(p.type==="dronebee"){const t=this.petAbilityTarget(ownerId,id,p,210),dmg=stats.damage||20;if(t){const aa=angTo(p.x,p.y,t.obj.x,t.obj.y),dash=Math.min(120,Math.max(40,t.d-Math.max(10,t.obj.r||18))),ox=p.x,oy=p.y;p.x=clamp(p.x+Math.cos(aa)*dash,20,WORLD_W-20);p.y=clamp(p.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(p,(p.r||18)*.68);this.petAbilityDamage(t.ref,dmg,ownerId,id);sendFx("pounce",{fromX:ox,fromY:oy,targetX:p.x,targetY:p.y,angle:aa,life:.62,shockScale:.46});}
@@ -3526,9 +3407,6 @@ export class WorldRoom extends Room {
       const a=angle,dmg=stats.damage||5,projScale=petProjectileStageSize(p.stage);this.addProjectile({x:p.x+Math.cos(a)*(p.r+7),y:p.y+Math.sin(a)*(p.r+7),vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.3,r:9*projScale,hostile:false,kind:"poison",color:"#65cc65",dmg,ownerId,petBlast:true,knock:0,sourcePetId:id});sendFx("poisonMuzzle",{angle:a,life:.5});
     }else if(elem==="Light"){
       const range=petAbilityRangeFor(p,155,3.15),dmg=stats.damage||16;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{});this.petDamageResourcesAround(ownerId,p,p.x,p.y,range,true);sendFx("lightRingBurst",{range,life:7});
-    }else if(p.type==="rhino"){
-      const t=this.petAbilityTarget(ownerId,id,p,430),ang=t?angTo(p.x,p.y,t.obj.x,t.obj.y):(Number(p.angle)||angle),ramDmg=stats.damage||22,spikeDmg=stats.spike||10;
-      p.angle=ang;p._rhinoChargeUntil=this.state.worldTime+4;this.activePetAbilities=this.activePetAbilities.filter(f=>!(f.type==="rhinoCharge"&&f.petId===id));this.activePetAbilities.push({type:"rhinoCharge",petId:id,ownerId,time:4,ramDmg,spikeDmg,angle:ang,spikeTick:0,hits:new Map()});sendFx("earthRingBurst",{angle:ang,range:Math.max(58,p.r*1.2),life:.65});
     }else if(elem==="Earth"){
       const range=petAbilityRangeFor(p,145,2.95),dmg=stats.damage||20;this.petAbilityArea(ownerId,id,p,p.x,p.y,range,dmg,{knock:12});this.petDamageResourcesAround(ownerId,p,p.x,p.y,range,true);sendFx("earthRingBurst",{range,life:7});
     }else if(elem==="Combat"){
@@ -3608,7 +3486,7 @@ export class WorldRoom extends Room {
   pullWildAbilityTarget(ref,target,toX,toY,amount){if(!ref||!target||amount<=0)return;const q=angTo(target.x,target.y,toX,toY);let pull=amount;if(ref.kind==="pet"||ref.kind==="animal")pull*=animalKnockbackScale(target);target.x=clamp(target.x+Math.cos(q)*pull,20,WORLD_W-20);target.y=clamp(target.y+Math.sin(q)*pull,20,WORLD_H-20);if(ref.kind==="player")this.resolveStatic(target,PLAYER_R*.82);else if(ref.kind==="pet"||ref.kind==="animal")this.resolveStatic(target,(target.r||18)*.68);}
 
   wildUseAbility(id,a,ref,target){
-    if(!a||!target||a.stage==="baby"||abilityCooldownActive(a)||a.sleeping||a.hp<=0)return false;
+    if(!a||!target||a.stage==="baby"||(a.abilityCd||0)>0||a.sleeping||a.hp<=0)return false;
     const info=PET_TYPES[a.type]||{};const elem=info.elem||"";
     a.abilityCd=Math.max(3.2,(info.abilityCd||12)*.55);
     if(!["clouded","fennec"].includes(a.type))this.broadcast("abilityEvent",{petId:"",ownerId:"",elem,x:a.x,y:a.y,r:a.r,wildAnimalId:id});
@@ -3642,10 +3520,7 @@ export class WorldRoom extends Room {
       const dmg=petAbilityStats(a).damage||2;if(d<320){this.createSpikePrison("","",id,ref,target,dmg,a.stage);}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"SPIKE PRISON",color:"#a9a9a2"});
     }
     else if(a.type==="seal"){
-      const dmg=petAbilityStats(a).damage||10,targets=this.wildAbilityTargetsAround(a.x,a.y,320);if(targets.length){startDelayedAbilityCooldown(a,SEAL_SPIKE_PRISON_DURATION,SEAL_POST_ABILITY_COOLDOWN);for(const t of targets)this.createSpikePrison("","",id,t.ref,t.obj,dmg,a.stage);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"SPIKE PRISON",color:"#a9a9a2"});
-    }
-    else if(a.type==="rhino"){
-      const st=petAbilityStats(a),ang=angTo(a.x,a.y,target.x,target.y);a.angle=ang;a._rhinoChargeUntil=this.state.worldTime+4;this.activeWildAbilities=this.activeWildAbilities.filter(f=>!(f.type==="rhinoCharge"&&f.animalId===id));this.activeWildAbilities.push({type:"rhinoCharge",animalId:id,time:4,ramDmg:st.damage||22,spikeDmg:st.spike||10,angle:ang,spikeTick:0,hits:new Map()});this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Earth",fxType:"earthRingBurst",x:a.x,y:a.y,r:a.r,stage:a.stage,angle:ang,range:Math.max(58,a.r*1.2),life:.65});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"CHARGING TRAIL",color:"#6b4a2d"});
+      const dmg=petAbilityStats(a).damage||10,targets=this.wildAbilityTargetsAround(a.x,a.y,320);if(targets.length){for(const t of targets)this.createSpikePrison("","",id,t.ref,t.obj,dmg,a.stage);}this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"SPIKE PRISON",color:"#a9a9a2"});
     }
     else if(a.type==="queenbee"){const st=petAbilityStats(a),range=Math.max(215,(a.r||18)*4.2);this.spawnQueenBeeSwarm("","",id,a,st,true);this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Insect",fxType:"beeSwarm",x:a.x,y:a.y,r:a.r,stage:a.stage,range,life:.45,color:"#ffe27c"});this.broadcastFx({kind:"ability",x:a.x,y:a.y,text:"ROYAL SWARM",color:"#ffe27c"});}
     else if(a.type==="workerbee"){const st=petAbilityStats(a),dmg=st.damage||14,dot=st.dot||10;if(d<185){const aa=angTo(a.x,a.y,target.x,target.y),dash=Math.min(95,Math.max(24,d-Math.max(8,target.r||PLAYER_R))),ox=a.x,oy=a.y;a.x=clamp(a.x+Math.cos(aa)*dash,20,WORLD_W-20);a.y=clamp(a.y+Math.sin(aa)*dash,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(animalAttackContact(a,ref,target,8)){this.damageTarget(ref,dmg,"animal",id);this.applyAbilityFixedDot(ref,dot,5,"","",id);}this.broadcast("abilityEvent",{petId:"",ownerId:"",wildAnimalId:id,elem:"Poison",fxType:"pounce",x:a.x,y:a.y,fromX:ox,fromY:oy,targetX:a.x,targetY:a.y,angle:aa,r:a.r,stage:a.stage,life:.55,shockScale:.3});}this.broadcastFx({kind:"ability",x:target.x,y:target.y,text:"POISON CHARGE",color:"#90de68"});}
@@ -3927,35 +3802,19 @@ export class WorldRoom extends Room {
       }
       if(a.dead){this.state.animals.delete(id);this.animalAggro.delete(id);this.animalFleeFrom.delete(id);this.clearWildMate(id);continue;}
       const _alwaysMoveX=a.x,_alwaysMoveY=a.y;
-      // Ability cooldowns continue in real time even while off-screen or returning home.
-      tickAbilityCooldownTimer(a,dt);
       const forcedActive=this.enemyOwnerByPet.has(id)||this.animalAggro.has(id)||this.wildMateTargets.has(id)||a.tameFailedAggro||a.desperateAggro||(a.recentHit||0)>0;
-      const nearbyActive=this.hasNearbyPlayerOrPet(a.x,a.y,1250);
-      if(!forcedActive&&!nearbyActive){
-        // Do not freeze off-screen wildlife. Keep a cheap authoritative wander
-        // running every server tick; only the expensive AI is skipped.
-        if(!a.sleeping){
-          a.wanderT=(Number(a.wanderT)||0)-dt;
-          if(a.wanderT<=0){a.wanderA=rand(0,TAU);a.wanderT=rand(1.4,3.4);}
-          smoothTurn(a,Number.isFinite(a.wanderA)?a.wanderA:(a.angle||0),dt,2.2);
-          const sp=Math.max(10,(Number(a.speed)||60)*.18),dx=Math.cos(Number(a.angle)||0)*sp*dt,dy=Math.sin(Number(a.angle)||0)*sp*dt;
-          a.x=clamp(a.x+dx,20,WORLD_W-20);a.y=clamp(a.y+dy,20,WORLD_H-20);
-          a._farStaticAccum=(Number(a._farStaticAccum)||0)+dt;
-          if(a._farStaticAccum>=.14){a._farStaticAccum=0;this.resolveStatic(a,(a.r||18)*.68);}
-        }
-        continue;
-      }
+      if(!forcedActive&&!this.hasNearbyPlayerOrPet(a.x,a.y,1250))continue;
       if(this.keepWildInHomeBiome(id,a,dt))continue;
       const moveStartX=a.x,moveStartY=a.y;
 
       a.flash=Math.max(0,(a.flash||0)-dt);
       a.atkCd=Math.max(0,(a.atkCd||0)-dt);
+      a.abilityCd=Math.max(0,(a.abilityCd||0)-dt);
       a.combat=Math.max(0,(a.combat||0)-dt);
       a.recentHit=Math.max(0,(a.recentHit||0)-dt);
       a.attackAnim=Math.max(0,(a.attackAnim||0)-dt);
       a.tailPhase=(a.tailPhase||0)+dt*(2.2+(a.speed||60)*.02);
-      if(a.type==="rhino"&&(Number(a._rhinoChargeUntil)||0)>this.state.worldTime){this.resolveStatic(a,(a.r||18)*.72);continue;}
-      if(!a.sleeping)this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.06);
+      if(!a.sleeping)this.moveCreatureSwept(a,Math.max(5,(Number(a.speed)||60)*.06),dt);
       if((Number(a._abilityStunUntil)||0)>this.state.worldTime){a.attackAnim=0;this.resolveStatic(a,(a.r||18)*.68);continue;}
 
       const enemyOwnerId=this.enemyOwnerByPet.get(id);
@@ -3974,7 +3833,7 @@ export class WorldRoom extends Room {
       if(this.wildAttackBlockingResource(id,a)){this.resolveStatic(a,(a.r||18)*.68);continue;}
       if(this.tryWildEatBerry(id,a,dt)){this.resolveStatic(a,(a.r||18)*.68);continue;}
 
-      if(this.updateWildMating(id,a,dt)){a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(!a.sleeping&&!a.dead&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10)this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.24);continue;}
+      if(this.updateWildMating(id,a,dt)){a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);this.resolveStatic(a,(a.r||18)*.68);if(!a.sleeping&&!a.dead&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10){this.moveCreatureSwept(a,Math.max(14,(Number(a.speed)||60)*.24),dt);this.resolveStatic(a,(a.r||18)*.68);}continue;}
       // Hive bee reproduction is handled by the 5-minute hatch cycle and the every-10-nights queen/drone brood event.
 
       const info=PET_TYPES[a.type]||{};
@@ -4127,7 +3986,8 @@ export class WorldRoom extends Room {
       a.x=clamp(a.x,20,WORLD_W-20);a.y=clamp(a.y,20,WORLD_H-20);
       this.resolveStatic(a,(a.r||18)*.68);
       if(!a.sleeping&&!a.dead&&a.hp>0&&dist(_alwaysMoveX,_alwaysMoveY,a.x,a.y)<.10){
-        this.ensureAwakeWildMotion(a,_alwaysMoveX,_alwaysMoveY,dt,.24);
+        this.moveCreatureSwept(a,Math.max(14,(Number(a.speed)||60)*.24),dt);
+        this.resolveStatic(a,(a.r||18)*.68);
       }
       this.carryEverythingTouchedByAnimal(id,a,a.x-moveStartX,a.y-moveStartY);
     }
@@ -4139,13 +3999,16 @@ export class WorldRoom extends Room {
       if(!obj||obj.dead)return;
       // A ridden mount is already the player's collision body.
       if(player.ridingPetId&&isPet&&player.ridingPetId===objId)return;
-      const hit=animalSepCirclePenetration(obj,player.x,player.y,PLAYER_R*.82);
+      let hit=null,bestOverlap=0;
+      for(const h of animalPhysicalCircles(obj)){
+        const d=dist(player.x,player.y,h.x,h.y),overlap=PLAYER_R*.82+h.r-d;
+        if(overlap>bestOverlap){bestOverlap=overlap;hit={h,d,overlap};}
+      }
       if(!hit||hit.overlap<=0)return;
 
       let mx=player.moveX||0,my=player.moveY||0,ml=Math.hypot(mx,my);
       if(ml>.05){mx/=ml;my/=ml;}else{mx=0;my=0;}
-      // hit.n is the direction the animal must move away from the player; the player's escape normal is opposite.
-      let nx=-hit.nx,ny=-hit.ny;if(!Number.isFinite(nx)||!Number.isFinite(ny)){if(ml>.05){nx=mx;ny=my;}else{const a=Number(player.angle)||0;nx=Math.cos(a);ny=Math.sin(a);}}
+      let nx,ny;if(hit.d>.10){nx=(player.x-hit.h.x)/hit.d;ny=(player.y-hit.h.y)/hit.d;}else if(ml>.05){nx=mx;ny=my;}else{const a=Number(player.angle)||0;nx=Math.cos(a);ny=Math.sin(a);}
       const movingInto=ml>.05&&(mx*(-nx)+my*(-ny))>.02;
       const correction=Math.min(hit.overlap+.45,8.5+Math.sqrt(Math.max(0,hit.overlap))*.55);
 
@@ -4336,12 +4199,49 @@ export class WorldRoom extends Room {
   }
 
   resolveCreaturePairPhysical(a,b){
-    if(!a||!b||a===b||a.dead||b.dead||a.hp<=0||b.hp<=0)return false;let moved=false;
-    for(let pass=0;pass<2;pass++){const hit=animalSepPairPenetration(a,b);if(!hit||hit.overlap<=.01)break;const wa=animalWeight(a),wb=animalWeight(b),ia=1/Math.max(.2,wa),ib=1/Math.max(.2,wb),sum=ia+ib||1,correction=Math.min(hit.overlap+.35,16),ma=correction*(ia/sum),mb=correction*(ib/sum);a.x-=hit.nx*ma;a.y-=hit.ny*ma;b.x+=hit.nx*mb;b.y+=hit.ny*mb;moved=true;}return moved;
+    if(!a||!b||a===b||a.dead||b.dead||a.hp<=0||b.hp<=0)return false;
+    let moved=false;
+    for(let pass=0;pass<2;pass++){
+      const ah=animalPhysicalCircles(a),bh=animalPhysicalCircles(b);
+      let best=null,bestOverlap=0;
+      for(const ca of ah)for(const cb of bh){
+        const dx=cb.x-ca.x,dy=cb.y-ca.y,rr=ca.r+cb.r,d2=dx*dx+dy*dy;
+        if(d2>=rr*rr)continue;
+        const d=Math.sqrt(Math.max(.0001,d2)),ov=rr-d;
+        if(ov>bestOverlap){bestOverlap=ov;best={dx,dy,d};}
+      }
+      if(!best||bestOverlap<=.01)break;
+      let nx=best.dx/best.d,ny=best.dy/best.d;
+      if(!Number.isFinite(nx)||!Number.isFinite(ny)){
+        const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;nx=dx/d;ny=dy/d;
+      }
+      const wa=animalWeight(a),wb=animalWeight(b),ia=1/Math.max(.2,wa),ib=1/Math.max(.2,wb),sum=ia+ib||1;
+      const correction=Math.min(bestOverlap+.35,16);
+      const ma=correction*(ia/sum),mb=correction*(ib/sum);
+      a.x-=nx*ma;a.y-=ny*ma;b.x+=nx*mb;b.y+=ny*mb;moved=true;
+    }
+    return moved;
   }
 
   resolveMountedCreaturePair(anchor,mover){
-    if(!anchor||!mover||anchor.dead||mover.dead)return false;const hit=animalSepPairPenetration(anchor,mover);if(!hit||hit.overlap<=.01)return false;const mountShare=clamp(.16+(1-animalPushMobility(mover))*.10,.16,.28),correction=Math.min(hit.overlap+.08,5.5+Math.sqrt(Math.max(0,hit.overlap))*.55);anchor.x-=hit.nx*correction*mountShare;anchor.y-=hit.ny*correction*mountShare;mover.x+=hit.nx*correction*(1-mountShare);mover.y+=hit.ny*correction*(1-mountShare);return true;
+    if(!anchor||!mover||anchor.dead||mover.dead)return false;
+    let best=null,bestOverlap=0;
+    for(const ca of animalPhysicalCircles(anchor))for(const cb of animalPhysicalCircles(mover)){
+      const dx=cb.x-ca.x,dy=cb.y-ca.y,rr=ca.r+cb.r,d2=dx*dx+dy*dy;
+      if(d2>=rr*rr)continue;
+      const d=Math.sqrt(Math.max(.0001,d2)),ov=rr-d;
+      if(ov>bestOverlap){bestOverlap=ov;best={dx,dy,d};}
+    }
+    if(!best||bestOverlap<=.01)return false;
+    let nx=best.dx/best.d,ny=best.dy/best.d;
+    if(!Number.isFinite(nx)||!Number.isFinite(ny)){const dx=mover.x-anchor.x,dy=mover.y-anchor.y,d=Math.hypot(dx,dy)||1;nx=dx/d;ny=dy/d;}
+    // Match the client solver exactly so online riding does not get corrected
+    // back and forth between two slightly different collision responses.
+    const mountShare=clamp(.16+(1-animalPushMobility(mover))*.10,.16,.28);
+    const correction=Math.min(bestOverlap+.08,5.5+Math.sqrt(Math.max(0,bestOverlap))*.55);
+    anchor.x-=nx*correction*mountShare;anchor.y-=ny*correction*mountShare;
+    mover.x+=nx*correction*(1-mountShare);mover.y+=ny*correction*(1-mountShare);
+    return true;
   }
 
   resolveAnimalAnimalCollisions(){
@@ -4527,7 +4427,7 @@ export class WorldRoom extends Room {
     for(const[id,p]of this.state.pets){
       if(p.dead)continue;
       const _petAlwaysX=p.x,_petAlwaysY=p.y;
-      tickAbilityCooldownTimer(p,dt);
+      p.abilityCd=Math.max(0,p.abilityCd-dt);
       p.atkCd=Math.max(0,p.atkCd-dt);
       if(Array.isArray(p._stoneFruitStackExpiries)){p._stoneFruitStackExpiries=p._stoneFruitStackExpiries.filter(t=>Number(t)>this.state.worldTime);p.stoneFruitStacks=p._stoneFruitStackExpiries.length;}else if(p.stoneFruitStacks)p.stoneFruitStacks=0;
       p.combat=Math.max(0,p.combat-dt);
@@ -4539,7 +4439,6 @@ export class WorldRoom extends Room {
       p.flash=Math.max(0,p.flash-dt);
       p.attackAnim=Math.max(0,p.attackAnim-dt);
       p.tailPhase=(p.tailPhase||0)+dt*(.34+Math.min(.55,Math.max(0,Number(p.speed)||0)*.003));
-      if(p.type==="rhino"&&(Number(p._rhinoChargeUntil)||0)>this.state.worldTime){this.resolveStatic(p,(p.r||18)*.72);const owner=this.state.players.get(p.ownerId);if(owner&&owner.ridingPetId===id){owner.x=p.x;owner.y=p.y;}continue;}
       if((Number(p._abilityStunUntil)||0)>this.state.worldTime){p.attackAnim=0;this.resolveStatic(p,(p.r||18)*.72);continue;}
 
       const owner=this.state.players.get(p.ownerId);
@@ -4831,8 +4730,22 @@ export class WorldRoom extends Room {
   }
 
   resolveEnemyCreatureContacts(en){
-    if(!en||en.dead)return;const er=(en.r||17)*.90;
-    for(const rec of this.nearbyDynamic(en.x,en.y,er+180,CREATURE_DYNAMIC_KINDS)){const obj=rec.obj;if(!obj||obj.dead||(obj.hp!=null&&obj.hp<=0))continue;const hit=animalSepCirclePenetration(obj,en.x,en.y,er);if(!hit||hit.overlap<=.01)continue;const correction=Math.min(hit.overlap+.04,7.5);en.x-=hit.nx*correction;en.y-=hit.ny*correction;}
+    if(!en||en.dead)return;
+    const er=(en.r||17)*.90;
+    for(const rec of this.nearbyDynamic(en.x,en.y,er+180,CREATURE_DYNAMIC_KINDS)){
+      const obj=rec.obj;if(!obj||obj.dead||(obj.hp!=null&&obj.hp<=0))continue;
+      let best=null,bestOverlap=0;
+      for(const h of animalPhysicalCircles(obj)){
+        const dx=en.x-h.x,dy=en.y-h.y,d2=dx*dx+dy*dy,rr=er+h.r;
+        if(d2>=rr*rr)continue;const d=Math.sqrt(Math.max(.0001,d2)),overlap=rr-d;
+        if(overlap>bestOverlap){bestOverlap=overlap;best={dx,dy,d};}
+      }
+      if(!best||bestOverlap<=.01)continue;
+      let nx=best.dx/best.d,ny=best.dy/best.d;
+      if(!Number.isFinite(nx)||!Number.isFinite(ny)){const q=angTo(obj.x,obj.y,en.x,en.y);nx=Math.cos(q);ny=Math.sin(q);}
+      const correction=Math.min(bestOverlap+.04,7.5);
+      en.x+=nx*correction;en.y+=ny*correction;
+    }
   }
 
   updateEnemies(dt){
@@ -4879,7 +4792,7 @@ export class WorldRoom extends Room {
       if(en.moonMarked){en.x=Number(en._moonAnchorX)||en.x;en.y=Number(en._moonAnchorY)||en.y;}else{this.resolveEnemyCreatureContacts(en);this.resolveStatic(en,en.r*.9);}
       // A non-riding guard is a separate body; never let it sit inside its cube.
       const gid=this.enemyPetByEnemy.get(id),guard=gid&&this.state.animals.get(gid);
-      if(guard&&en.ridingPetId!==gid){const hit=animalSepCirclePenetration(guard,en.x,en.y,(en.r||18)+12);if(hit&&hit.overlap>0){guard.x+=hit.nx*hit.overlap;guard.y+=hit.ny*hit.overlap;this.resolveStatic(guard,(guard.r||18)*.68);}}
+      if(guard&&en.ridingPetId!==gid){let best=null,bestOverlap=0;for(const h of animalPhysicalCircles(guard)){const d=dist(en.x,en.y,h.x,h.y),overlap=(en.r||18)+h.r+12-d;if(overlap>bestOverlap){bestOverlap=overlap;best={h,d,overlap};}}if(best&&best.d>.01){const a=angTo(en.x,en.y,best.h.x,best.h.y);guard.x+=Math.cos(a)*best.overlap;guard.y+=Math.sin(a)*best.overlap;this.resolveStatic(guard,(guard.r||18)*.68);}}
     }
   }
 
@@ -5138,6 +5051,16 @@ export class WorldRoom extends Room {
     // Stability guard: bound dt so a stalled process never tries to catch up in one giant tick.
     if(!Number.isFinite(dt)||dt<0)dt=0;
     dt=Math.min(dt,.05);
+
+    const playerCount = this.state?.players ? this.state.players.size : 0;
+    if (playerCount !== this._simPlayers) this._applyEfficiencyMode();
+
+    // EMPTY ROOM MODE: almost no work when nobody is online (free-tier CPU saver).
+    if (playerCount === 0) {
+      this.state.worldTime = (Number(this.state.worldTime)||0) + dt;
+      return;
+    }
+
     this.updateTime(dt);
     this.updateAbilityStatuses(dt);
     this.updateActivePetAbilities(dt);
@@ -5181,9 +5104,27 @@ export class WorldRoom extends Room {
     this.updateWallsTowers(dt);this.updateProjectiles(dt);this.flushNetworkEvents(dt);
   }
 
+  _playerCount(){
+    return this.state?.players ? this.state.players.size : 0;
+  }
+
+  _applyEfficiencyMode(){
+    const count = this._playerCount();
+    this._simPlayers = count;
+    const targetMs = count === 0 ? 500 : 50;
+    try { this.setSimulationInterval((delta)=>this.update(delta/1000), targetMs); } catch (_) {}
+    const patchMs = count === 0 ? 250 : 100;
+    try {
+      if (typeof this.setPatchRate === "function") this.setPatchRate(patchMs);
+      else this.patchRate = patchMs;
+    } catch (_) {}
+    this._idleMode = count === 0;
+  }
+
   onJoin(client,options={}){
     const populationKey=`${this.roomId||"world"}:${client.sessionId}`;
     this.populationKeys.set(client.sessionId,populationKey);ACTIVE_CUBE_PLAYER_KEYS.add(populationKey);
+    queueMicrotask(() => { try { this._applyEfficiencyMode(); } catch(_){} });
     const s=this.safeSpawn(),p=new PlayerState();this.playerCombatReadyAt.set(client.sessionId,Infinity);p.id=client.sessionId;p.username=String(options.username||"Cube").slice(0,14);p.x=s.x;p.y=s.y;p.angle=0;p.health=100;p.maxHealth=100;p.hydration=100;p.bucketWater=true;p.bucketSips=BUCKET_MAX_SIPS;p.color=typeof options.color==="string"?options.color:"#3fa7ff";p.tool="Fist";p.oxygen=0;p.oxygenMax=0;p._jungleHotUntil=0;p._jungleHotRate=0;p._cactusGoodUntil=0;p._cactusHealRate=0;p._cactusHydrateRate=0;p._badCactusUntil=0;p._badCactusDamageRate=0;p._badCactusHydrateRate=0;p._cactusSpineCd=0;p._desertHydrationWait=2.5;p._stoneFruitUntil=0;p._blueSeaweedUntil=0;
     let verifiedAccount=null;try{verifiedAccount=HOSTL_ACCOUNT_HOOKS.resolveSession(String(options.accountToken||""));}catch(_){verifiedAccount=null;}
     if(verifiedAccount?.userId){this.playerAccountIds.set(client.sessionId,String(verifiedAccount.userId));this.playerAccountEntitlements.set(client.sessionId,verifiedAccount);if(verifiedAccount.username)p.username=String(verifiedAccount.username).slice(0,14);p.title=String(verifiedAccount.title||"").slice(0,32);p.testerRank=Math.max(0,Math.floor(Number(verifiedAccount.testerRank)||0));p.ownerRank=Math.max(0,Math.floor(Number(verifiedAccount.ownerRank)||0));try{HOSTL_ACCOUNT_HOOKS.onPresenceJoin(String(verifiedAccount.userId),`${this.roomId||"world"}:${client.sessionId}`,this.worldId);}catch(_){}}
