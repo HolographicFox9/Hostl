@@ -1075,6 +1075,17 @@ function utcDayKey() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
 }
+// Free daily login bonus (5 Gold Cubits once per real day, no ad required)
+function grantFreeDailyLoginBonus(account) {
+  if (!account || typeof account !== "object") return false;
+  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+  if (safeText(account.lastFreeDailyLogin || "", 20) === day) return false;
+  addGoldCubits(account, 5);
+  account.lastFreeDailyLogin = day;
+  account.updatedAt = new Date().toISOString();
+  return true;
+}
+
 function ensureRewardedDailyCubitMode(account) {
   if (!account || typeof account !== "object") return false;
   if (account.dailyCubitRewardMode === "rewarded100v1") return false;
@@ -1257,12 +1268,12 @@ app.post("/auth/google", async (req, res) => {
       account.updatedAt = new Date().toISOString();
     }
     const dailyModeMigrated = ensureRewardedDailyCubitMode(account);
-    const dailyGranted = false;
-    if (dailyModeMigrated) account.updatedAt = new Date().toISOString();
+    const freeDailyGranted = grantFreeDailyLoginBonus(account);
+    if (dailyModeMigrated || freeDailyGranted) account.updatedAt = new Date().toISOString();
     await saveAccounts();
     const sessionToken = signSession(userId);
     setSessionCookie(res, sessionToken);
-    res.json({ ok: true, created, recovered, dailyGranted, token: sessionToken, account: publicAccount(account) });
+    res.json({ ok: true, created, recovered, dailyGranted: freeDailyGranted, freeDailyCubits: freeDailyGranted ? 5 : 0, token: sessionToken, account: publicAccount(account) });
   } catch (err) {
     console.error("Google login failed:", err?.message || err);
     res.status(401).json({ ok: false, error: "google_verification_failed" });
@@ -1273,10 +1284,12 @@ app.get("/api/account", requireAccount, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const a=accountDb.byId[req.hostlUserId];
   const dailyModeMigrated=ensureRewardedDailyCubitMode(a);
-  if(dailyModeMigrated||repairSpecialPromoEntitlements(a)){a.updatedAt=new Date().toISOString();await saveAccounts();}
+  const freeDailyGranted=grantFreeDailyLoginBonus(a);
+  const promoFixed=repairSpecialPromoEntitlements(a);
+  if(dailyModeMigrated||freeDailyGranted||promoFixed){a.updatedAt=new Date().toISOString();await saveAccounts();}
   // Returning the already-verified token lets the browser restore its local copy from
   // the HttpOnly cookie after a reload without asking Google to sign in again.
-  res.json({ ok: true, token: req.hostlSessionToken, account: publicAccount(a) });
+  res.json({ ok: true, token: req.hostlSessionToken, freeDailyCubits: freeDailyGranted ? 5 : 0, account: publicAccount(a) });
 });
 
 app.post("/api/account/recover", requireAccount, async (req,res)=>{
