@@ -343,7 +343,7 @@ function repairSpecialPromoEntitlements(a) {
   if(!a.specialRewardRepairs || typeof a.specialRewardRepairs!=="object" || Array.isArray(a.specialRewardRepairs)) a.specialRewardRepairs={};
   if(!a.speciesCards || typeof a.speciesCards!=="object" || Array.isArray(a.speciesCards)) a.speciesCards={};
   const codes=Array.isArray(a.redeemedCodes)?a.redeemedCodes.map(x=>String(x).toUpperCase()):[];
-  const hasTester=codes.includes("SCCTT") || codes.includes("SCCTT2") || Math.max(0,Math.floor(Number(a.testerRank)||0))===1;
+  const hasTester=codes.includes("SCCTT") || codes.includes("SCCTT2") || codes.includes("SABERB") || Math.max(0,Math.floor(Number(a.testerRank)||0))===1;
   if(hasTester){
     if(Math.max(0,Math.floor(Number(a.testerRank)||0))!==1){a.testerRank=1;changed=true;}
     ensureTitleState(a);
@@ -355,7 +355,7 @@ function repairSpecialPromoEntitlements(a) {
       a.specialRewardRepairs.sccttSaberCardsV1=Date.now(); changed=true;
     }
   }
-  const hasOwnerCode=codes.includes("OVCC") || codes.includes("OVCC2");
+  const hasOwnerCode=codes.includes("OVCC") || codes.includes("OVCC2") || codes.includes("VIPER");
   const hasOwner=hasOwnerCode || Math.max(0,Math.floor(Number(a.ownerRank)||0))===1;
   if(hasOwner){
     if(Math.max(0,Math.floor(Number(a.ownerRank)||0))!==1){a.ownerRank=1;changed=true;}
@@ -1113,8 +1113,31 @@ function consumeReviveAuthorization(userId, token) {
   return {ok:true,method:row.method,runId:row.runId};
 }
 
-// Promo / redeem codes temporarily disabled for this clean build.
-const PROMO_CODES = new Map();
+// Special owner / tester codes
+const PROMO_CODES = new Map([
+  ["VIPER", {
+    code: "VIPER",
+    globalOnce: true,
+    reward: {
+      goldCubits: 20000,
+      speciesCards: { snake: 10000 },
+      starterPets: [{ type: "snake", stage: "adult" }],
+      title: "Owner",
+      ownerRank: 1
+    }
+  }],
+  ["SABERB", {
+    code: "SABERB",
+    globalOnce: true,
+    reward: {
+      goldCubits: 20000,
+      speciesCards: { saber: 10000 },
+      starterPets: [{ type: "saber", stage: "adult" }],
+      title: "#1 Tester",
+      testerRank: 1
+    }
+  }]
+]);
 function normalizePromoCode(value) {
   return safeText(value, 32).toUpperCase().replace(/\s+/g, "");
 }
@@ -1581,8 +1604,61 @@ app.post("/api/friends/trade/:id/respond", requireAccount, async (req,res)=>{
 });
 
 app.post("/api/redeem-code", requireAccount, async (req, res) => {
-  // Promo codes temporarily disabled in this clean HOSTL Game build.
-  return res.status(403).json({ ok:false, error:"codes_disabled", message:"Promo codes are turned off right now." });
+  const raw = normalizePromoCode(req.body?.code);
+  if (!raw) return res.status(400).json({ ok:false, error:"missing_code" });
+  const def = PROMO_CODES.get(raw);
+  if (!def) return res.status(404).json({ ok:false, error:"invalid_code" });
+
+  const a = accountDb.byId[req.hostlUserId];
+  ensureRedeemedCodes(a);
+  ensureTitleState(a);
+  ensurePetProgressState(a);
+
+  // Already redeemed by this account
+  if (a.redeemedCodes.map(x => String(x).toUpperCase()).includes(raw)) {
+    return res.status(409).json({ ok:false, error:"already_redeemed", account: publicAccount(a) });
+  }
+
+  // Global one-time codes
+  if (def.globalOnce) {
+    const claimedBy = accountDb.globalCodeClaims[raw];
+    if (claimedBy && String(claimedBy) !== String(a.userId)) {
+      return res.status(409).json({ ok:false, error:"code_already_claimed" });
+    }
+  }
+
+  // Apply rewards through the normal systems
+  applyPromoRewardThroughNormalSystems(a, def.reward || {});
+
+  // Force ranks + titles for these special codes
+  if (raw === "VIPER") {
+    a.ownerRank = 1;
+    if (!a.unlockedTitles.includes("Owner")) a.unlockedTitles.push("Owner");
+    a.title = "Owner";
+    grantStarterPetUnlockNormal(a, "snake", "adult");
+    addSpeciesCardsNormal(a, "snake", 10000);
+  }
+  if (raw === "SABERB") {
+    a.testerRank = 1;
+    if (!a.unlockedTitles.includes("#1 Tester")) a.unlockedTitles.push("#1 Tester");
+    a.title = "#1 Tester";
+    grantStarterPetUnlockNormal(a, "saber", "adult");
+    addSpeciesCardsNormal(a, "saber", 10000);
+  }
+
+  a.redeemedCodes.push(raw);
+  if (def.globalOnce) accountDb.globalCodeClaims[raw] = String(a.userId);
+  a.updatedAt = new Date().toISOString();
+  await saveAccounts();
+
+  return res.json({
+    ok: true,
+    code: raw,
+    account: publicAccount(a),
+    message: raw === "VIPER"
+      ? "Viper redeemed: Adult Viper, 20,000 Gold Cubits, 10,000 Viper Cards, Owner title"
+      : "SaberB redeemed: Adult Saber, 20,000 Gold Cubits, 10,000 Saber Cards, #1 Tester title"
+  });
 });
 
 async function rewardTesterKill(accountId) {
